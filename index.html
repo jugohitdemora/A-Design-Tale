@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sala de briefing</title>
+  <title>Project Orbit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="estilos.css">
   <script type="importmap">
   {
@@ -18,20 +21,90 @@
 <body>
   <div id="lienzo"></div>
 
-  <div id="lobby" class="panel">
-    <h1>Sala de briefing</h1>
-    <p class="sala">Sala: <strong id="codigo-sala"></strong>
-      <button id="copiar" type="button">Copiar enlace</button></p>
-    <p id="estado-red" class="tenue">Conectando…</p>
-    <p>Elige tu rol:</p>
-    <div id="roles"></div>
-    <p id="aviso" class="aviso"></p>
-  </div>
+  <!-- Pantalla de inicio -->
+  <section id="inicio" class="cartel">
+    <svg class="icono-orbita" viewBox="0 0 120 50" aria-hidden="true">
+      <ellipse cx="55" cy="28" rx="48" ry="16" transform="rotate(-14 55 28)" />
+      <circle cx="44" cy="33" r="6" class="relleno" />
+      <path d="M92 6 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z" class="relleno" />
+    </svg>
+    <h1 id="titulo" class="titulo"></h1>
+    <p id="lema" class="lema"></p>
+    <button id="btn-unirse" class="btn btn-primario" type="button"><span class="triangulo">▶</span><span id="txt-unirse"></span></button>
+    <button id="btn-ajustes" class="btn btn-secundario" type="button"></button>
+    <div class="pie">
+      <span class="raya"></span>
+      <svg class="icono-mini" viewBox="0 0 60 30" aria-hidden="true">
+        <ellipse cx="28" cy="17" rx="22" ry="8" transform="rotate(-18 28 17)" />
+        <circle cx="22" cy="20" r="4" class="relleno" />
+        <path d="M46 3 l1.5 3.5 3.5 1.5 -3.5 1.5 -1.5 3.5 -1.5 -3.5 -3.5 -1.5 3.5 -1.5z" class="relleno" />
+      </svg>
+      <span class="raya"></span>
+    </div>
+    <p id="jugadores" class="jugadores"></p>
+  </section>
 
+  <!-- Unirse -->
+  <dialog id="dlg-unirse" class="dialogo">
+    <form method="dialog" id="form-unirse">
+      <h2>Unirse a la tripulación</h2>
+      <label>Nick
+        <input id="in-nick" name="nick" maxlength="16" required autocomplete="nickname" placeholder="Ej.: Astro">
+      </label>
+      <label>Código de sala
+        <input id="in-sala" name="sala" maxlength="8" required pattern="[A-Za-z0-9]{4,8}" autocomplete="off">
+      </label>
+      <p class="tenue pequeno">Comparte el mismo código con tu equipo para entrar en la misma sala.</p>
+      <div class="acciones">
+        <button type="button" class="btn-plano" id="cancelar-unirse">Cancelar</button>
+        <button type="submit" class="btn-plano primario">Entrar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Ajustes -->
+  <dialog id="dlg-ajustes" class="dialogo">
+    <form method="dialog">
+      <h2>Ajustes</h2>
+      <label>Sensibilidad de la cámara
+        <input id="in-sensibilidad" type="range" min="0.002" max="0.012" step="0.001">
+      </label>
+      <label>Calidad gráfica
+        <select id="in-calidad">
+          <option value="alta">Alta</option>
+          <option value="baja">Baja (equipos lentos)</option>
+        </select>
+      </label>
+      <label class="fila"><input id="in-animar" type="checkbox"> Animar el fondo del inicio</label>
+      <div class="acciones"><button class="btn-plano primario">Listo</button></div>
+    </form>
+  </dialog>
+
+  <!-- Lobby -->
+  <section id="lobby" class="panel oculto">
+    <header class="lobby-cabecera">
+      <div>
+        <p class="tenue pequeno">SALA</p>
+        <p class="codigo"><strong id="codigo-sala"></strong> <button id="copiar" class="btn-plano" type="button">Copiar enlace</button></p>
+      </div>
+      <p id="contador" class="contador"></p>
+    </header>
+    <h3>Tripulación</h3>
+    <ul id="tripulacion" class="tripulacion"></ul>
+    <h3>Tu rol</h3>
+    <div id="roles" class="roles"></div>
+    <p id="aviso" class="aviso"></p>
+    <div class="acciones">
+      <button id="salir-lobby" class="btn-plano" type="button">Salir</button>
+      <button id="iniciar" class="btn-plano primario" type="button">Iniciar misión</button>
+    </div>
+  </section>
+
+  <!-- HUD en la sala de briefing -->
   <div id="hud" class="panel oculto">
     <span id="mi-rol"></span>
     <span id="hud-red" class="tenue"></span>
-    <button id="salir" type="button">Cambiar rol</button>
+    <button id="volver-lobby" class="btn-plano" type="button">Lobby</button>
     <p class="tenue">Arrastra para mirar · clic en la pizarra o en las carpetas</p>
   </div>
 

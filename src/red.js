@@ -5,9 +5,9 @@ import { joinRoom, selfId } from 'trystero';
 
 export { selfId };
 
-export function conectar(codigoSala, { alEstado, alMesa, alEntrar, alSalir }) {
-  const sala = joinRoom({ appId: 'spaceapps-briefing-2026' }, codigoSala);
-  const estado = sala.makeAction('estado'); // { rol, yaw, pitch }
+export function conectar(appId, codigoSala, { alEstado, alMesa, alEntrar, alSalir }) {
+  const sala = joinRoom({ appId }, codigoSala);
+  const estado = sala.makeAction('estado'); // { nick, rol, yaw, pitch }
   const mesa = sala.makeAction('mesa');     // { v, autor, datos }
 
   estado.onMessage = (datos, { peerId }) => alEstado(peerId, datos);

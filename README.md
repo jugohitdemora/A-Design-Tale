@@ -26,18 +26,20 @@ Abre `http://localhost:8770/` en dos pestañas o en dos equipos con la **misma U
 
 ## Qué hace
 
-- Lobby con código de sala, enlace para compartir y los 4 roles (los ocupados se bloquean).
-- Cada jugador ve la sala desde su asiento y mira arrastrando con el ratón o con el dedo.
-- Los demás ven la cabeza de cada jugador girar hacia donde mira.
-- Pizarra (Objetivos, Tareas, Riesgos) y carpetas compartidas: un clic las cambia para todos.
-- Si dos personas toman el mismo rol a la vez, se queda la de id menor.
+- **Inicio:** cartel con el nombre del juego sobre un centro de control low poly animado (gradas de consolas y pared de pantallas). El nombre y los textos se cambian en `src/config.js`.
+- **Join crew:** pide un nick y un código de sala. Un enlace con `#CODIGO` abre este diálogo con la sala ya puesta.
+- **Lobby:** cuántos hay en la sala (máx. 4), la tripulación con su nick y su rol, y la elección de rol (los ocupados se bloquean). "Iniciar misión" solo se activa cuando todos tienen rol, y lleva a todos a la vez a la sala de briefing.
+- **Sala de briefing:** cada jugador ve desde su asiento y mira arrastrando. Los demás ven su cabeza girar. Pizarra y carpetas compartidas.
+- **Ajustes:** sensibilidad de la cámara, calidad gráfica y animación del fondo (se guardan en el navegador).
 
 ## Archivos
 
-- `index.html`: lobby, HUD e importmap.
-- `src/escena.js`: sala, mesa, sillas, avatares y NPC.
+- `index.html`: cartel de inicio, diálogos, lobby, HUD e importmap.
+- `src/config.js`: nombre del juego y textos de marca.
+- `src/inicio.js`: centro de control del fondo.
+- `src/escena.js`: sala de briefing, avatares y NPC.
 - `src/red.js`: conexión entre pares.
-- `src/main.js`: cámara por asiento, controles, sincronización.
+- `src/main.js`: pantallas, lobby, cámara por asiento y sincronización.
 
 ## Límites conocidos
 
