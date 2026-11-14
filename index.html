@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sala de briefing</title>
+  <link rel="stylesheet" href="estilos.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+      "trystero": "https://cdn.jsdelivr.net/npm/@trystero-p2p/mqtt@0.25.4/+esm"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="lienzo"></div>
+
+  <div id="lobby" class="panel">
+    <h1>Sala de briefing</h1>
+    <p class="sala">Sala: <strong id="codigo-sala"></strong>
+      <button id="copiar" type="button">Copiar enlace</button></p>
+    <p id="estado-red" class="tenue">Conectando…</p>
+    <p>Elige tu rol:</p>
+    <div id="roles"></div>
+    <p id="aviso" class="aviso"></p>
+  </div>
+
+  <div id="hud" class="panel oculto">
+    <span id="mi-rol"></span>
+    <span id="hud-red" class="tenue"></span>
+    <button id="salir" type="button">Cambiar rol</button>
+    <p class="tenue">Arrastra para mirar · clic en la pizarra o en las carpetas</p>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

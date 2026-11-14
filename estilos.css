@@ -1,0 +1,38 @@
+:root {
+  --fondo: #1c1f24;
+  --panel: rgba(20, 22, 26, 0.88);
+  --texto: #ece8df;
+  --tenue: #a7a39a;
+  --borde: #3d4450;
+  --acento: #e0a040;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--fondo); color: var(--texto);
+  font: 15px/1.4 system-ui, sans-serif; overflow: hidden; }
+#lienzo { position: fixed; inset: 0; touch-action: none; cursor: grab; }
+#lienzo:active { cursor: grabbing; }
+
+.panel { position: fixed; background: var(--panel); border: 1px solid var(--borde);
+  border-radius: 10px; padding: 14px 16px; }
+#lobby { top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(380px, calc(100vw - 32px)); }
+#lobby h1 { margin: 0 0 8px; font-size: 20px; }
+#hud { top: 12px; left: 12px; max-width: calc(100vw - 24px); display: flex;
+  flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+#hud p { margin: 0; width: 100%; font-size: 13px; }
+#mi-rol { font-weight: 600; }
+.oculto { display: none !important; }
+.tenue { color: var(--tenue); }
+.aviso { color: var(--acento); min-height: 1.2em; margin: 8px 0 0; }
+
+button { font: inherit; color: var(--texto); background: #2a2f37; border: 1px solid var(--borde);
+  border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--acento); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+#roles { display: grid; gap: 6px; }
+#roles button { display: flex; align-items: center; gap: 8px; text-align: left; padding: 8px 10px; }
+.punto { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+
+.etiqueta { font: 12px system-ui, sans-serif; color: #fff; background: rgba(0,0,0,0.55);
+  padding: 2px 6px; border-radius: 4px; white-space: nowrap; pointer-events: none; }
+.etiqueta.pizarra { background: none; color: #2b2b2b; font-weight: 600; font-size: 13px; }
