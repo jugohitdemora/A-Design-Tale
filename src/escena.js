@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { textos, depto } from './i18n.js';
+import { decorarSala } from './decorado-briefing.js';
 
 const T = textos({
   es: { pizarra: 'BRIEFING DE MISIÓN', objetivos: 'Objetivos', tareas: 'Tareas', riesgos: 'Riesgos', puerta: 'CONTROL DE MISIÓN', jefe: 'Jefe de misión',
@@ -72,51 +73,26 @@ export function crearEscena() {
   sol.position.set(2, 4, 3);
   escena.add(sol);
 
-  // Habitación 8 × 6 × 3 m.
-  const suelo = caja(8, 0.1, 6, 0x6e6e6e); suelo.position.y = -0.05; escena.add(suelo);
-  const techo = caja(8, 0.1, 6, 0x4a3a2a); techo.position.y = 3.05; escena.add(techo);
-  const pared = (w, x, z, ry) => {
-    const p = caja(w, 3, 0.1, 0xd8cdb0); p.position.set(x, 1.5, z); p.rotation.y = ry; escena.add(p);
-    const z2 = caja(w, 0.9, 0.12, 0x7a5232); z2.position.set(x, 0.45, z); z2.rotation.y = ry; escena.add(z2);
-  };
+  // Habitación 8 × 6 × 3 m. Estas cajas son el respaldo (grosor de las paredes); el acabado lo pone decorarSala().
+  const suelo = caja(8, 0.1, 6, 0x3b4656); suelo.position.y = -0.05; escena.add(suelo);
+  const techo = caja(8, 0.1, 6, 0xd7dadc); techo.position.y = 3.05; escena.add(techo);
+  const pared = (w, x, z, ry) => { const p = caja(w, 3, 0.1, 0xdcd8cc); p.position.set(x, 1.5, z); p.rotation.y = ry; escena.add(p); };
   pared(8, 0, -3, 0); pared(8, 0, 3, 0); pared(6, -4, 0, Math.PI / 2); pared(6, 4, 0, Math.PI / 2);
-  const tuboLuz = caja(1.4, 0.08, 0.3, 0xfff3c4);
-  tuboLuz.material.emissive = new THREE.Color(0xffe7a0); tuboLuz.material.emissiveIntensity = 0.9;
-  tuboLuz.position.set(0, 2.95, 0); escena.add(tuboLuz);
 
   // Mesa.
   const tablero = caja(4.4, 0.08, 1.9, 0x8a5a34); tablero.position.y = 0.76; escena.add(tablero);
   const pie = caja(1.2, 0.72, 0.6, 0x5e3d23); pie.position.y = 0.36; escena.add(pie);
 
-  // Póster en la pared del fondo.
-  const poster = caja(1.3, 1.5, 0.02, 0x5577a0); poster.position.set(0.3, 1.9, -2.94); escena.add(poster);
-  const disco = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.02, 10), mat(0x1f3f8a));
-  disco.rotation.x = Math.PI / 2; disco.position.set(0.3, 1.9, -2.92); escena.add(disco);
-
-  // Puerta a la sala de control de misión (clic: ir a planificar la ruta).
+  // Puerta a la sala de control de misión (clic: ir a la sala de control). El marco y el piloto están en decorarSala().
   const puerta = caja(1.0, 2.1, 0.06, 0x6d7278); puerta.position.set(3.2, 1.05, -2.93); escena.add(puerta);
   const pomo = caja(0.12, 0.04, 0.06, 0xb8bcc0); pomo.position.set(2.85, 1.0, -2.88); escena.add(pomo);
   const placa = etiqueta(() => T.puerta, 'etiqueta puerta-etq'); placa.position.set(3.2, 1.75, -2.88); escena.add(placa);
   const zPuerta = zona(1.0, 2.1, 0.2, { tipo: 'puerta' }); zPuerta.position.copy(puerta.position); escena.add(zPuerta); clicables.push(zPuerta);
 
-  // Archivador y cajas a la izquierda.
-  const archivador = caja(0.8, 1.6, 0.5, 0x666b70); archivador.position.set(-3.5, 0.8, -2.6); escena.add(archivador);
-  const cajaCarton = caja(0.6, 0.35, 0.45, 0xa47a48); cajaCarton.position.set(-3.5, 1.78, -2.6); escena.add(cajaCarton);
-
-  // Pizarra de briefing con tres casillas clicables.
-  const pizarra = caja(1.6, 1.2, 0.05, 0xece6d6); pizarra.position.set(-2.0, 1.8, -2.93); escena.add(pizarra);
-  const marco = caja(1.7, 1.3, 0.03, 0x7a7a7a); marco.position.set(-2.0, 1.8, -2.955); escena.add(marco);
-  const titulo = etiqueta(() => T.pizarra, 'etiqueta pizarra'); titulo.position.set(-2.0, 2.25, -2.89); escena.add(titulo);
+  // Escenario: suelo, techo, paredes, ventanal, carteles, maquetas y mobiliario (src/decorado-briefing.js).
+  decorarSala(escena, { tablero });
+  // Antes había una pizarra con tres casillas clicables; ya no hay. Se conserva el objeto (vacío) por quien lo consulta.
   const casillas = {};
-  ['objetivos', 'tareas', 'riesgos'].forEach((id, i) => {
-    const y = 1.95 - i * 0.3;
-    const c = caja(0.14, 0.14, 0.04, 0xffffff);
-    c.position.set(-2.55, y, -2.88);
-    c.userData = { tipo: 'casilla', id, activo: true };
-    escena.add(c); clicables.push(c);
-    const e = etiqueta(() => T[id], 'etiqueta pizarra'); e.position.set(-2.0, y, -2.88); escena.add(e);
-    casillas[id] = c;
-  });
 
   // Sillas, portátiles, manuales y avatares por asiento.
   const avatares = [], laptops = [], manuales = [];
@@ -196,7 +172,7 @@ export function crearEscena() {
     return c;
   });
 
-  // Jefe de misión (NPC) de pie junto a la pizarra.
+  // Jefe de misión (NPC) de pie junto a la maqueta de cohete.
   const jefe = crearAvatar({ nombre: '', color: 0x2b2b30 }, JEFE_REPOSO, true);
   jefe.grupo.visible = true;
   jefe.nombre.element.textContent = T.jefe;
@@ -215,7 +191,7 @@ export function crearEscena() {
   const DUR = { ir: 1.0, carpeta: 0.55, paso: 0.32 };
   const finCine = () => DUR.ir + DUR.paso * 2 + DUR.carpeta + 0.3;
 
-  // El jefe camina hacia su objetivo: la mesa mientras hay proyector o reparto, si no, la pizarra.
+  // El jefe camina hacia su objetivo: la mesa mientras hay proyector o reparto, si no, junto a la maqueta de cohete.
   function moverJefe(dt) {
     const meta = proy.activo || cine ? JEFE_MESA : JEFE_REPOSO;
     const dx = meta.x - jefePose.x, dz = meta.z - jefePose.z, d = Math.hypot(dx, dz);

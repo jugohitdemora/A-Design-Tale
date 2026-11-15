@@ -66,7 +66,8 @@ Las pantallas se proyectan sobre objetos 3D: el portátil mide 1024 × 640 px l�
 - `src/config.js`: nombre del juego y textos de marca.
 - `src/textos.js`: todos los textos de interfaz de las pantallas de juego (inglés).
 - `src/inicio.js`: centro de control del fondo.
-- `src/escena.js`: sala de briefing, avatares y NPC.
+- `src/escena.js`: sala de briefing (mesa, asientos, proyector, carpetas, puerta), avatares y NPC.
+- `src/decorado-briefing.js`: el escenario de la sala de briefing, una oficina de diseño de misiones: moqueta y alfombra, techo técnico con conducto y colgantes, ventanal nocturno, carteles, relojes de centros de control, maquetas de cohete, satélite y globo, librería, credenza y rincón del café. Las texturas se dibujan en canvas, sin archivos de imagen.
 - `src/main.js`: pantallas de inicio y lobby, cámara por asiento, y conexión de la sesión con `src/pantallas/`.
 - `src/pantallas/`: una pantalla por fase. `index.js` (guía del siguiente paso, avisos, repintado por estado, modal de eventos), `briefing.js`, `taller.js` (Diseño y Restricciones, con `cohete.js`, `ruta.js`, `riesgos.js`), `panel-global.js`, `verificacion.js`, `mision.js`, `informe.js`, `ui.js` (ayudas) y `_simulado.js` (datos y reglas falsos para `?simulado=1`).
 - `src/reglas/` y `src/datos/`: motor de reglas y datos (los escriben otros; ver `mecanicas-del-juego.md`).
