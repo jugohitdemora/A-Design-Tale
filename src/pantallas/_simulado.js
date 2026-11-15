@@ -163,7 +163,7 @@ const clon = (x) => JSON.parse(JSON.stringify(x));
 function preparar(e) {
   const fase = e.fase;
   if (fase === 'briefing') return;
-  if (!e.mision?.id) e.mision = { escenario: 'orbita', id: 'SIM-1', dificultad: 'normal' };
+  if (!e.mision?.id) e.mision = { escenario: 'orbita', id: 'SIM-1', dificultad: 'normal', objetivos: ['O1', 'O2'] };
   if (fase === 'restricciones' && e.porRol.vuelo.cohete === 'R-A') e.porRol.vuelo.cohete = 'R-C';
   if (fase === 'verificacion' && Object.keys(e.firmas).length === 0) e.firmas = { vuelo: false, ciencia: false, potencia: false, comms: false };
   if ((fase === 'mision' || fase === 'informe') && !e.resultado) e.resultado = simular(e);
@@ -176,7 +176,7 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
   const n = Math.max(1, Math.min(4, Number(params.get('jugadores')) || 2));
   const e = {
     fase: params.get('fase') || 'diseno', jugadores: { [jugadorId]: { nick, rol, orden: 1, conectado: true, desconectadoEn: 0, ultimaIntencion: 0 } }, siguienteOrden: 2, semilla: 12345,
-    briefing: { objetivos: true, tareas: false, riesgos: false, carpetas: {} }, registro: [],
+    briefing: { objetivos: true, tareas: false, riesgos: false, reparto: null, repartos: 0, listos: {} }, registro: [],
     mision: null, porRol: clon(DISENO_BASE), diseno: { revisiones: 0, eventos: [] }, firmas: {}, resultado: null, vista: { paso: 0 },
   };
   const otros = ['ciencia', 'comms', 'potencia', 'vuelo'].filter((r) => r !== rol).slice(0, n - 1);
@@ -191,8 +191,14 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
   const acciones = {
     elegirMision(p) {
       const m = e.mision ?? { escenario: null, id: null, dificultad: 'normal' };
-      if (p.escenario !== undefined) { m.escenario = p.escenario; if (DATOS.MISIONES[m.id]?.escenario !== p.escenario) m.id = null; }
-      if (p.id) { m.id = p.id; m.escenario = DATOS.MISIONES[p.id].escenario; e.porRol = clon(DISENO_BASE); for (const r of Object.keys(e.porRol)) e.porRol[r].piezas = {}; e.porRol.vuelo.cohete = null; e.porRol.vuelo.ruta = null; }
+      if (p.escenario !== undefined) {
+        if (p.escenario !== m.escenario) {
+          e.briefing.reparto = Object.values(DATOS.MISIONES).filter((x) => x.escenario === p.escenario).map((x) => x.id).slice(0, 3);
+          e.briefing.repartos = (e.briefing.repartos ?? 0) + 1;
+        }
+        m.escenario = p.escenario; if (DATOS.MISIONES[m.id]?.escenario !== p.escenario) m.id = null;
+      }
+      if (p.id) { m.id = p.id; m.escenario = DATOS.MISIONES[p.id].escenario; e.porRol = clon(DISENO_BASE); for (const r of Object.keys(e.porRol)) e.porRol[r].piezas = {}; e.porRol.vuelo.cohete = null; e.porRol.vuelo.ruta = null; m.objetivos = (DATOS.MISIONES[p.id].objetivos || []).map((x) => x.id); e.briefing.listos = {}; }
       if (p.dificultad) m.dificultad = p.dificultad;
       e.mision = m;
     },
@@ -224,7 +230,48 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
     elegirRol(p) { yo().rol = p.rol; },
     iniciarMision() { e.fase = 'briefing'; },
     marcarPizarra(p) { e.briefing[p.id] = !e.briefing[p.id]; },
-    abrirCarpeta(p) { e.briefing.carpetas[p.rol] = !e.briefing.carpetas[p.rol]; },
+    // Marca o desmarca un objetivo del expediente (el prioritario no se puede quitar); la dificultad sale de los secundarios marcados.
+    objetivo(p) {
+      const m = DATOS.MISIONES[e.mision?.id];
+      if (!m) return 'Choose a mission first';
+      const o = (m.objetivos || []).find((x) => x.id === p.id);
+      if (!o) return 'Unknown goal for this mission';
+      if (o.prioridad && !p.on) return 'The priority goal cannot be dropped';
+      const sel = new Set(e.mision.objetivos ?? (m.objetivos || []).map((x) => x.id));
+      if (p.on) sel.add(p.id); else sel.delete(p.id);
+      e.mision.objetivos = (m.objetivos || []).map((x) => x.id).filter((x) => sel.has(x));
+      const extra = (m.objetivos || []).filter((x) => !x.prioridad && sel.has(x.id)).length;
+      e.mision.dificultad = extra >= 2 ? 'dificil' : extra === 1 ? 'normal' : 'facil';
+      e.briefing.listos = {};
+    },
+    // Listo para diseñar: cuando todos los conectados con rol lo están, empieza el diseño (los bots se dan por listos).
+    listo(p) {
+      if (!yo().rol) return 'You need a role';
+      if (p.on) {
+        const m = DATOS.MISIONES[e.mision?.id];
+        if (!m) return 'Choose a mission first';
+        if (!m.jugable) return 'That mission is not playable yet';
+      }
+      e.briefing.listos[jugadorId] = !!p.on;
+      if (p.on) for (const id of Object.keys(e.jugadores)) if (id.startsWith('bot')) e.briefing.listos[id] = true;
+      const faltan = Object.entries(e.jugadores).filter(([id, j]) => j.conectado && j.rol && !e.briefing.listos[id]);
+      if (!faltan.length) { e.fase = 'diseno'; e.briefing.listos = {}; preparar(e); }
+    },
+    // Sala de control: el departamento dueño activa la contingencia que el paso necesita.
+    activarContingencia(p) {
+      if (!p.id) return 'That contingency is not needed now';
+      const a = Array.isArray(e.vista.activadas) ? e.vista.activadas : [];
+      e.vista = { ...e.vista, activadas: [...new Set([...a, p.id])] };
+    },
+    // Planificación de ruta: día de lanzamiento y sitio.
+    planificarRuta(p) {
+      if (p.ventana != null && !(Number.isInteger(p.ventana) && p.ventana >= 0 && p.ventana <= 1000)) return 'Unknown launch day';
+      if (p.sitio != null && typeof p.sitio !== 'string') return 'Unknown site';
+      if (!e.ruta || typeof e.ruta !== 'object') e.ruta = { ventana: null, sitio: null };
+      if (p.ventana !== undefined) e.ruta.ventana = p.ventana;
+      if (p.sitio !== undefined) e.ruta.sitio = p.sitio;
+      e.firmas = {};
+    },
   };
 
   const sesion = {

@@ -1,14 +1,16 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import mqtt from 'mqtt';
-import { JUEGO, TEXTOS, RED } from './config.js';
+import { JUEGO, RED } from './config.js';
+import { ponerIdioma } from './i18n.js';
+import { TI } from './textos-inicio.js';
 import { crearEscena, ROLES, ASIENTOS } from './escena.js';
 import { crearCentroDeControl } from './inicio.js';
 import { crearSesion } from './red/sesion.js';
 import { crearTransporteMqtt } from './red/transporte-mqtt.js';
 import { MAX_JUGADORES, conectados, duenoDeRol } from './red/protocolo.js';
 import { T } from './textos.js';
-import { crearPantallas } from './pantallas/index.js';
+import { crearPantallas, LOGICO } from './pantallas/index.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -18,12 +20,7 @@ const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } 
 const ajustes = leer('ajustes', { sensibilidad: 0.005, calidad: 'alta', animar: true });
 
 // ---------- Marca ----------
-document.title = JUEGO.NOMBRE.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 $('titulo').textContent = JUEGO.NOMBRE;
-$('lema').textContent = JUEGO.LEMA;
-$('jugadores').textContent = JUEGO.JUGADORES;
-$('txt-unirse').textContent = TEXTOS.unirse;
-$('btn-ajustes').textContent = TEXTOS.ajustes;
 
 // ---------- Render ----------
 const contenedor = $('lienzo');
@@ -34,10 +31,13 @@ const renderEtiquetas = new CSS2DRenderer();
 renderEtiquetas.domElement.style.cssText = 'position:absolute;inset:0;pointer-events:none';
 contenedor.appendChild(renderEtiquetas.domElement);
 
-const centro = crearCentroDeControl();
-const sala = crearEscena();
-const camaraSala = new THREE.PerspectiveCamera(70, 1, 0.05, 50);
+const centro = crearCentroDeControl();   // fondo del inicio
+const sala = crearEscena();              // sala de briefing
+const control = crearCentroDeControl();  // sala de control de misión (misma sala, otra instancia)
+const camaraSala = new THREE.PerspectiveCamera(70, 1, 0.03, 60);
 camaraSala.rotation.order = 'YXZ';
+// Pared principal de la sala de control (ver inicio.js: pantalla(7.2, 3.6, 0, 3.3) en z = -7.35 + 0.1).
+const PARED = { centro: new THREE.Vector3(0, 3.3, -7.24), normal: new THREE.Vector3(0, 0, 1), arriba: new THREE.Vector3(0, 1, 0), ancho: 7.2, alto: 3.6 };
 
 function aplicarCalidad() {
   render.setPixelRatio(ajustes.calidad === 'baja' ? 1 : Math.min(devicePixelRatio, 2));
@@ -48,16 +48,13 @@ function ajustarTamano() {
   render.setSize(w, h);
   renderEtiquetas.setSize(w, h);
   for (const cam of [camaraSala, centro.camara]) { cam.aspect = w / h; cam.updateProjectionMatrix(); }
-  // En pantallas anchas el cartel tapa la izquierda: corremos la vista del centro de control a la derecha.
   if (w > 700) centro.camara.setViewOffset(w, h, -w * 0.17, 0, w, h);
   else centro.camara.clearViewOffset();
+  rectoAnterior = '';
 }
 addEventListener('resize', ajustarTamano);
-aplicarCalidad();
 
 // ---------- Identidad ----------
-// Sobrevive a recargar la pestaña (sessionStorage), así el jugador recupera su rol.
-// No usamos localStorage: dos pestañas del mismo navegador tienen que ser dos jugadores distintos.
 function idDeJugador() {
   try {
     let id = sessionStorage.getItem('jugadorId');
@@ -68,27 +65,30 @@ function idDeJugador() {
 const jugadorId = idDeJugador();
 
 // ---------- Estado local (lo que no se comparte) ----------
-let pantalla = 'inicio'; // 'inicio' | 'lobby' | 'sala'
-// El nick de esta pestaña manda sobre el último usado en el navegador (dos pestañas = dos jugadores).
+let pantalla = 'inicio';   // 'inicio' | 'lobby' | 'sala'
+let lugar = 'briefing';    // 'briefing' | 'control': qué sala 3D se ve
+let vista = 'sala';        // 'sala' (mirar) | 'laptop' (sentado al portátil) | 'control' (pared de la sala de control)
+let pantallaLista = false; // la pantalla DOM solo aparece cuando la cámara terminó de encuadrar
+let faseVista = null;      // última fase para la que se decidió la vista automática
 const nickDePestana = () => { try { return sessionStorage.getItem('nick'); } catch { return null; } };
 let nick = nickDePestana() ?? leer('nick', '');
-const mirada = { yaw: 0, pitch: -0.25 }; // hacia dónde mira mi cámara
-const poses = new Map();                 // jugadorId -> { yaw, pitch } de los demás (presencia)
+const mirada = { yaw: 0, pitch: -0.25 };
+const poses = new Map();
 let sesion = null;
 let transporte = null;
 let codigo = '';
 let lobbyForzado = false;
 let versionAjena = false;
-// ?simulado=1: pantallas con datos y reglas falsas, sin red (ver src/pantallas/_simulado.js)
 const params = new URLSearchParams(location.search);
 const SIMULADO = params.get('simulado') === '1';
 let moduloSimulado = null;
-const ui = crearPantallas({ raiz: $('pantalla'), franja: $('franja'), modal: $('modal-evento'), simulado: SIMULADO });
-const enBriefing = () => estado()?.fase === 'briefing';
+const raizPantalla = $('pantalla');
+const ui = crearPantallas({ raiz: raizPantalla, franja: $('franja'), modal: $('modal-evento'), capa: $('capa'), simulado: SIMULADO });
 
 const indiceRol = (id) => ROLES.findIndex((r) => r.id === id);
 const estado = () => sesion?.estado ?? null;
 const miRol = () => sesion?.yo()?.rol ?? null;
+const enJuego = () => pantalla === 'sala' && !!estado() && estado().fase !== 'lobby';
 
 function codigoAleatorio() {
   return Array.from({ length: 5 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
@@ -121,6 +121,8 @@ $('btn-ajustes').addEventListener('click', () => {
   $('in-animar').checked = ajustes.animar;
   dlgAjustes.showModal();
 });
+// El idioma se aplica al momento (el resto de ajustes al cerrar el diálogo).
+$('in-idioma').addEventListener('change', (e) => ponerIdioma(e.target.value));
 dlgAjustes.addEventListener('close', () => {
   ajustes.sensibilidad = Number($('in-sensibilidad').value);
   ajustes.calidad = $('in-calidad').value;
@@ -128,11 +130,12 @@ dlgAjustes.addEventListener('close', () => {
   guardar('ajustes', ajustes);
   aplicarCalidad();
 });
+addEventListener('idioma', () => { sala.refrescarTextos(); pintarRoles(); actualizarTodo(); });
 
 // ---------- Sesión ----------
 function entrarEnSala(cod) {
   codigo = cod;
-  history.replaceState(null, '', '#' + codigo);
+  history.replaceState(null, '', location.pathname + location.search + '#' + codigo);
   $('codigo-sala').textContent = codigo;
   lobbyForzado = false;
   versionAjena = false;
@@ -140,6 +143,10 @@ function entrarEnSala(cod) {
   if (moduloSimulado) {
     transporte = { enLinea: () => ({ listos: 1 }) };
     sesion = moduloSimulado.crearSesionSimulada({ jugadorId, nick, params });
+  } else if (moduloLocal) {
+    // ?local=1: reglas y datos reales, sin red (un solo jugador; los demás departamentos quedan vacantes).
+    transporte = Object.assign(moduloLocal.crearRed().unir(), { enLinea: () => ({ listos: 1 }) });
+    sesion = crearSesion({ transporte, jugadorId, nick });
   } else {
     transporte = crearTransporteMqtt(JUEGO.APP_ID, codigo, { brokers: RED.BROKERS, conectar: (url, o) => mqtt.connect(url, o) });
     sesion = crearSesion({ transporte, jugadorId, nick });
@@ -147,9 +154,10 @@ function entrarEnSala(cod) {
   sesion.on('estado', () => { pintarMesa(); actualizarTodo(); });
   sesion.on('aviso', (motivo) => { avisar(motivo); actualizarTodo(); });
   sesion.on('version', () => { versionAjena = true; actualizarTodo(); });
-  sesion.on('nuevoPar', () => sesion?.presencia({ ...mirada })); // que el recién llegado vea hacia dónde miro
+  sesion.on('nuevoPar', () => sesion?.presencia({ ...mirada }));
   sesion.on('presencia', (id, datos) => { if (datos) poses.set(id, datos); else poses.delete(id); actualizarAvatares(); });
   pantalla = 'lobby';
+  faseVista = null;
   avisar('');
   actualizarTodo();
 }
@@ -181,20 +189,23 @@ ROLES.forEach((r) => {
   punto.style.background = colorCss(r.color);
   const texto = document.createElement('span');
   texto.innerHTML = '<span class="nombre"></span><small></small>';
-  texto.querySelector('.nombre').textContent = r.nombre;
   b.append(punto, texto);
   b.addEventListener('click', () => {
     avisar('');
-    sesion?.intentar('elegirRol', { rol: miRol() === r.id ? null : r.id }); // segundo clic = soltar el rol
+    sesion?.intentar('elegirRol', { rol: miRol() === r.id ? null : r.id });
     mirada.yaw = 0; mirada.pitch = -0.25;
   });
   listaRoles.appendChild(b);
 });
+function pintarRoles() {
+  for (const b of listaRoles.children) b.querySelector('.nombre').textContent = ROLES[indiceRol(b.dataset.rol)].nombre;
+}
+pintarRoles();
 
 $('copiar').addEventListener('click', async (e) => {
-  try { await navigator.clipboard.writeText(location.href); e.target.textContent = 'Copiado'; }
+  try { await navigator.clipboard.writeText(location.href); e.target.textContent = TI.copiado; }
   catch { e.target.textContent = location.href; }
-  setTimeout(() => { e.target.textContent = 'Copiar enlace'; }, 2000);
+  setTimeout(() => { e.target.textContent = TI.copiarEnlace; }, 2000);
 });
 $('salir-lobby').addEventListener('click', salirDeSala);
 $('iniciar').addEventListener('click', () => {
@@ -207,41 +218,75 @@ $('iniciar').addEventListener('click', () => {
 function avisar(t) { $('aviso').textContent = t; ui.aviso(t); }
 function colorCss(c) { return '#' + c.toString(16).padStart(6, '0'); }
 
+// ---------- Vistas: dónde está la cámara ----------
+// Decide la vista al cambiar de fase: diseño → portátil; misión/informe → sala de control; briefing → mirar la sala.
+function vistaAutomatica(fase) {
+  if (fase === faseVista) return;
+  const antes = faseVista;
+  faseVista = fase;
+  if (fase === 'briefing') irA('sala', !antes);
+  else if (['diseno', 'restricciones', 'verificacion'].includes(fase)) { if (!(lugar === 'control' && antes && antes !== 'informe' && antes !== 'mision')) irA('laptop', !antes); }
+  else if (fase === 'mision' || fase === 'informe') irA('control', !antes);
+}
+
+let fundido = null;
+// v: 'sala' | 'laptop' | 'control'. 'control' cambia de sala con un fundido; volver de control a 'sala' también.
+function irA(v, inmediato = false) {
+  if (!enJuego()) return;
+  if (v === 'laptop' && !miRol()) return;
+  const nuevoLugar = v === 'control' ? 'control' : 'briefing';
+  if (nuevoLugar !== lugar) {
+    const cambiar = () => { lugar = nuevoLugar; vista = v; empezarTransicion(true); actualizarTodo(); };
+    if (inmediato) { cambiar(); return; }
+    clearTimeout(fundido);
+    $('fundido').classList.add('on');
+    pantallaLista = false;
+    actualizarTodo();
+    fundido = setTimeout(() => { cambiar(); setTimeout(() => $('fundido').classList.remove('on'), 60); }, 320);
+    return;
+  }
+  if (v === vista && pantallaLista) return;
+  vista = v;
+  if (v === 'sala') { mirada.yaw = 0; mirada.pitch = -0.25; }
+  empezarTransicion(inmediato);
+  actualizarTodo();
+}
+
 function actualizarTodo() {
   const e = estado();
   const rol = miRol();
 
-  // Pantalla: con la misión en marcha y un rol, se entra a la sala de briefing.
-  if (pantalla === 'lobby' && e && e.fase !== 'lobby' && rol && !lobbyForzado) pantalla = 'sala';
+  if (pantalla === 'lobby' && e && e.fase !== 'lobby' && rol && !lobbyForzado) { pantalla = 'sala'; faseVista = null; }
   if (pantalla === 'sala' && !rol) pantalla = 'lobby';
-  if (pantalla === 'sala' && e && e.fase === 'lobby') pantalla = 'lobby'; // "New mission" desde el informe
+  if (pantalla === 'sala' && e && e.fase === 'lobby') pantalla = 'lobby';
+  if (enJuego()) vistaAutomatica(e.fase);
+  else { faseVista = null; lugar = 'briefing'; vista = 'sala'; pantallaLista = false; }
 
   $('inicio').classList.toggle('oculto', pantalla !== 'inicio');
   $('lobby').classList.toggle('oculto', pantalla !== 'lobby');
-  const verSala = pantalla === 'sala' && e?.fase === 'briefing';
-  document.body.classList.toggle('en-sala', verSala);
-  renderEtiquetas.domElement.style.display = verSala ? '' : 'none';
+  const enSala = pantalla === 'sala' && lugar === 'briefing';
+  document.body.classList.toggle('en-sala', enSala && vista === 'sala');
+  document.body.classList.toggle('en-juego', pantalla === 'sala');
+  renderEtiquetas.domElement.style.display = enSala && vista === 'sala' ? '' : 'none';
   ui.pintar({
-    estado: e, rol, jugadorId, nick, activo: pantalla === 'sala',
+    estado: e, rol, jugadorId, nick, activo: pantalla === 'sala', vista: pantalla === 'sala' ? vista : 'sala', pantallaLista,
     enLinea: e ? T.online(conectados(e).length, MAX_JUGADORES) : '',
     intentar: (tipo, payload) => sesion?.intentar(tipo, payload),
     volverAlLobby: () => { lobbyForzado = true; pantalla = 'lobby'; actualizarTodo(); },
+    irA: (v) => irA(v),
   });
   if (pantalla === 'inicio') return;
 
   const ul = $('tripulacion');
   ul.replaceChildren();
   if (!e) {
-    $('contador').textContent = 'CONECTANDO…';
+    $('contador').textContent = TI.conectando;
     const li = document.createElement('li');
     li.className = 'tenue';
-    li.textContent = 'Buscando a la tripulación en la sala…';
+    li.textContent = TI.buscando;
     ul.appendChild(li);
   } else {
-    // Sin ningún relé no hay sala compartida: mejor decirlo que enseñar un "1/4" que parece normal.
-    $('contador').textContent = transporte?.enLinea().listos
-      ? `${conectados(e).length}/${MAX_JUGADORES} EN LA SALA`
-      : 'SIN CONEXIÓN · REINTENTANDO…';
+    $('contador').textContent = transporte?.enLinea().listos ? TI.enLaSala(conectados(e).length, MAX_JUGADORES) : TI.sinConexion;
     const miembros = Object.entries(e.jugadores).sort((a, b) => a[1].orden - b[1].orden);
     for (const [id, j] of miembros) {
       const r = ROLES[indiceRol(j.rol)];
@@ -252,42 +297,40 @@ function actualizarTodo() {
       punto.style.background = r ? colorCss(r.color) : '#3a4250';
       const n = document.createElement('span');
       n.className = 'nick';
-      n.textContent = j.nick + (id === jugadorId ? ' (tú)' : '') + (id === sesion.etiqueta.host ? ' ★' : '');
-      if (id === sesion.etiqueta.host) n.title = 'Anfitrión de la sala';
+      n.textContent = j.nick + (id === jugadorId ? ' ' + TI.tu : '') + (id === sesion.etiqueta.host ? ' ★' : '');
+      if (id === sesion.etiqueta.host) n.title = TI.anfitrion;
       const t = document.createElement('span');
       t.className = 'rol';
-      t.textContent = (r ? r.nombre : 'eligiendo rol…') + (j.conectado ? '' : ' · desconectado');
+      t.textContent = (r ? r.nombre : TI.eligiendoRol) + (j.conectado ? '' : TI.desconectado);
       li.append(punto, n, t);
       ul.appendChild(li);
     }
   }
 
-  // Botones de rol
   for (const b of listaRoles.children) {
     const d = e ? duenoDeRol(e, b.dataset.rol) : null;
     const otro = d && d[0] !== jugadorId ? d[1] : null;
     b.disabled = !e || !!otro || !sesion?.yo();
     b.classList.toggle('mio', rol === b.dataset.rol);
     b.querySelector('small').textContent = otro
-      ? `${otro.conectado ? 'Ocupado' : 'Reservado'} por ${otro.nick}`
-      : rol === b.dataset.rol ? 'Tu rol · clic para soltarlo' : 'Libre';
+      ? (otro.conectado ? TI.ocupadoPor(otro.nick) : TI.reservadoPor(otro.nick))
+      : rol === b.dataset.rol ? TI.rolPropio : TI.libre;
   }
 
-  // Botón de inicio
   const btn = $('iniciar');
   if (e && e.fase !== 'lobby') {
-    btn.textContent = 'Entrar a la misión';
+    btn.textContent = TI.entrarMision;
     btn.disabled = !rol;
-    if (!rol && !$('aviso').textContent) avisar('La misión ya empezó. Elige un rol libre para entrar.');
+    if (!rol && !$('aviso').textContent) avisar(TI.yaEmpezo);
   } else {
-    btn.textContent = 'Iniciar misión';
+    btn.textContent = TI.iniciarMision;
     const sinRol = e ? conectados(e).filter(([, j]) => !j.rol).length : 1;
     btn.disabled = !e || !rol || sinRol > 0;
-    btn.title = btn.disabled ? 'Todos los jugadores tienen que elegir rol' : '';
+    btn.title = btn.disabled ? TI.todosRol : '';
   }
-  if (e && !sesion.yo() && !$('aviso').textContent) avisar('Entrando en la sala…');
-  else if (sesion.yo() && $('aviso').textContent === 'Entrando en la sala…') avisar('');
-  if (versionAjena) avisar('Alguien en la sala tiene otra versión del juego. Recargad la página (Ctrl+F5) todos.');
+  if (e && !sesion.yo() && !$('aviso').textContent) avisar(TI.entrandoSala);
+  else if (sesion.yo() && $('aviso').textContent === TI.entrandoSala) avisar('');
+  if (versionAjena) avisar(TI.versionAjena);
 
   actualizarAvatares();
 }
@@ -310,41 +353,57 @@ function actualizarAvatares() {
   });
 }
 
+let repartoVisto = null; // quien llega tarde ve las carpetas ya en la mesa, sin cinemática
 function pintarMesa() {
-  const b = estado()?.briefing;
+  const e = estado();
+  const b = e?.briefing;
   if (!b) return;
   for (const [id, c] of Object.entries(sala.casillas)) c.material.color.set(b[id] ? 0x2f8f4f : 0xffffff);
-  sala.carpetas.forEach((c) => {
-    const abierta = !!b.carpetas[c.userData.id];
-    c.material.color.set(abierta ? 0xf6dc8a : 0xe8b84a);
-    c.scale.x = abierta ? 1.9 : 1;
-  });
+  sala.elegirEscenario(e.mision?.escenario ?? null);
+  if (b.repartos !== repartoVisto) {
+    const animar = repartoVisto !== null && pantalla === 'sala' && e.fase === 'briefing';
+    sala.repartir(b.reparto, animar);
+    repartoVisto = b.repartos;
+    if (animar && vista !== 'sala') irA('sala');
+  }
+  sala.marcarCarpeta(e.mision?.id ?? null);
 }
 actualizarTodo();
-// El aviso de "sin conexión" no depende de ningún mensaje: se repasa cada 2 s mientras se ve el lobby.
 let enLineaAntes = true;
 setInterval(() => {
   const ok = !sesion || !transporte || transporte.enLinea().listos > 0;
   if (ok !== enLineaAntes && pantalla === 'lobby') actualizarTodo();
   enLineaAntes = ok;
 }, 2000);
-window.__depurar = { sesion: () => sesion, transporte: () => transporte, mirada, camara: camaraSala, clicables: sala.clicables, THREE };
+window.__depurar = { sesion: () => sesion, transporte: () => transporte, mirada, camara: camaraSala, clicables: sala.clicables, THREE, irA: (v) => irA(v), estadoVista: () => ({ lugar, vista, pantallaLista }) };
 
-// Si el enlace trae código de sala, abrimos directamente el diálogo de unirse.
+let moduloLocal = null;
 if (SIMULADO) {
   import('./pantallas/_simulado.js').then((m) => { moduloSimulado = m; nick = nick || 'Tester'; entrarEnSala('SIM01'); });
+} else if (params.get('local') === '1') {
+  import('./red/transporte-memoria.js').then((m) => { moduloLocal = m; nick = nick || 'Solo'; entrarEnSala('LOCAL1'); });
 } else if (/^#[A-Za-z0-9]{4,8}$/.test(location.hash)) $('btn-unirse').click();
 
-// ---------- Mirar (arrastrar) y clic, solo en la sala ----------
+// ---------- Teclado ----------
+addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Escape' || !enJuego()) return;
+  if (document.querySelector('dialog[open]')) return;
+  if (ui.overlay) { ui.cerrar(); return; }
+  if (!$('modal-evento').classList.contains('oculto')) return;
+  if (vista !== 'sala') irA('sala');
+});
+
+// ---------- Mirar (arrastrar) y clic, solo mirando la sala de briefing ----------
 let arrastre = null;
 const raycaster = new THREE.Raycaster();
+const puedeMirar = () => enJuego() && lugar === 'briefing' && vista === 'sala' && !ui.overlay;
 contenedor.addEventListener('pointerdown', (e) => {
-  if (pantalla !== 'sala' || !enBriefing()) return;
+  if (!puedeMirar()) return;
   arrastre = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY };
   contenedor.setPointerCapture(e.pointerId);
 });
 contenedor.addEventListener('pointermove', (e) => {
-  if (!arrastre) return;
+  if (!arrastre) { if (puedeMirar()) resaltar(e); return; }
   const s = ajustes.sensibilidad;
   mirada.yaw = THREE.MathUtils.clamp(mirada.yaw - (e.clientX - arrastre.x) * s, -1.9, 1.9);
   mirada.pitch = THREE.MathUtils.clamp(mirada.pitch - (e.clientY - arrastre.y) * s, -1.1, 1.0);
@@ -354,33 +413,123 @@ contenedor.addEventListener('pointermove', (e) => {
 contenedor.addEventListener('pointerup', (e) => {
   const fueClic = arrastre && Math.hypot(e.clientX - arrastre.x0, e.clientY - arrastre.y0) < 6;
   arrastre = null;
-  if (fueClic && pantalla === 'sala' && enBriefing()) clic(e);
+  if (fueClic && puedeMirar()) clic(e);
 });
 
-function clic(e) {
+function tocado(e) {
   const p = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(p, camaraSala);
-  const [hit] = raycaster.intersectObjects(sala.clicables);
+  return raycaster.intersectObjects(sala.clicables).filter((x) => x.object.userData.activo !== false)[0] ?? null;
+}
+function resaltar(e) {
+  const hit = tocado(e);
+  contenedor.style.cursor = hit ? 'pointer' : '';
+}
+
+function clic(e) {
+  const hit = tocado(e);
   if (!hit) return;
-  const { tipo, id } = hit.object.userData;
-  if (tipo === 'casilla') sesion?.intentar('marcarPizarra', { id });
-  if (tipo === 'carpeta') sesion?.intentar('abrirCarpeta', { rol: id });
+  const d = hit.object.userData;
+  const fase = estado()?.fase;
+  if (d.tipo === 'casilla') sesion?.intentar('marcarPizarra', { id: d.id });
+  if (d.tipo === 'escenario' && fase === 'briefing') sesion?.intentar('elegirMision', { escenario: d.id });
+  if (d.tipo === 'carpeta' && d.id) ui.abrir({ tipo: 'expediente', id: d.id });
+  if (d.tipo === 'laptop') irA('laptop');
+  if (d.tipo === 'manual') ui.abrir({ tipo: 'manual', rol: d.rol });
+  if (d.tipo === 'puerta') irA('control');
+}
+
+// ---------- Cámara: pose objetivo por vista y transición suave ----------
+const posCabeza = new THREE.Vector3();
+const objetivo = { pos: new THREE.Vector3(), quat: new THREE.Quaternion() };
+const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+const mLook = new THREE.Matrix4();
+let transicion = null;
+const suave = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
+
+function empezarTransicion(inmediato) {
+  pantallaLista = false;
+  transicion = inmediato ? { t: 1, p0: camaraSala.position.clone(), q0: camaraSala.quaternion.clone() } : { t: 0, p0: camaraSala.position.clone(), q0: camaraSala.quaternion.clone() };
+}
+
+// Encuadra un rectángulo (centro, normal hacia el espectador, arriba, ancho, alto) llenando `llenado` de la vista.
+function encuadrar(rect, llenado, out) {
+  const tan = Math.tan(THREE.MathUtils.degToRad(camaraSala.fov / 2));
+  const d = Math.max((rect.alto / 2) / tan, (rect.ancho / 2) / (tan * camaraSala.aspect)) / llenado;
+  out.pos.copy(rect.centro).addScaledVector(rect.normal, d);
+  mLook.lookAt(out.pos, rect.centro, rect.arriba);
+  out.quat.setFromRotationMatrix(mLook);
+}
+
+const puntoMirar = new THREE.Vector3();
+function poseObjetivo(out) {
+  const i = Math.max(0, indiceRol(miRol()));
+  if (lugar === 'control') { encuadrar(PARED, 0.97, out); return; }
+  if (vista === 'laptop') { encuadrar(sala.pantallaLaptop(i), 0.96, out); return; }
+  sala.avatares[i].cabeza.getWorldPosition(posCabeza);
+  out.pos.copy(posCabeza);
+  if (sala.enCinematica && sala.puntoCinematica(puntoMirar)) {
+    mLook.lookAt(posCabeza, puntoMirar, camaraSala.up);
+    out.quat.setFromRotationMatrix(mLook);
+    return;
+  }
+  euler.set(mirada.pitch, ASIENTOS[i].ry + Math.PI + mirada.yaw, 0);
+  out.quat.setFromEuler(euler);
+}
+
+// Proyecta la pantalla (portátil o pared) a píxeles y coloca encima el DOM escalado.
+const v3 = new THREE.Vector3();
+let rectoAnterior = '';
+function colocarPantalla() {
+  if (!pantallaLista || pantalla !== 'sala') return;
+  const rect = lugar === 'control' ? PARED : sala.pantallaLaptop(Math.max(0, indiceRol(miRol())));
+  const L = LOGICO[lugar === 'control' ? 'control' : 'laptop'];
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const esquinas = rect.esquinas ?? [[-1, 1], [1, 1], [1, -1], [-1, -1]].map(([sx, sy]) => new THREE.Vector3(rect.centro.x + sx * rect.ancho / 2, rect.centro.y + sy * rect.alto / 2, rect.centro.z));
+  for (const p of esquinas) {
+    v3.copy(p).project(camaraSala);
+    const x = (v3.x + 1) / 2 * innerWidth, y = (1 - v3.y) / 2 * innerHeight;
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+  }
+  const s = Math.min((x1 - x0) / L.w, (y1 - y0) / L.h);
+  const clave = `${x0.toFixed(1)}|${y0.toFixed(1)}|${s.toFixed(4)}|${L.w}`;
+  if (clave === rectoAnterior) return;
+  rectoAnterior = clave;
+  const cx = (x0 + x1) / 2 - (L.w * s) / 2, cy = (y0 + y1) / 2 - (L.h * s) / 2;
+  Object.assign(raizPantalla.style, { width: L.w + 'px', height: L.h + 'px', transform: `translate(${cx}px, ${cy}px) scale(${s})` });
 }
 
 // ---------- Bucle (solo dibuja: la lógica de red no depende de él) ----------
-const posCabeza = new THREE.Vector3();
 const reloj = new THREE.Clock();
-let tFondo = 0;
+let tFondo = 0, tControl = 0;
 function bucle() {
-  const dt = reloj.getDelta();
-  const rol = miRol();
-  if (pantalla === 'sala' && rol && enBriefing()) {
-    const i = indiceRol(rol);
-    sala.avatares[i].cabeza.getWorldPosition(posCabeza);
-    camaraSala.position.copy(posCabeza);
-    camaraSala.rotation.set(mirada.pitch, ASIENTOS[i].ry + Math.PI + mirada.yaw, 0);
-    render.render(sala.escena, camaraSala);
-    renderEtiquetas.render(sala.escena, camaraSala);
+  const dt = Math.min(0.1, reloj.getDelta());
+  sala.actualizar(dt);
+  if (pantalla === 'sala' && miRol()) {
+    poseObjetivo(objetivo);
+    if (transicion && transicion.t < 1) {
+      transicion.t = Math.min(1, transicion.t + dt / 0.75);
+      const u = suave(transicion.t);
+      camaraSala.position.lerpVectors(transicion.p0, objetivo.pos, u);
+      camaraSala.quaternion.slerpQuaternions(transicion.q0, objetivo.quat, u);
+    } else {
+      camaraSala.position.copy(objetivo.pos);
+      if (vista === 'sala' && lugar === 'briefing' && sala.enCinematica) camaraSala.quaternion.slerp(objetivo.quat, Math.min(1, dt * 4));
+      else camaraSala.quaternion.copy(objetivo.quat);
+      if (transicion) {
+        transicion = null;
+        if (vista !== 'sala') { pantallaLista = true; rectoAnterior = ''; actualizarTodo(); }
+      }
+    }
+    if (lugar === 'control') {
+      tControl += dt;
+      control.actualizar(tControl);
+      render.render(control.escena, camaraSala);
+    } else {
+      render.render(sala.escena, camaraSala);
+      if (vista === 'sala') renderEtiquetas.render(sala.escena, camaraSala);
+    }
+    colocarPantalla();
   } else {
     if (ajustes.animar) tFondo += dt;
     centro.actualizar(tFondo);
@@ -388,4 +537,5 @@ function bucle() {
   }
   requestAnimationFrame(bucle);
 }
+aplicarCalidad();
 bucle();

@@ -81,17 +81,17 @@ function loteRol(c, rol, activo) {
     if (editable) {
       if (p && lista(p.opciones).length > 1) baldosa.append(selectorOpcion(p, m.op, (v) => c.enviar('montar', conRol(c, rol, { pieza: id, op: v, uso: m.uso }))));
       if (p?.uso) {
-        const lbl = h('span', { class: 'uso-valor' }, `${m.uso ?? p.uso.def} h`);
+        const lbl = h('span', { class: 'uso-valor' }, `${m.uso ?? p.uso.def} ${T.hoursShort}`);
         const rng = h('input', {
           type: 'range', min: p.uso.min ?? 0, max: p.uso.max ?? 24, step: 1, value: m.uso ?? p.uso.def, 'aria-label': T.usage,
-          oninput: (ev) => { lbl.textContent = `${ev.target.value} h`; },
+          oninput: (ev) => { lbl.textContent = `${ev.target.value} ${T.hoursShort}`; },
           onchange: (ev) => c.enviar('montar', conRol(c, rol, { pieza: id, op: m.op, uso: Number(ev.target.value) })),
         });
         baldosa.append(h('label', { class: 'uso' }, h('small', {}, T.usage), rng, lbl));
       } else baldosa.append(h('small', { class: 'tenue' }, T.alwaysOn));
       baldosa.append(h('button', { class: 'btn-plano peligro', type: 'button', onclick: () => c.enviar('quitar', conRol(c, rol, { pieza: id })) }, T.remove));
     } else {
-      baldosa.append(h('small', { class: 'tenue' }, `${T.option} ${m.op ?? '?'}${p?.uso ? ` · ${m.uso ?? '?'} h/day` : ''}`));
+      baldosa.append(h('small', { class: 'tenue' }, `${T.option} ${m.op ?? '?'}${p?.uso ? ` · ${m.uso ?? '?'} ${T.hoursPerDay}` : ''}`));
     }
     baldosa.append(datosOpcion(c, op));
     caja.append(baldosa);

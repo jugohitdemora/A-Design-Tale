@@ -1,5 +1,6 @@
 // Shared helpers for all screens. No state here.
 import { T } from '../textos.js';
+import { tx, depto } from '../i18n.js';
 
 export const ROLES_IDS = ['vuelo', 'ciencia', 'potencia', 'comms'];
 export const ROL_COLOR = { vuelo: '#d9822b', ciencia: '#3fa66b', potencia: '#e0c040', comms: '#4a7fd0' };
@@ -28,8 +29,9 @@ export function h(tag, attrs, ...hijos) {
   return el;
 }
 
-// Text of a bilingual field ({es,en}) or a plain string.
-export const en = (x) => (x == null ? '' : typeof x === 'string' ? x : x.en ?? x.es ?? '');
+// Texto de un campo bilingüe ({es,en}) o de un texto plano, en la lengua activa. `en` se conserva como alias.
+export { tx };
+export const en = (x) => tx(x);
 
 export const lista = (x) => (Array.isArray(x) ? x : x && typeof x === 'object' ? Object.values(x) : []);
 
@@ -51,7 +53,7 @@ export function valor(c, x, unidad = '') {
   return el;
 }
 
-export const nombreRol = (r) => T.roles[r] ?? r;
+export const nombreRol = (r) => depto(r);
 export const sinCero = (n) => (n == null ? 0 : n);
 
 // Is a role vacant (nobody connected owns it)?

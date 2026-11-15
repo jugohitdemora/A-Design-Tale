@@ -1,0 +1,30 @@
+/* Laptop de cada asiento: la pantalla del portátil 3D muestra #pantalla encima (main.js la coloca sobre la pantalla proyectada).
+   Tokens compartidos por todas las apps del portátil (constructor, cámara de lanzamiento, contingencias, manual, expediente).
+   Estética: software de agencia de los 90 en pixel art (ver Concept art/): fondo azul claro, paneles crema, tinta azul marino,
+   plano azul de ingeniería con rejilla. Las apps solo usan estas variables, nunca colores sueltos. */
+:root {
+  --lp-escritorio: #8fcbd9;     /* fondo de la pantalla */
+  --lp-panel: #f3ead6;          /* paneles crema */
+  --lp-panel-2: #e6dbc2;        /* panel hundido / filas alternas */
+  --lp-tinta: #1d2a3a;          /* texto principal */
+  --lp-tenue: #5d6876;          /* texto secundario */
+  --lp-borde: #33404f;          /* bordes de 2px tipo pixel */
+  --lp-sel: #c9e2f2;            /* fila seleccionada */
+  --lp-acento: #2a6f97;         /* botones primarios */
+  --lp-acento-txt: #ffffff;
+  --lp-plano: #1f7fa8;          /* plano de ingeniería */
+  --lp-plano-linea: rgba(255, 255, 255, 0.16);
+  --lp-plano-tinta: #eaf6ff;
+  --lp-ok: #2f8f4f;
+  --lp-aviso: #d19a1e;
+  --lp-mal: #c2412f;
+  --lp-barra: #263445;          /* barra de tareas */
+  --lp-rol-vuelo: #d9822b;
+  --lp-rol-ciencia: #3fa66b;
+  --lp-rol-potencia: #e0c040;
+  --lp-rol-comms: #4a7fd0;
+  --lp-radio: 3px;
+  --lp-sombra: 3px 3px 0 rgba(0, 0, 0, 0.25);   /* sombra dura, estilo pixel */
+  --lp-pixel: 'Press Start 2P', monospace;      /* títulos cortos en mayúsculas */
+  --lp-ui: 'Space Grotesk', system-ui, sans-serif;
+}

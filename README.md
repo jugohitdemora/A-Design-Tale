@@ -36,6 +36,18 @@ Abre `http://localhost:8770/` en dos pestañas o en dos equipos con la **misma U
 - **Ajustes:** sensibilidad de la cámara, calidad gráfica y animación del fondo (se guardan en el navegador).
 - **Revisar pantallas sin red:** `http://localhost:8770/?simulado=1` usa datos y reglas falsos (`src/pantallas/_simulado.js`) y una barra morada para saltar de fase o de rol. Parámetros: `fase` (`briefing`, `diseno`, `restricciones`, `verificacion`, `mision`, `informe`), `rol` (`vuelo`, `ciencia`, `potencia`, `comms`), `jugadores` (1 a 4; los roles sin jugador quedan vacantes).
 
+## Flujo dentro del 3D (versión actual)
+
+Todo el juego ocurre en el entorno 3D; las interfaces se proyectan sobre objetos de la escena.
+
+- **Sala de briefing:** clic en un holograma del proyector para elegir escenario. El jefe pone 3 carpetas sobre la mesa (cinemática; el reparto es aleatorio con la semilla de la partida y siempre incluye la misión jugable). Clic en una carpeta abre el expediente: se asigna la misión, se marcan los objetivos (el prioritario es obligatorio; la ambición fija los eventos de diseño) y cada jugador pulsa "Listo". El diseño empieza cuando toda la tripulación está lista.
+- **Portátil de cada asiento** (clic en el portátil o botón "Portátil"; Esc para levantar la vista): AGENCIA·OS con Constructor tipo KSP (`src/laptop/constructor.js`), Cámara de lanzamiento (`camara-lanzamiento.js`), Contingencias por departamento (`contingencias.js`), Estado, Verificación, Informe, Expediente y Manual SOP (`manual.js`).
+- **Manual SOP** de cada departamento: en el portátil o clic en la carpeta de anillas de la mesa.
+- **Expediente siempre visible:** pestaña abajo a la derecha (se despliega al pasar el ratón; clic para abrirlo entero).
+- **Sala de control de misión** (puerta de la sala o botón "Sala de control"): en diseño, planificación de ruta (`src/control/planificador.js`): ruta, ventana de lanzamiento (curva de ΔV; fuera del óptimo hay más propelente) y sitio/órbita sobre mapas reales (LROC, LOLA, MESSENGER, OSIRIS) con capas de datos (algunas calculadas, otras aproximadas y marcadas "≈ juego"). En misión, consola de operaciones estilo GMAT (`src/control/operaciones.js`) con propagador RK4 de dos cuerpos (`src/control/propagador.js`), secuencia de misión, script, telemetría y activación de contingencias por el departamento dueño.
+- **Idioma:** Ajustes → Idioma / Language (ES/EN), local de cada jugador (`src/i18n.js`).
+- **Jugar en solitario sin red:** `http://localhost:8770/?local=1` usa las reglas y datos reales con un transporte en memoria (los departamentos vacantes los opera el jugador).
+
 ## Archivos
 
 - `index.html`: cartel de inicio, diálogos, lobby, contenedores de las pantallas de juego e importmap.

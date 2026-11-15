@@ -1,6 +1,202 @@
-// Every interface string of the game screens (RULE-08: English, one table).
-// The lobby and start screen still use Spanish strings in main.js / index.html / config.js (see README).
-export const T = {
+// Todas las cadenas de la interfaz de las pantallas de juego, en español e inglés (misma lista de claves en las dos lenguas).
+// T lee siempre la lengua activa (src/i18n.js). Lobby e inicio: src/textos-inicio.js.
+import { textos, depto } from './i18n.js';
+
+export const T = textos({
+  es: {
+  loadingRules: 'Cargando reglas y datos...',
+  rulesFailed: 'No se pudo cargar el módulo de reglas o de datos',
+  noMission: 'Todavía no se ha elegido misión.',
+  noData: 'Sin datos',
+  none: 'ninguno',
+  yes: 'sí',
+  no: 'no',
+
+  // franja superior
+  phases: { briefing: 'Expediente', diseno: 'Diseño', restricciones: 'Restricciones', verificacion: 'Verificación', mision: 'Misión', informe: 'Informe' },
+  online: (n, max) => `${n}/${max} en línea`,
+  toLobby: 'Sala',
+  get roles() { return { vuelo: depto('vuelo'), ciencia: depto('ciencia'), potencia: depto('potencia'), comms: depto('comms') }; },
+  get rolesLong() { return { vuelo: depto('vuelo', 'largo'), ciencia: depto('ciencia', 'largo'), potencia: depto('potencia', 'largo'), comms: depto('comms', 'largo') }; },
+  noRole: 'sin rol',
+  you: 'tú',
+
+  // briefing
+  briefingTitle: 'Expediente de la misión',
+  pickScenario: '1. Elige un escenario',
+  pickMission: '2. Elige una misión',
+  pickDifficulty: '3. Elige una dificultad',
+  scenarios: { orbita: 'Órbita', landing: 'Aterrizaje', exploracion: 'Exploración' },
+  difficulty: { facil: 'Fácil (1 evento de diseño)', normal: 'Normal (2 eventos de diseño)', dificil: 'Difícil (3 eventos de diseño)' },
+  comingNext: 'Próximamente',
+  playable: 'Jugable',
+  missionSheet: 'Ficha de la misión',
+  target: 'Destino',
+  goals: 'Objetivos',
+  priorityGoal: 'PRIORITARIO',
+  realMissionRef: 'Misión real de referencia',
+  budget: 'Presupuesto',
+  startDesign: 'Empezar el diseño',
+  startHint: 'Primero elige una misión jugable.',
+  dragHint: 'Arrastra para mirar alrededor. La sala es compartida.',
+  noScenarios: 'No hay escenarios en el módulo de datos.',
+
+  // taller
+  tabs: { taller: 'Taller', cohete: 'Cohete', ruta: 'Ruta', riesgos: 'Riesgos' },
+  actingAs: 'Trabajando en el taller de:',
+  vacant: 'vacante',
+  partsList: (rol) => `Piezas: ${rol}`,
+  noParts: 'No hay piezas para este departamento en esta misión.',
+  mount: 'Montar',
+  mounted: 'Montada',
+  remove: 'Quitar',
+  option: 'Opción',
+  usage: 'Uso (h/día)',
+  blueprint: 'Plano',
+  blueprintEmpty: 'Todavía no hay nada montado.',
+  readOnly: 'solo lectura (otro departamento)',
+  contributes: 'Aporta',
+  aporta: { potencia: 'W de potencia', bateria: 'Wh de batería', bajada: 'kbps de bajada', volumen: 'L de volumen' },
+  alwaysOn: 'siempre encendida',
+  contribTo: 'Ciencia para',
+  mass: 'Masa', power: 'Potencia', price: 'Precio', rate: 'Tasa de datos', volume: 'Volumen',
+  gameValue: 'valor de juego, aún sin dato real',
+  sourceLabel: 'fuente',
+  addDisabled: 'No se pueden añadir piezas en Restricciones.',
+  requestReview: 'Pedir revisión',
+  reviewsDone: (n) => `Revisiones pedidas: ${n}`,
+  reviewHint: 'Una revisión puede activar antes un evento de diseño.',
+  lastReview: (nivel, barras) => ({
+    fuera: `Última revisión: rechazada. Pasa del 20 % de tolerancia: ${barras}. Corrige el diseño y vuelve a pedirla.`,
+    tolerancia: `Última revisión: dentro de la tolerancia. Pasa del límite: ${barras}.`,
+    dentro: 'Última revisión: todas las barras dentro de sus límites.',
+    evento: 'Última revisión: antes entró un evento de diseño. Adapta el diseño y vuelve a pedirla.',
+  })[nivel] ?? '',
+  designStatus: { dentro: 'Todas las barras están dentro de sus límites.', tolerancia: 'Algunas barras pasan del límite pero están dentro del 20 %: recórtalas en Restricciones.', fuera: 'Algunas barras pasan más del 20 %: redúcelas antes de que la revisión sea aprobada.' },
+
+  // panel global
+  globalPanel: 'Estado global',
+  categories: { actitud: 'control de actitud', antena: 'antena', bateria: 'batería', camara: 'cámara', computador: 'computador', estructura: 'estructura', guiado: 'guiado', instrumento: 'instrumento', memoria: 'almacenamiento de datos', navegacion: 'navegación', paneles: 'paneles solares', polvo: 'control de polvo', propulsion: 'propulsión', proteccion: 'blindaje', sondas: 'sondas', termica: 'térmica', tierra: 'segmento terrestre' },
+  bars: { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Enlace de datos', presupuesto: 'Presupuesto', volumen: 'Volumen' },
+  units: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/día', presupuesto: 'M USD', volumen: 'L' },
+  barState: { ok: 'OK', tolerancia: 'Sobre el límite (tolerancia)', exceso: 'Excede demasiado' },
+  marker100: '100%', marker120: '120%',
+  science: 'Cobertura científica',
+  crew: 'Tripulación',
+  signed: 'firmado', notSigned: 'sin firmar',
+
+  // cohete
+  rocketTitle: 'Cohete',
+  prev: 'Anterior', next: 'Siguiente',
+  capacityTo: (dest) => `Capacidad a ${dest}`,
+  rocketPrice: 'Precio',
+  nasaUse: 'Uso de la NASA',
+  operator: 'Operador',
+  select: 'Elegir',
+  selected: 'Elegido',
+  onlyRole: (rol) => `Solo ${rol} puede elegir (o cualquiera, si ese departamento está vacante).`,
+  noRockets: 'No hay cohetes listados para esta misión.',
+
+  // ruta
+  routeTitle: 'Ruta',
+  days: 'Duración', days_unit: 'días',
+  propellant: 'Masa de propelente',
+  effect: 'Efecto',
+  noEffect: 'no cambia las probabilidades',
+  effectText: (fase, dp) => `${fase}: ${dp > 0 ? '+' : ''}${Math.round(dp * 100)} % de probabilidad`,
+  noRoutes: 'No hay rutas listadas para esta misión.',
+
+  // riesgos
+  risksTitle: 'Mazo de riesgos',
+  contingenciesTitle: 'Contingencias',
+  contingenciesHint: (n, max) => `Cuestan recursos. Elegidas: ${n}/${max}.`,
+  probability: 'Probabilidad',
+  mitigated: 'Mitigado',
+  notMitigated: 'Sin mitigar',
+  realCase: 'Caso real',
+  buy: 'Tomar', drop: 'Soltar', taken: 'Tomada',
+  mitigates: 'Mitiga',
+  noRisks: 'Todavía no hay riesgos que mostrar.',
+  noContingencies: 'No hay contingencias para esta misión.',
+  phase: 'Fase',
+
+  // modal de evento de diseño
+  designEvent: 'Evento de diseño',
+  changed: 'Qué cambió',
+  close: 'Cerrar',
+  eff: {
+    presupuesto: (v) => `Presupuesto ${v > 0 ? '+' : ''}${v} M USD`,
+    limite: (r, f) => `Límite de ${r} x${f}`,
+    prioridad: (id) => `Ahora la meta prioritaria es ${id}`,
+  },
+
+  // restricciones
+  constraintsTitle: 'Restricciones: recorta el diseño',
+  constraintsLead: 'Solo puedes quitar piezas, bajar el uso o cambiar a una opción que no suba ninguna barra que esté sobre su límite. Pide una revisión cuando todas las barras estén en verde.',
+  over: (nombre, usado, limite, pct, u) => `${nombre}: ${usado} de ${limite} ${u} (+${pct} %)`,
+  nothingOver: 'Ninguna barra pasa su límite.',
+
+  // verificación
+  verifTitle: 'Verificación',
+  verifLead: 'Todas las comprobaciones deben pasar y los cuatro departamentos deben firmar antes del lanzamiento.',
+  checks: 'Comprobaciones',
+  pass: 'PASA', fail: 'FALLA',
+  signatures: 'Firmas',
+  sign: 'Firmar', unsign: 'Retirar firma',
+  launch: 'Lanzar',
+  backToDesign: 'Volver al diseño',
+  launchHint: 'Se necesitan todas las comprobaciones aprobadas y cuatro firmas.',
+  signHint: 'Editar el diseño borra las firmas.',
+
+  // misión
+  missionTitle: 'Control de misión',
+  steps: 'Fases de la misión',
+  stepPending: 'en espera',
+  success: 'Éxito', failure: 'Fallo',
+  eventFired: 'Evento',
+  mitigatedBy: 'mitigado por una contingencia',
+  notMitigatedShort: 'sin mitigar',
+  dataReceived: 'Datos recibidos',
+  generated: 'generados',
+  downlinked: 'bajados',
+  lost: 'perdidos (no cupieron en el enlace)',
+  nextStep: 'Siguiente',
+  toReport: 'Ir al informe',
+  noResult: 'Todavía no hay resultado de vuelo.',
+  endOfFlight: 'Vuelo completo.',
+
+  // informe
+  reportTitle: 'Informe de la misión',
+  verdicts: { total: 'Éxito total', parcial: 'Éxito parcial', fallida: 'Misión fallida' },
+  verdictText: {
+    total: 'Se cumplió la meta prioritaria y volvió a casa al menos el 80 % de la ciencia.',
+    parcial: 'Se cumplió la meta prioritaria, pero volvió a casa menos del 80 % de la ciencia.',
+    fallida: 'Se perdió la meta prioritaria.',
+  },
+  points: 'Puntaje',
+  causes: 'Qué pasó, paso a paso',
+  scienceAchieved: 'Ciencia lograda',
+  achieved: 'lograda', notAchieved: 'no lograda',
+  hidden: 'Hallazgos ocultos',
+  finalBars: 'Barras finales',
+  realMission: 'Misión real',
+  agency: 'Agencia',
+  realRocket: 'Cohete real',
+  foundReally: 'Lo que realmente encontró',
+  sources: 'Fuentes',
+  noSources: 'No hay fuentes listadas.',
+  redesign: 'Rediseñar y volar de nuevo',
+  newMission: 'Nueva misión',
+
+  // extras
+  hoursShort: 'h',
+  hoursPerDay: 'h/día',
+  found: 'encontrado',
+  missed: 'perdido (ningún instrumento a bordo podía detectarlo)',
+  notThere: 'no estaba esta vez',
+  sep: ' - ',
+  },
+  en: {
   loadingRules: 'Loading rules and data...',
   rulesFailed: 'Rules or data module could not be loaded',
   noMission: 'No mission chosen yet.',
@@ -13,8 +209,8 @@ export const T = {
   phases: { briefing: 'Briefing', diseno: 'Design', restricciones: 'Constraints', verificacion: 'Verification', mision: 'Mission', informe: 'Report' },
   online: (n, max) => `${n}/${max} online`,
   toLobby: 'Lobby',
-  roles: { vuelo: 'Flight', ciencia: 'Science', potencia: 'Power', comms: 'Comms & Ops' },
-  rolesLong: { vuelo: 'Flight director', ciencia: 'Scientist', potencia: 'Power engineer', comms: 'Communications & operations' },
+  get roles() { return { vuelo: depto('vuelo'), ciencia: depto('ciencia'), potencia: depto('potencia'), comms: depto('comms') }; },
+  get rolesLong() { return { vuelo: depto('vuelo', 'largo'), ciencia: depto('ciencia', 'largo'), potencia: depto('potencia', 'largo'), comms: depto('comms', 'largo') }; },
   noRole: 'no role',
   you: 'you',
 
@@ -184,4 +380,13 @@ export const T = {
   noSources: 'No sources listed.',
   redesign: 'Redesign and fly again',
   newMission: 'New mission',
-};
+
+  // extras
+  hoursShort: 'h',
+  hoursPerDay: 'h/day',
+  found: 'found',
+  missed: 'missed (no instrument on board could detect it)',
+  notThere: 'not there this time',
+  sep: ' - ',
+  },
+});

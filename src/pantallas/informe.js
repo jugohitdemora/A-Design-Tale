@@ -1,5 +1,6 @@
 // Report: verdict, causes, science, hidden findings, final bars, real mission, sources, replay buttons.
 import { T } from '../textos.js';
+import { idioma, tx } from '../i18n.js';
 import { h, en, lista, redondear, resumenSeguro, fuenteLink } from './ui.js';
 import { panelGlobal } from './panel-global.js';
 
@@ -34,7 +35,7 @@ export function pantallaInforme(c) {
       r.puntos != null ? h('small', {}, `${T.points}: ${redondear(Number(r.puntos), 0)}`) : null));
     raiz.append(h('h4', {}, T.causes));
     const causas = lista(r.causas);
-    raiz.append(causas.length ? h('ol', { class: 'causas' }, causas.map((x) => h('li', {}, en(x)))) : h('p', { class: 'tenue' }, T.none));
+    raiz.append(causas.length ? h('ol', { class: 'causas' }, causas.map((x) => h('li', {}, tx(x)))) : h('p', { class: 'tenue' }, T.none));
 
     raiz.append(h('h4', {}, T.scienceAchieved));
     const cs = h('ul', { class: 'objetivos' });
@@ -52,7 +53,7 @@ export function pantallaInforme(c) {
         const id = typeof x === 'string' ? x : x?.id;
         const o = lista(m?.oculto).find((q) => q.id === id) ?? {};
         // El motor dice de cada hallazgo si estaba (presente) y si lo captó un instrumento a bordo (capturado).
-        const marca = typeof x === 'object' && x ? (x.capturado ? ' - found' : x.presente ? ' - missed (no instrument on board could detect it)' : ' - not there this time') : '';
+        const marca = typeof x === 'object' && x ? (x.capturado ? T.sep + T.found : x.presente ? T.sep + T.missed : T.sep + T.notThere) : '';
         return h('li', {}, h('b', {}, en(o.nombre) || en(x?.nombre) || id), marca, en(o.casoReal) ? h('div', { class: 'tenue pequeno' }, en(o.casoReal)) : null);
       })));
     }
@@ -63,7 +64,7 @@ export function pantallaInforme(c) {
   if (ref) {
     real.append(h('dl', {},
       h('dt', {}, T.realMissionRef), h('dd', {}, ref.mision ?? '-'),
-      h('dt', {}, T.agency), h('dd', {}, ref.agencia ?? '-'),
+      h('dt', {}, T.agency), h('dd', {}, (idioma() === 'es' && ref.agenciaEs) || ref.agencia || '-'),
       h('dt', {}, T.realRocket), h('dd', {}, ref.coheteReal ?? '-')));
     const datos = lista(m.objetivos).filter((o) => en(o.datoReal));
     if (datos.length) real.append(h('h4', {}, T.foundReally), h('ul', { class: 'objetivos' }, datos.map((o) => h('li', {}, en(o.datoReal)))));

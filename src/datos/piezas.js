@@ -183,5 +183,64 @@ const LISTA = [
      opc('B', 'Standard', { masa: J(30), potencia: J(170), volumen: J(250), precio: J(35, 'GAP-P16') })]),
 ];
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Español de descripciones y nombres de opción. El inglés queda en el dato original; tx() usa el idioma activo.
+// id: [descripción, { opción: nombre }]. (El nombre de la pieza ya trae `es` en pz().)
+// ---------------------------------------------------------------------------------------------------------------------
+const ES_PZ = {
+  'ME-05': ['El armazón del orbitador. Da el espacio para todo lo demás.', { A: 'Armazón real del MPO' }],
+  'ME-02': ['La etapa de motores que lleva el orbitador a Mercurio.', { A: 'Propulsores iónicos (real)', B: 'Motor químico' }],
+  'JG-MER-ACT': ['Ruedas y pequeños propulsores que apuntan la nave.', { A: 'Ruedas ágiles', B: 'Ruedas estándar' }],
+  'ME-13': ['Un altímetro láser que mide la altura del terreno.', { A: 'Modelo de vuelo' }],
+  'ME-14': ['Espectrómetro de rayos gamma y neutrones para conocer la composición del suelo.', { A: 'Modelo de vuelo' }],
+  'ME-15': ['Espectrómetro de rayos X que lee qué elementos hay en la superficie.', { A: 'Modelo de vuelo' }],
+  'ME-16': ['Instrumento infrarrojo térmico para rocas y calor.', { A: 'Modelo de vuelo' }],
+  'ME-17': ['Un conjunto de cámaras que mapean todo el planeta.', { A: 'Modelo de vuelo' }],
+  'ME-18': ['Un magnetómetro que siente el campo magnético.', { A: 'Modelo de vuelo' }],
+  'ME-20': ['Alas solares que generan energía cerca del Sol.', { A: 'Real: 30 % GaAs, 70 % espejos', B: 'Más GaAs, menos espejos' }],
+  'ME-21': ['Un panel que mira al frío y libera calor al espacio.', { A: '1,5 m2 (tamaño real)', B: 'Radiador más grande' }],
+  'ME-23': ['Mantas de lámina delgada que mantienen el calor afuera.', { A: 'Mantas reales' }],
+  'ME-24': ['Guarda energía para la sombra del planeta.', { A: 'Estándar', B: 'Grande' }],
+  'ME-25': ['Una antena orientable que envía datos a la Tierra.', { A: '1,0 m, bandas X y Ka', B: '1,5 m (diseño anterior)' }],
+  'ME-28': ['Antenas en la Tierra que escuchan a la nave.', { A: 'Red de la ESA', B: 'Red de Espacio Profundo de la NASA' }],
+  'JG-MER-OBC': ['El cerebro de la nave. También guarda datos hasta el siguiente paso.', { A: 'Resistente a la radiación', B: 'Estándar' }],
+  'LE-04': ['El cuerpo del módulo de aterrizaje. Lleva las cargas y define cuánto espacio tienes.', { A: 'Tipo Blue Ghost' }],
+  'LE-05': ['Cámaras que filman el suelo mientras el módulo aterriza.', { A: 'Versión 1.0', B: 'Versión 1.1 (+2 cámaras)' }],
+  'JG-LUN-GNC': ['Radar y lidar que le dicen al módulo a qué altura está.', { A: 'Navegación relativa al terreno', B: 'Sensores estándar' }],
+  'LE-10': ['Una cámara de rayos X que observa dónde el viento solar golpea el escudo magnético de la Tierra.', { A: 'Modelo de vuelo' }],
+  'LE-11': ['Sensores magnéticos y eléctricos que miran bajo el suelo.', { A: 'Modelo de vuelo' }],
+  'LE-12': ['Paneles en los lados y en la parte superior del módulo.', { A: 'Paneles de Blue Ghost (3)', B: 'Celdas de GaAs', C: 'Celdas de silicio' }],
+  'LE-13': ['Mantiene vivo el módulo en la oscuridad.', { A: 'Batería de Blue Ghost', B: 'Batería más grande' }],
+  'LE-14': ['Calentadores y radiadores para el calor del mediodía y el frío de la noche.', { A: 'Calentadores y radiadores' }],
+  'LE-15': ['Campos eléctricos que levantan y empujan el polvo.', { A: '2 sistemas' }],
+  'LE-16': ['La radio y la antena que hablan directo con la Tierra.', { A: 'Antena de alta ganancia', B: 'Antena estándar' }],
+  'LE-17': ['Un receptor que prueba la navegación por satélite en la Luna.', { A: 'Modelo de vuelo' }],
+  'LE-18': ['El computador del módulo de aterrizaje.', { A: 'RadPC (tolerante a la radiación)', B: 'Computador estándar' }],
+  'CE-04': ['El cuerpo de la nave. Da el espacio para todo lo demás.', { A: 'Cuerpo real de Rosetta' }],
+  'CE-05': ['Un escudo que detiene los granos del cometa.', { A: 'Escudo ligero', B: 'Escudo grueso' }],
+  'CE-06': ['Pequeñas sondas que se acercan más al cometa y envían datos a través de la nave.', { A: '1 sonda', B: '2 sondas' }],
+  'JG-COM-ACT': ['Ruedas y pequeños propulsores que apuntan la nave.', { A: 'Ruedas ágiles', B: 'Ruedas estándar' }],
+  'CE-08': ['Un espectrómetro que olfatea los iones y el gas alrededor del cometa.', { A: 'Modelo de vuelo' }],
+  'CE-09': ['Un instrumento ultravioleta que mide el agua y los gases de carbono.', { A: 'Modelo de vuelo' }],
+  'CE-10': ['Un instrumento de microondas que mide el gas y la temperatura del núcleo.', { A: 'Modo bajo', B: 'Modo alto' }],
+  'CE-11': ['Un detector de polvo que cuenta y pesa los granos.', { A: 'Modelo de vuelo' }],
+  'CE-16': ['Cinco instrumentos de plasma que comparten una caja de electrónica.', { A: 'Modelo de vuelo' }],
+  'CE-12': ['Las cámaras principales del orbitador.', { A: 'Modelo de vuelo' }],
+  'CE-14': ['Un analizador que recoge granos de polvo y dice de qué están hechos.', { A: 'Modelo de vuelo' }],
+  'CE-24': ['Dos alas solares largas. Lejos del Sol tienen que ser enormes.', { A: 'Real: dos alas de 14 m (silicio)', B: 'Celdas de GaAs, menos área' }],
+  'CE-26': ['Guarda energía para los momentos oscuros y los despertares.', { A: 'Estándar', B: 'Grande' }],
+  'CE-28': ['Mantienen calientes los instrumentos mientras duermen.', { A: 'Lazos de calentadores' }],
+  'JG-COM-MLI': ['Mantas de lámina que retienen el calor.', { A: 'Mantas estándar' }],
+  'CE-29': ['Una antena grande orientable que habla con la Tierra desde muy lejos.', { A: '2,2 m, bandas S y X (real)', B: 'Antena más pequeña de 1,1 m' }],
+  'CE-31': ['Guarda datos cuando el enlace está caído.', { A: 'Memoria estándar' }],
+  'JG-COM-OBC': ['El cerebro de la nave.', { A: 'Resistente a la radiación', B: 'Estándar' }],
+};
+for (const p of LISTA) {
+  const t = ES_PZ[p.id];
+  if (!t) continue;
+  p.desc.es = t[0];
+  for (const o of p.opciones) if (t[1][o.id]) o.nombre.es = t[1][o.id];
+}
+
 export const PIEZAS = Object.fromEntries(LISTA.map((p) => [p.id, p]));
 export default PIEZAS;

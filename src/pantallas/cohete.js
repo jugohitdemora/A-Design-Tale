@@ -1,5 +1,6 @@
 // Rocket tab: one rocket at a time, arrows to cycle, a "folder" with its data. Flight (or anyone if vacant) selects.
 import { T } from '../textos.js';
+import { idioma } from '../i18n.js';
 import { h, en, lista, valor, panelVacio, puedoPor, nombreRol } from './ui.js';
 
 function dibujo(i) {
@@ -31,9 +32,9 @@ export function pestanaCohete(c) {
       h('h4', {}, en(k.nombre) || k.id, esElegido ? h('span', { class: 'etq ok' }, T.selected) : null),
       h('dl', {},
         h('dt', {}, T.operator), h('dd', {}, k.operador ?? '-'),
-        h('dt', {}, T.capacityTo(m.destino ?? '?')), h('dd', {}, valor(c, cap, 'kg')),
+        h('dt', {}, T.capacityTo(en(m.cuerpo) || m.destino || '?')), h('dd', {}, valor(c, cap, 'kg')),
         h('dt', {}, T.rocketPrice), h('dd', {}, valor(c, k.precio, 'M USD')),
-        h('dt', {}, T.nasaUse), h('dd', {}, k.usoNasa ?? T.none)),
+        h('dt', {}, T.nasaUse), h('dd', {}, (idioma() === 'es' && k.usoNasaEs) || k.usoNasa || T.none)),
       h('div', { class: 'acciones izq' },
         h('button', {
           class: 'btn-plano primario', type: 'button', disabled: !puedo || esElegido,

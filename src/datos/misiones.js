@@ -271,5 +271,116 @@ const FILAS = [
     [['Fill the sample tubes with the best finds', true]]),
 ];
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Español de los textos visibles. El inglés queda en el dato original; tx() usa el idioma activo (i18n.js).
+// ---------------------------------------------------------------------------------------------------------------------
+const ES_ESC = {
+  orbita: ['Pon una nave en órbita alrededor de un mundo y trae sus datos a casa.', 'Puntaje: los datos útiles que envías a casa durante la vida de la misión.'],
+  landing: ['Aterriza una sonda en la superficie y trabaja allí el mayor tiempo posible.', 'Puntaje: la cadena desde el lanzamiento hasta el aterrizaje debe resistir; luego, la ciencia multiplicada por los días que trabajas en la superficie.'],
+  exploracion: ['Explora un lugar que nadie conoce aún y encuentra lo que se esconde allí.', 'Puntaje: la ciencia que ganas más los hallazgos ocultos, por cada vatio-hora que gastas.'],
+};
+for (const e of ESCENARIOS) { const t = ES_ESC[e.id]; if (t) { e.desc.es = t[0]; e.regla.es = t[1]; } }
+
+const ES_MIS = {
+  'MER-3': {
+    apertura: 'Noviembre de 2026. Tras siete años y nueve sobrevuelos, dos naves frenan para entrar en órbita alrededor del planeta más cercano al Sol.',
+    brief: 'Construye un orbitador que mapee de qué está hecho Mercurio y luego envía los datos a casa.',
+    cifras: ['La masa de lanzamiento fue de 4.100 kg, y 1.400 kg eran propelente.', 'El orbitador MPO pesa 1.230 kg, con 85 kg de instrumentos científicos.', 'Sus alas solares generan hasta 1.000 W en la fase científica.', 'Un radiador de 1,5 m2 libera 200 W de calor.'],
+    objetivos: {
+      'MER-3-O1': ['Descubrir de qué está hecha la superficie', 'MESSENGER encontró más potasio y azufre de lo esperado, lo que no encaja con la idea del gran impacto.'],
+      'MER-3-O2': ['Averiguar por qué Mercurio es tan denso', 'BepiColombo responderá las preguntas 2 y 3 de la ESA: por qué el planeta es tan denso y si su núcleo es líquido.'],
+      'MER-3-O3': ['Buscar hielo de agua en los cráteres polares', 'MESSENGER vio hielo de agua bajo material oscuro en cráteres de los polos.'],
+    },
+    rutas: { 'MER-3-R1': 'Nueve sobrevuelos (como BepiColombo)', 'MER-3-R2': 'Menos sobrevuelos, más combustible' },
+    fases: { launch: 'Lanzamiento', cruise: 'Crucero y sobrevuelos', insertion: 'Inserción en órbita', commissioning: 'Puesta en servicio', science: 'Órbita científica' },
+    verificacion: { 'MER-3-V1': 'Hay una antena montada para enviar los datos a casa.', 'MER-3-V2': 'La meta prioritaria tiene al menos la mitad de su cobertura.' },
+  },
+  'LUN-3': {
+    apertura: '2 de marzo de 2025. Un módulo aterriza en el Mare Crisium con diez instrumentos de la NASA. Uno de ellos no necesita energía: es un espejo.',
+    brief: 'Aterriza en la Luna y usa una cámara de rayos X para observar el escudo magnético de la Tierra.',
+    cifras: ['Aterrizó el 2 de marzo de 2025 en el Mare Crisium con diez instrumentos de la NASA.', 'El módulo generó hasta 400 W y trabajó más de 14 días en la superficie.', 'LEXI pesa 11,1 kg, usa 1,6 W y envía 40 kbps.', 'La NASA pagó cerca de 101 M USD por el envío y 44 M USD por las diez cargas (informe de prensa).'],
+    objetivos: {
+      'LUN-3-O1': ['Tomar fotos de rayos X del escudo magnético de la Tierra', 'LEXI tomó imágenes de rayos X de donde el viento solar golpea el campo magnético de la Tierra.'],
+      'LUN-3-O2': ['Ver cómo cambia el escudo con el viento solar', 'LEXI se construyó para observar cómo reacciona el escudo cuando cambia el viento solar.'],
+      'LUN-3-O3': ['Medir la atmósfera tenue de la Luna', 'LEXI midió perfiles de densidad de la exosfera lunar con el mismo resplandor de rayos X.'],
+      'LUN-3-OX': ['Sondear el suelo con campos eléctricos y magnéticos', 'LMS encontró una conductividad del suelo muy parecida a la del sitio del Apolo 12.'],
+    },
+    rutas: { 'LUN-3-R1': 'Órbitas de espera (45 días, como Blue Ghost)', 'LUN-3-R2': 'Vuelo directo (unos pocos días)' },
+    fases: { launch: 'Lanzamiento', transit: 'Crucero a la Luna', orbit: 'Órbita lunar', landing: 'Aterrizaje', surface: 'Operaciones en superficie' },
+    verificacion: { 'LUN-3-V1': 'LEXI está montado.', 'LUN-3-V2': 'Los sensores de aterrizaje están montados.' },
+  },
+  'COM-1': {
+    apertura: '6 de agosto de 2014. Tras diez años en el espacio, una nave llega a un cometa que nadie había visto de cerca.',
+    brief: 'Vuela junto al cometa 67P y olfatea sus gases, incluso los que nadie espera.',
+    cifras: ['Se lanzó el 2 de marzo de 2004 y llegó al cometa el 6 de agosto de 2014.', 'El orbitador pesaba 2.900 kg: 1.670 kg de propelente y 165 kg de ciencia.', 'Sus paneles daban 850 W a 3,4 UA y 395 W a 5,25 UA.', 'La misión completa devolvió 220 GB y más de 100.000 imágenes.'],
+    objetivos: {
+      'COM-1-O1': ['Descubrir qué gases salen del cometa y cuánto', 'ALICE midió qué tan rápido el cometa produce agua, monóxido de carbono y dióxido de carbono.'],
+      'COM-1-O2': ['Ver cómo despierta el cometa cerca del Sol', 'Rosetta se quedó con el cometa durante su punto más cercano al Sol, el 13 de agosto de 2015.'],
+      'COM-1-O3': ['Cazar gases inesperados', 'ROSINA encontró oxígeno molecular, algo inédito en un cometa, en más de 3.000 muestras.'],
+    },
+    rutas: { 'COM-1-R1': 'Cuatro asistencias gravitatorias (como Rosetta, 10 años)', 'COM-1-R2': 'Menos asistencias, más combustible' },
+    fases: { launch: 'Lanzamiento', cruise: 'Crucero y asistencias gravitatorias', wake: 'Despertar de la hibernación', arrival: 'Encuentro con el cometa', coma: 'Ciencia en la coma' },
+    verificacion: { 'COM-1-V1': 'ROSINA está montado.', 'COM-1-V2': 'La meta prioritaria tiene al menos la mitad de su cobertura.' },
+    oculto: {
+      'COM-1-H1': ['Oxígeno molecular', 'ROSINA hizo la primera detección de oxígeno molecular en un cometa, en más de 3.000 muestras entre septiembre de 2014 y marzo de 2015.'],
+      'COM-1-H2': ['Glicina y fósforo', 'Rosetta encontró glicina, un aminoácido, y fósforo en el cometa 67P.'],
+      'COM-1-H3': ['Oleada de gas y polvo en el perihelio', 'Rosetta se quedó con el cometa durante su punto más cercano al Sol el 13 de agosto de 2015; ALICE siguió sus gases de agua y carbono.'],
+      'COM-1-H4': ['Plasma alrededor del cometa', 'Rosetta llevó RPC, cinco instrumentos de plasma, para estudiar el espacio alrededor del cometa.'],
+      'COM-1-H5': ['De qué está hecho el polvo', 'COSIMA recogió granos de polvo para analizar de qué están hechos.'],
+    },
+  },
+};
+for (const [id, t] of Object.entries(ES_MIS)) {
+  const m = ({'MER-3':MER_3,'LUN-3':LUN_3,'COM-1':COM_1})[id];
+  m.apertura.es = t.apertura; m.brief.es = t.brief;
+  m.referencia.cifras.forEach((c, i) => { c.es = t.cifras[i]; });
+  for (const o of m.objetivos) { const x = t.objetivos[o.id]; if (x) { o.nombre.es = x[0]; o.datoReal.es = x[1]; } }
+  for (const r of m.rutas) if (t.rutas[r.id]) r.nombre.es = t.rutas[r.id];
+  for (const f of m.fases) if (t.fases[f.id]) f.nombre.es = t.fases[f.id];
+  for (const v of m.verificacion) if (t.verificacion[v.id]) v.texto.es = t.verificacion[v.id];
+  for (const o of m.oculto ?? []) { const x = t.oculto?.[o.id]; if (x) { o.nombre.es = x[0]; o.casoReal.es = x[1]; } }
+}
+
+// Filas sin cablear: [brief, [objetivos...]] (nota en M-EXP-2).
+const ES_FILAS = {
+  'LUN-1': ['Recoge polvo lunar, averigua cómo se pega y perfora para medir el calor.', ['Recoger y clasificar muestras del suelo lunar', 'Aprender cómo se pega el polvo y cómo quitarlo', 'Medir el calor que sale del suelo']],
+  'LUN-2': ['Deja un espejo láser en la Luna para que la Tierra mida la distancia y ponga a prueba a Einstein.', ['Poner a prueba el principio de equivalencia de Einstein', 'Medir la distancia Tierra-Luna con menos de un milímetro de error', 'Dejar un blanco que funcione por décadas']],
+  'MER-1': ['Estudia el gas tenue alrededor de Mercurio y la larga cola de sodio que la luz del Sol empuja lejos.', ['Descubrir qué gases forman la atmósfera tenue', 'Ver cómo se mueve la cola de sodio con el viento solar', 'Descubrir qué produce la atmósfera']],
+  'MER-2': ['Usa señales de radio que pasan cerca del Sol para poner a prueba la relatividad general.', ['Medir cómo se curvan las ondas de radio cerca del Sol mejor que Cassini', 'Medir el desplazamiento del punto de Mercurio más cercano al Sol', 'Poner a prueba otras predicciones de la relatividad general']],
+  'COM-2': ['Mide el agua de un cometa y comprueba si los cometas llenaron los océanos de la Tierra.', ['Medir la razón deuterio-hidrógeno del agua del cometa', 'Comprobar si los cometas trajeron el agua de la Tierra', 'Mapear el núcleo para hallar de dónde sale cada chorro de gas']],
+  'COM-3': ['Aterriza una pequeña sonda en el núcleo de un cometa y estudia su suelo.', ['Analizar los gases y compuestos del suelo', 'Medir qué tan duro y qué tan cálido es el suelo', 'Ver el interior del núcleo']],
+  'M-ORB-1': ['Vuela un diminuto CubeSat 3U que vigila tormentas desde la órbita baja terrestre.', ['Revisitar tormentas cada hora aproximadamente con un CubeSat 3U de unos 5 kg']],
+  'M-ORB-3': ['Envía un gran satélite meteorológico a un punto fijo a 35.786 km sobre el ecuador.', ['Entregar 5.192 kg a la órbita geoestacionaria y trabajar durante 10 años']],
+  'M-ORB-4': ['Encuentra un satélite en órbita y cambia sus paneles solares o un instrumento dañado.', ['Encontrar un satélite en órbita y cambiar sus paneles solares o un instrumento dañado']],
+  'M-LND-1': ['Aterriza en el Mare Crisium y trabaja durante un día lunar completo.', ['Trabajar un día lunar, unos 14 días terrestres']],
+  'M-LND-2': ['Aterriza dentro de una elipse pequeña junto a un antiguo delta de río en Marte.', ['Aterrizar en una elipse de 7,7 x 6,6 km o menos en un delta antiguo']],
+  'M-LND-3': ['Toca el suelo a menos de 100 m de un blanco cerca del polo sur de la Luna.', ['Aterrizar a menos de 100 m del blanco']],
+  'M-EXP-1': ['Estrella una nave en un cráter oscuro y busca agua en la nube de material.', ['Detectar agua en la columna de un impacto']],
+  'M-EXP-2': ['Conduce un rover por cráteres oscuros cerca del polo sur y mapea el hielo.', ['Mapear hielo en 100 días cerca del Mons Mouton']],
+  'M-EXP-3': ['Recorre el cráter Jezero y llena tubos de muestras con los mejores hallazgos.', ['Llenar los tubos de muestras con los mejores hallazgos']],
+};
+const NOTA_EXP2 = 'Misión de reserva: sus instrumentos (NSS, NIRVSS, MSolo, TRIDENT) ya tienen masa y potencia reales, listos para conectar.';
+for (const m of FILAS) {
+  const t = ES_FILAS[m.id];
+  if (!t) continue;
+  m.brief.es = t[0];
+  m.objetivos.forEach((o, i) => { o.nombre.es = t[1][i]; });
+  if (m.nota) m.nota.es = NOTA_EXP2;
+}
+
+// Agencias (texto plano en `referencia.agencia`; la versión en español va aparte en `referencia.agenciaEs`).
+const ES_AGENCIA = {
+  'ESA with JAXA': 'ESA con JAXA',
+  'Firefly Aerospace for NASA (CLPS)': 'Firefly Aerospace para la NASA (CLPS)',
+  'ESA, with contributions from NASA': 'ESA, con aportes de la NASA',
+  'NASA and NOAA': 'NASA y NOAA',
+  'ISRO, JAXA and Intuitive Machines': 'ISRO, JAXA e Intuitive Machines',
+  'NASA': 'NASA',
+};
+for (const m of [MER_3, LUN_3, COM_1, ...FILAS]) {
+  const a = m.referencia?.agencia;
+  if (a && ES_AGENCIA[a]) m.referencia.agenciaEs = ES_AGENCIA[a];
+}
+
 export const MISIONES = Object.fromEntries([MER_3, LUN_3, COM_1, ...FILAS].map((m) => [m.id, m]));
 export default MISIONES;

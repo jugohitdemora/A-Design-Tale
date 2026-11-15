@@ -24,6 +24,8 @@ const obj = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});
 const arr = (x) => (Array.isArray(x) ? x : []);
 const r3 = (x) => (Number.isFinite(x) ? Math.round(x * 1000) / 1000 : 0);
 const r1 = (x) => (Number.isFinite(x) ? Math.round(x * 10) / 10 : 0);
+// Nombre en español de un campo {es, en} (cae al inglés si falta).
+const textoEs = (x, porDefecto = '') => (x == null ? porDefecto : typeof x === 'string' ? x : x.es ?? x.en ?? porDefecto);
 
 function esNegativo(ev) {
   const ef = obj(ev.efecto);
@@ -43,7 +45,7 @@ export function simular(estado, D) {
   if (!m) {
     return {
       pasos: [], hallazgos: [], datos: { generadosMB: 0, bajadosMB: 0, perdidosMB: 0 }, ciencia: [], puntos: 0,
-      veredicto: 'fallida', causas: [{ en: 'No mission was chosen.', tipo: 'veredicto' }],
+      veredicto: 'fallida', causas: [{ en: 'No mission was chosen.', es: 'No se eligió ninguna misión.', tipo: 'veredicto' }],
       puntuacion: null, cienciaTotal: 0, diasPrevistos: 0, diasConseguidos: 0, perdida: false, golpes: 0,
     };
   }
@@ -53,11 +55,13 @@ export function simular(estado, D) {
   const EV = obj(D?.EVENTOS_MISION), CO = obj(D?.CONTINGENCIAS);
   const compradas = new Set(contingenciasCompradas(estado, D).map((c) => c.id));
   const nombreConting = (id) => textoEn(CO[id]?.nombre, id);
+  const nombreContingEs = (id) => textoEs(CO[id]?.nombre, id);
   const pasos = [], causas = [];
   let fCiencia = 1, fDias = 1, golpes = 0, perdida = false, idxCorte = -1;
 
   res.fases.forEach((f, i) => {
     const nombre = textoEn(f.nombre, f.id);
+    const nombreEs = textoEs(f.nombre, f.id);
     if (perdida) {
       pasos.push({ fase: f.id, nombre: f.nombre, critica: f.critica, p: r3(f.p), ok: false, omitida: true });
       return;
@@ -71,35 +75,40 @@ export function simular(estado, D) {
     let golpesAqui = 0;
 
     if (!ok) {
-      if (f.critica) { golpesAqui++; causas.push({ en: `${nombre} (critical phase) failed its ${Math.round(f.p * 100)} % check.`, tipo: 'fase', fase: f.id }); }
-      else { fCiencia *= FACTOR_DEGRADA; causas.push({ en: `${nombre} had problems (${Math.round(f.p * 100)} % check failed): science degraded.`, tipo: 'fase', fase: f.id }); }
+      if (f.critica) { golpesAqui++; causas.push({ en: `${nombre} (critical phase) failed its ${Math.round(f.p * 100)} % check.`, es: `${nombreEs} (fase crítica) falló su prueba del ${Math.round(f.p * 100)} %.`, tipo: 'fase', fase: f.id }); }
+      else { fCiencia *= FACTOR_DEGRADA; causas.push({ en: `${nombre} had problems (${Math.round(f.p * 100)} % check failed): science degraded.`, es: `${nombreEs} tuvo problemas (falló la prueba del ${Math.round(f.p * 100)} %): la ciencia se degrada.`, tipo: 'fase', fase: f.id }); }
     }
 
     if (ev) {
       const ef = obj(ev.efecto);
       const nombreEv = textoEn(ev.nombre, ev.id);
+      const nombreEvEs = textoEs(ev.nombre, ev.id);
       paso.evento = ev.id;
       paso.signo = ev.signo ?? '-';
       if (esNegativo(ev)) {
         const mitigador = arr(ev.mitigadoPor).find((c) => compradas.has(c));
         paso.mitigado = !!mitigador;
+        if (mitigador) paso.mitigador = mitigador; // la sala de control pide que su departamento la active
         if (mitigador) {
-          causas.push({ en: `${nombre}: ${nombreEv}. The ${nombreConting(mitigador)} contingency cancelled it.`, tipo: 'mitigado', fase: f.id, evento: ev.id });
+          causas.push({ en: `${nombre}: ${nombreEv}. The ${nombreConting(mitigador)} contingency cancelled it.`, es: `${nombreEs}: ${nombreEvEs}. La contingencia ${nombreContingEs(mitigador)} lo anuló.`, tipo: 'mitigado', fase: f.id, evento: ev.id });
         } else {
           if (ef.ciencia != null) fCiencia *= Math.max(FACTOR_MIN_EVENTO, Math.min(1, num(ef.ciencia)));
           if (ef.dias != null) fDias *= Math.max(FACTOR_MIN_EVENTO, Math.min(1, num(ef.dias)));
           if (ef.falla) { if (f.critica) golpesAqui++; else fCiencia *= FACTOR_DEGRADA; }
           const faltan = arr(ev.mitigadoPor).map(nombreConting);
           const leccion = textoEn(ev.leccion, '');
+          const faltanEs = arr(ev.mitigadoPor).map(nombreContingEs);
+          const leccionEs = textoEs(ev.leccion, '');
           causas.push({
             en: `${nombre}: ${nombreEv}, not mitigated.` + (faltan.length ? ` Missing contingency: ${faltan.join(' or ')}.` : '') + (leccion ? ` ${leccion}` : ''),
+            es: `${nombreEs}: ${nombreEvEs}, sin mitigar.` + (faltanEs.length ? ` Falta la contingencia: ${faltanEs.join(' o ')}.` : '') + (leccionEs ? ` ${leccionEs}` : ''),
             tipo: 'evento', fase: f.id, evento: ev.id,
           });
         }
       } else {
         if (ef.ciencia != null) fCiencia *= Math.min(FACTOR_MAX_EVENTO, Math.max(1, num(ef.ciencia)));
         if (ef.dias != null) fDias *= Math.min(FACTOR_MAX_EVENTO, Math.max(1, num(ef.dias)));
-        causas.push({ en: `${nombre}: ${nombreEv} (good news).`, tipo: 'positivo', fase: f.id, evento: ev.id });
+        causas.push({ en: `${nombre}: ${nombreEv} (good news).`, es: `${nombreEs}: ${nombreEvEs} (buenas noticias).`, tipo: 'positivo', fase: f.id, evento: ev.id });
       }
     }
 
@@ -108,11 +117,11 @@ export function simular(estado, D) {
       if (golpes === 1) {
         fCiencia *= FACTOR_GOLPE_CRITICO;
         fDias *= FACTOR_GOLPE_CRITICO;
-        causas.push({ en: `First critical failure in ${nombre}: the mission goes on, degraded.`, tipo: 'golpe', fase: f.id });
+        causas.push({ en: `First critical failure in ${nombre}: the mission goes on, degraded.`, es: `Primer fallo crítico en ${nombreEs}: la misión sigue, pero degradada.`, tipo: 'golpe', fase: f.id });
       } else if (golpes >= GOLPES_PARA_PERDER && !perdida) {
         perdida = true;
         idxCorte = i;
-        causas.push({ en: `Second critical failure in ${nombre}: the spacecraft is lost.`, tipo: 'perdida', fase: f.id });
+        causas.push({ en: `Second critical failure in ${nombre}: the spacecraft is lost.`, es: `Segundo fallo crítico en ${nombreEs}: se pierde la nave.`, tipo: 'perdida', fase: f.id });
       }
     }
     paso.golpe = golpesAqui > 0;
@@ -129,7 +138,7 @@ export function simular(estado, D) {
   const bajadosMB = Math.min(generadosMB, capDia * diasConseguidos);
   const fracDatos = genDia > 0 ? Math.min(1, capDia / genDia) : 1;
   if (generadosMB - bajadosMB > 0.05) {
-    causas.push({ en: `${r1(generadosMB - bajadosMB)} MB of data could not be sent home: the link was too small for what the instruments produced.`, tipo: 'datos' });
+    causas.push({ en: `${r1(generadosMB - bajadosMB)} MB of data could not be sent home: the link was too small for what the instruments produced.`, es: `${r1(generadosMB - bajadosMB)} MB de datos no se pudieron enviar a casa: el enlace era demasiado pequeño para lo que producían los instrumentos.`, tipo: 'datos' });
   }
 
   // Hallazgos ocultos (MEC-18): sorteo propio, independiente de las fases.
@@ -141,10 +150,16 @@ export function simular(estado, D) {
     const detector = arr(h.detecta).find((id) => activos.has(id)) ?? null;
     const capturado = presente && !!detector && !perdida;
     const nombre = textoEn(h.nombre, h.id);
-    if (capturado) causas.push({ en: `Discovery: ${nombre}, detected by ${textoEn(P[detector]?.nombre, detector)}.`, tipo: 'hallazgo' });
+    const nombreHEs = textoEs(h.nombre, h.id);
+    if (capturado) causas.push({ en: `Discovery: ${nombre}, detected by ${textoEn(P[detector]?.nombre, detector)}.`, es: `Hallazgo: ${nombreHEs}, detectado por ${textoEs(P[detector]?.nombre, detector)}.`, tipo: 'hallazgo' });
     else if (presente && !perdida) {
       const podian = arr(h.detecta).map((id) => textoEn(P[id]?.nombre, id));
-      causas.push({ en: `${nombre} was there, but nothing on board could detect it` + (podian.length ? ` (needed: ${podian.join(' or ')}).` : '.'), tipo: 'hallazgo' });
+      const podianEs = arr(h.detecta).map((id) => textoEs(P[id]?.nombre, id));
+      causas.push({
+        en: `${nombre} was there, but nothing on board could detect it` + (podian.length ? ` (needed: ${podian.join(' or ')}).` : '.'),
+        es: `${nombreHEs} estaba allí, pero nada a bordo podía detectarlo` + (podianEs.length ? ` (se necesitaba: ${podianEs.join(' o ')}).` : '.'),
+        tipo: 'hallazgo',
+      });
     }
     return { id: h.id, nombre: h.nombre ?? null, presente, capturado, valor: num(h.valor), detector: capturado ? detector : null };
   });
@@ -179,6 +194,10 @@ export function simular(estado, D) {
       : veredicto === 'parcial' ? `Partial success: priority objective achieved, ${pct} % of the science returned (80 % needed for full success).`
         : perdida ? 'Mission failed: the spacecraft was lost before achieving the priority objective.'
           : 'Mission failed: the priority objective was not achieved.',
+    es: veredicto === 'total' ? `Éxito total: se logró el objetivo prioritario y se devolvió el ${pct} % de la ciencia.`
+      : veredicto === 'parcial' ? `Éxito parcial: se logró el objetivo prioritario y se devolvió el ${pct} % de la ciencia (se necesita el 80 % para el éxito total).`
+        : perdida ? 'La misión fracasó: se perdió la nave antes de lograr el objetivo prioritario.'
+          : 'La misión fracasó: no se logró el objetivo prioritario.',
     tipo: 'veredicto',
   });
 

@@ -123,6 +123,31 @@ export function siguienteEventoDiseno(estado, D) {
   return orden.find((id) => !vistos.includes(id)) ?? null;
 }
 
+// ---------- Planificación de ruta (sala de control) ----------
+// Factor de ΔV de un día de la ventana: 1 en el óptimo, crece como una parábola (corte de un porkchop plot), con tope.
+export function factorVentana(v, dia) {
+  const V = obj(v);
+  const anchura = num(V.anchura) || 1;
+  const x = (finito(Number(dia)) - num(V.optimo)) / anchura;
+  return Math.min(num(V.maxFactor) || 1.6, 1 + (num(V.k) || 0.3) * x * x);
+}
+// Margen (en anchuras) que cuenta como "día óptimo": da un pequeño extra de probabilidad a la fase de la ventana.
+export const MARGEN_OPTIMO = 0.35;
+export const BONO_OPTIMO = 0.02;
+
+// → null si la misión no tiene planificación; si no { P, dia, sitio, factor, optimo }.
+export function planDe(estado, D) {
+  const m = misionDe(estado, D);
+  const P = m ? obj(D?.PLANIFICACION)[m.id] : null;
+  if (!P) return null;
+  const r = obj(estado?.ruta);
+  const dia = Number.isInteger(r.ventana) && r.ventana >= 0 && r.ventana <= num(obj(P.ventana).dias) ? r.ventana : null;
+  const sitio = arr(P.sitios).find((s) => s?.id === r.sitio) ?? null;
+  const factor = dia == null ? 1 : factorVentana(P.ventana, dia);
+  const optimo = dia != null && Math.abs(dia - num(obj(P.ventana).optimo)) / (num(obj(P.ventana).anchura) || 1) <= MARGEN_OPTIMO;
+  return { P, dia, sitio, factor, optimo };
+}
+
 // ---------- Barras ----------
 export function estadoDeRatio(ratio) {
   if (ratio <= 1 + EPS) return 'ok';
@@ -154,7 +179,9 @@ export function resumen(estado, D) {
   const sumar = (b, rol, id, v) => { if (!v) return; barras[b].usado += v; barras[b].partes.push({ rol, id, v }); };
   const aporte = { masa: 0, potencia: 0, bateria: 0, datos: 0, volumen: 0 };
   const aportar = (b, rol, id, v) => { if (!(v > 0)) return; aporte[b] += v; barras[b].aportes.push({ rol, id, v }); };
-  const horasSombra = num(m.horasSombra), horasEnlace = num(m.horasEnlace);
+  const plan = planDe(estado, D);
+  const efSitio = obj(plan?.sitio?.efectos);
+  const horasSombra = tiene(efSitio.horasSombra) ? num(efSitio.horasSombra) : num(m.horasSombra), horasEnlace = num(m.horasEnlace);
 
   const ms = montadas(estado, D);
   for (const x of ms) {
@@ -182,7 +209,11 @@ export function resumen(estado, D) {
   if (ruta) {
     sumar('masa', 'vuelo', ruta.id, num(ruta.masa));
     sumar('presupuesto', 'vuelo', ruta.id, num(ruta.precio));
+    // Día de lanzamiento lejos del óptimo: más ΔV = más propelente.
+    if (plan && plan.factor > 1 + EPS) sumar('masa', 'vuelo', 'ventana', num(ruta.masa) * (plan.factor - 1));
   }
+  res.plan = plan ? { dia: plan.dia, sitio: plan.sitio?.id ?? null, factor: plan.factor, optimo: plan.optimo,
+    extraKg: ruta ? num(ruta.masa) * (plan.factor - 1) : 0, horasSombra } : null;
   const compradas = contingenciasCompradas(estado, D);
   for (const c of compradas) {
     sumar('masa', 'comms', c.id, num(c.masa));
@@ -214,18 +245,22 @@ export function resumen(estado, D) {
     x.estado = estadoDeRatio(x.ratio);
   }
 
-  res.ciencia = ciencia(m, ms, prioridad);
-  res.fases = fases(m, ms, ruta, compradas);
+  res.ciencia = ciencia(m, ms, prioridad, estado?.mision?.objetivos, obj(efSitio.ciencia));
+  res.fases = fases(m, ms, ruta, compradas, plan);
   res.riesgos = riesgos(m, D, compradas);
   return res;
 }
 
 // Indicador de ciencia (§6): cobertura = fracción de instrumentos montados × min(1, uso medio / uso objetivo).
-function ciencia(m, ms, prioridadPedida) {
+// `seleccion`: ids marcados en el expediente (estado.mision.objetivos). Si no es una lista, cuentan todos.
+// El prioritario cuenta siempre.
+function ciencia(m, ms, prioridadPedida, seleccion, factores = {}) {
   const uso = new Map(ms.map((x) => [x.id, x.uso]));
-  // Un evento que nombra un objetivo que no es de esta misión no cambia nada.
-  const prioridadEvento = arr(m.objetivos).some((o) => o?.id === prioridadPedida) ? prioridadPedida : null;
-  const objetivos = arr(m.objetivos).filter((o) => o && o.id != null).map((o) => {
+  const sel = Array.isArray(seleccion) ? new Set(seleccion) : null;
+  const elegidos = arr(m.objetivos).filter((o) => o && o.id != null && (!sel || o.prioridad || sel.has(o.id)));
+  // Un evento que nombra un objetivo que no es de esta misión (o no está marcado) no cambia nada.
+  const prioridadEvento = elegidos.some((o) => o?.id === prioridadPedida) ? prioridadPedida : null;
+  const objetivos = elegidos.map((o) => {
     const req = arr(o.requiere);
     let cobertura = 1;
     if (req.length) {
@@ -234,6 +269,8 @@ function ciencia(m, ms, prioridadPedida) {
       const uo = num(o.usoObjetivo);
       cobertura = hechos.length ? (hechos.length / req.length) * (uo > 0 ? Math.min(1, usoMedio / uo) : 1) : 0;
     }
+    // El sitio u órbita elegidos en la sala de control pueden limitar un objetivo (p. ej. sin ver la Tierra).
+    if (tiene(factores[o.id])) cobertura = clamp01(cobertura * num(factores[o.id]));
     const prioridad = prioridadEvento ? o.id === prioridadEvento : !!o.prioridad;
     return { id: o.id, prioridad, cobertura, valor: o.valor == null ? 1 : num(o.valor), nombre: o.nombre ?? null };
   });
@@ -243,13 +280,16 @@ function ciencia(m, ms, prioridadPedida) {
 }
 
 // Fases del vuelo (G-01) con su probabilidad visible: base + mejoras por piezas, contingencias y ruta.
-function fases(m, ms, ruta, compradas) {
+function fases(m, ms, ruta, compradas, plan = null) {
   const hay = new Set([...ms.filter((x) => x.uso > 0 || !x.pieza.uso).map((x) => x.id), ...compradas.map((c) => c.id)]);
   if (ruta) hay.add(ruta.id);
+  const faseVentana = plan?.P?.ventana?.fase ?? ruta?.efecto?.fase;
   return arr(m.fases).filter((f) => f && f.id != null).map((f) => {
     let p = num(f.pBase);
     for (const mj of arr(f.mejoras)) if (hay.has(mj?.por)) p += num(mj.dp);
     if (ruta?.efecto?.fase === f.id) p += num(ruta.efecto.dp);
+    if (plan?.optimo && faseVentana === f.id) p += BONO_OPTIMO;
+    for (const x of arr(plan?.sitio?.efectos?.fases)) if (x?.fase === f.id) p += num(x.dp);
     return { id: f.id, nombre: f.nombre ?? null, critica: !!f.critica, pBase: clamp01(num(f.pBase)), p: clamp01(p) };
   });
 }
@@ -279,19 +319,28 @@ export function cumple(res) {
 // → { pasa, comprobaciones: [{ id, ok, texto: { en } }] }
 export function verificar(estado, D) {
   const c = [];
-  const poner = (id, ok, en) => c.push({ id, ok: !!ok, texto: { en } });
+  const poner = (id, ok, en, es) => c.push({ id, ok: !!ok, texto: es ? { en, es } : { en } });
   const m = misionDe(estado, D);
-  if (!m) { poner('mision', false, 'A mission is chosen'); return { pasa: false, comprobaciones: c }; }
+  if (!m) { poner('mision', false, 'A mission is chosen', 'Hay una misión elegida'); return { pasa: false, comprobaciones: c }; }
   const res = resumen(estado, D);
   const malas = BARRAS.filter((b) => res.barras[b].estado !== 'ok');
-  poner('barras', !malas.length, malas.length ? `All bars within limits (over: ${malas.map((b) => NOMBRE_BARRA[b]).join(', ')})` : 'All bars within limits');
-  poner('cohete', !!coheteDe(estado, D), 'A launch vehicle is chosen');
-  poner('ruta', !!rutaDe(estado, D), 'A route is chosen');
+  const NOMBRE_BARRA_ES = { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Enlace de datos', presupuesto: 'Presupuesto', volumen: 'Volumen' };
+  poner('barras', !malas.length,
+    malas.length ? `All bars within limits (over: ${malas.map((b) => NOMBRE_BARRA[b]).join(', ')})` : 'All bars within limits',
+    malas.length ? `Todas las barras dentro de su límite (se pasan: ${malas.map((b) => NOMBRE_BARRA_ES[b]).join(', ')})` : 'Todas las barras dentro de su límite');
+  poner('cohete', !!coheteDe(estado, D), 'A launch vehicle is chosen', 'Hay un cohete elegido');
+  poner('ruta', !!rutaDe(estado, D), 'A route is chosen', 'Hay una ruta elegida');
+  const plan = planDe(estado, D);
+  if (plan) {
+    poner('plan', plan.dia != null && !!plan.sitio, 'Launch day and site/orbit planned in Mission Control',
+      'Día de lanzamiento y sitio/órbita planificados en la sala de control');
+  }
   const prio = res.ciencia.objetivos.find((o) => o.prioridad);
-  poner('prioritario', !prio || prio.cobertura > 0, 'The priority objective has its instruments on board and switched on');
+  poner('prioritario', !prio || prio.cobertura > 0, 'The priority objective has its instruments on board and switched on',
+    'El objetivo prioritario tiene sus instrumentos a bordo y encendidos');
   const ms = montadas(estado, D);
-  poner('fuentePotencia', ms.some((x) => num(obj(x.opcion.aporta).potencia) > 0), 'Something on board generates power');
-  poner('enlace', ms.some((x) => num(obj(x.opcion.aporta).bajada) > 0), 'Something on board can send data home');
+  poner('fuentePotencia', ms.some((x) => num(obj(x.opcion.aporta).potencia) > 0), 'Something on board generates power', 'Algo a bordo genera energía');
+  poner('enlace', ms.some((x) => num(obj(x.opcion.aporta).bajada) > 0), 'Something on board can send data home', 'Algo a bordo puede enviar datos a casa');
   const ids = new Set(ms.map((x) => x.id));
   for (const v of arr(m.verificacion)) {
     if (!v) continue;
@@ -301,6 +350,7 @@ export function verificar(estado, D) {
       ok = piezas.some((id) => ids.has(id));
     } else if (v.tipo === 'coberturaMin') {
       const o = res.ciencia.objetivos.find((x) => x.id === v.objetivo);
+      if (!o && arr(m.objetivos).some((x) => x?.id === v.objetivo)) continue; // objetivo no marcado en el expediente
       ok = (o?.cobertura ?? 0) + EPS >= num(v.min);
     }
     c.push({ id: v.id ?? `mision-${c.length}`, ok, texto: typeof v.texto === 'string' ? { en: v.texto } : v.texto ?? { en: String(v.id ?? '') } });

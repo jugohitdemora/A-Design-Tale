@@ -13,7 +13,9 @@ const I = (v) => ({ v, conf: 'INF', src: 'JUEGO' });
 const ed = (id, signo, nombre, texto, efecto, casoReal, src) => ({ id, signo, nombre: N(nombre), texto: N(texto), efecto, casoReal: N(casoReal), src });
 const em = (id, signo, fase, p, nombre, texto, efecto, mitigadoPor, casoReal, leccion, src) =>
   ({ id, signo, fase, p, nombre: N(nombre), texto: N(texto), efecto, mitigadoPor, casoReal: N(casoReal), leccion: N(leccion), src });
-const ct = (id, nombre, texto, masa, precio, mitiga) => ({ id, nombre: N(nombre), texto: N(texto), masa: I(masa), precio: I(precio), mitiga });
+// rol: el departamento que compra la contingencia en el diseño y la activa en la sala de control.
+const ROL_CT = {'CT-MER-1': 'vuelo', 'CT-MER-2': 'ciencia', 'CT-MER-3': 'comms', 'CT-MER-4': 'potencia', 'CT-LUN-1': 'vuelo', 'CT-LUN-2': 'vuelo', 'CT-LUN-3': 'potencia', 'CT-LUN-4': 'ciencia', 'CT-COM-1': 'vuelo', 'CT-COM-2': 'potencia', 'CT-COM-3': 'comms', 'CT-COM-4': 'ciencia'};
+const ct = (id, nombre, texto, masa, precio, mitiga) => ({ id, rol: ROL_CT[id] ?? 'comms', nombre: N(nombre), texto: N(texto), masa: I(masa), precio: I(precio), mitiga });
 
 export const EVENTOS_DISENO = {
   // ---------------- MER-3 (presupuesto de ~1100 M USD) ----------------
@@ -126,5 +128,62 @@ export const CONTINGENCIAS = {
   'CT-COM-3': ct('CT-COM-3', 'Wake-up plan', 'Spare computer and heaters ready for the wake-up.', 25, 15, ['EM-COM-6']),
   'CT-COM-4': ct('CT-COM-4', 'Backup probe', 'A spare disposable probe in case one is lost to dust.', 35, 18, ['EM-COM-1']),
 };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Español de los textos visibles. El inglés queda en el dato original; tx() usa el idioma activo (i18n.js).
+// ED: [nombre, texto, casoReal].  EM: [nombre, texto, casoReal, lección].  CT: [nombre, texto].
+// ---------------------------------------------------------------------------------------------------------------------
+const VIPER = 'Evento genérico del juego (F-06b). Paralelo real: en julio de 2024 la NASA canceló el rover VIPER por costos y retrasos, y lo retomó en 2025.';
+const ES_ED = {
+  'ED-MER-IN': ['Entra un inversionista', 'Una agencia socia aporta dinero a la misión.', 'Evento genérico del juego (F-06b). Paralelo real: BepiColombo es una misión conjunta de la ESA y la JAXA, con dos orbitadores lanzados juntos.'],
+  'ED-MER-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce.', VIPER],
+  'ED-MER-OBJ': ['El hielo pasa a ser la meta principal', 'Ahora el comité científico quiere primero el hielo de agua en los cráteres polares.', 'La ESA incluye el hielo en los cráteres polares como la pregunta científica 7 de BepiColombo; MESSENGER vio hielo de agua bajo material oscuro allí.'],
+  'ED-MER-LIM': ['Paneles más calientes', 'Los paneles deben mantenerse más fríos, así que se permite menos potencia.', 'Los paneles del MPO se mantienen por debajo de 180 grados C, con 30 % de celdas de GaAs y 70 % de espejos.'],
+  'ED-LUN-IN': ['Entra un inversionista', 'Una empresa aporta dinero a la misión lunar.', 'Evento genérico del juego (F-06b). Paralelo real: la NASA pagó cerca de 44 M USD por las 10 cargas de Blue Ghost, además del envío.'],
+  'ED-LUN-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce.', VIPER],
+  'ED-LUN-OBJ': ['Primero la exosfera', 'Ahora los científicos quieren medir primero la atmósfera tenue de la Luna.', 'LEXI midió perfiles de densidad de la exosfera lunar con el mismo resplandor de rayos X que usó para la magnetosfera.'],
+  'ED-LUN-LIM': ['Cubierta de energía compartida', 'Otra carga útil usa parte de la energía del módulo de aterrizaje.', 'El módulo Blue Ghost genera hasta 400 W para sí mismo y para las diez cargas de la NASA.'],
+  'ED-COM-IN': ['Entra un inversionista', 'Un socio aporta dinero a la misión al cometa.', 'Evento genérico del juego (F-06b). Paralelo real: Rosetta fue una misión de la ESA con aportes de la NASA.'],
+  'ED-COM-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce.', VIPER],
+  'ED-COM-OBJ': ['Primero los gases sorpresa', 'Ahora los científicos quieren cazar primero los gases inesperados.', 'ROSINA de Rosetta encontró oxígeno molecular, algo inédito en un cometa, en más de 3.000 muestras.'],
+  'ED-COM-LIM': ['Más lejos del Sol', 'El cometa está más lejos, así que hay menos luz solar y menos energía.', 'Los paneles de Rosetta daban 850 W a 3,4 UA, pero solo 395 W a 5,25 UA.'],
+};
+const ES_EM = {
+  'EM-MER-1': ['Propulsores débiles', 'Los propulsores iónicos empujan menos de lo previsto y el viaje dura más.', 'En 2024 los propulsores de BepiColombo dieron menos potencia y obligaron a una trayectoria de menor empuje; la llegada pasó de diciembre de 2025 a noviembre de 2026.', 'Deja margen de empuje en un plan de bajo empuje.'],
+  'EM-MER-2': ['Luz solar ruidosa', 'Los cambios en la luz solar enturbian las mediciones de radio.', 'Un estudio de 2022 encontró que las variaciones de la luz solar confunden el experimento de radio de BepiColombo (MORE).', 'Planea cómo calibrar el ruido antes de volar.'],
+  'EM-MER-3': ['Antena caliente', 'La antena se calienta demasiado cerca del Sol.', 'La antena de Mio, el orbitador de la JAXA, puede superar los 350 grados C.', 'Prueba las piezas en el caso más caliente antes de acercarlas al Sol.'],
+  'EM-MER-4': ['Prueba en un sobrevuelo', 'Un sobrevuelo de un planeta permite probar los instrumentos antes de llegar.', 'BepiColombo hizo 9 sobrevuelos en el camino: 1 de la Tierra, 2 de Venus y 6 de Mercurio. Falta confirmar con la ESA su uso como pruebas de instrumentos.', 'Los sobrevuelos son ensayos gratis.'],
+  'EM-MER-5': ['Misión extendida', 'La agencia añade un segundo año de ciencia.', 'BepiColombo tiene 1 año nominal de ciencia y es posible 1 año más de extensión.', 'Una nave sana puede ganar tiempo extra.'],
+  'EM-MER-6': ['Paneles al rojo', 'Los paneles solares se calientan demasiado y deben inclinarse lejos del Sol.', 'Los paneles del MPO se mantienen por debajo de 180 grados C y generan hasta 1.000 W en la fase científica.', 'Inclinar los paneles cambia potencia por calor.'],
+  'EM-LUN-1': ['La válvula no cierra', 'Una válvula de combustible no cierra tras una maniobra y pierde.', 'En 2024 una válvula de Peregrine no volvió a sellarse y rompió el tanque de oxidante.', 'Las válvulas que deben volver a sellarse necesitan un plan de respaldo.'],
+  'EM-LUN-2': ['El módulo se vuelca', 'El módulo aterriza en una pendiente y cae de lado.', 'En 2024 el módulo IM-1 Odysseus se volcó porque no se activó un interruptor del láser antes de aterrizar.', 'Revisa cada interruptor antes de aterrizar.'],
+  'EM-LUN-3': ['Eclipse solar desde la Luna', 'La Tierra tapa el Sol. Hace un frío extremo, pero es una oportunidad científica.', 'El 14 de marzo de 2025 un eclipse visto desde la Luna bajó la temperatura a -171 grados C.', 'Los calentadores convierten un peligro en una oportunidad.'],
+  'EM-LUN-4': ['Sobrevive la noche', 'El módulo sigue funcionando durante horas después del atardecer.', 'Blue Ghost siguió operando algo más de 5 horas dentro de la noche lunar.', 'Una buena batería es ciencia extra.'],
+  'EM-LUN-5': ['La navegación funciona mejor', 'La navegación por satélite funciona más lejos de lo esperado.', 'El experimento LuGRE batió un récord de distancia para señales de navegación, con 246.000 millas.', 'Prueba herramientas nuevas en un vuelo real.'],
+  'EM-LUN-6': ['Polvo en la lente', 'El polvo lunar se pega al instrumento y lo empaña.', 'El polvo lunar es abrasivo y desgasta naves, trajes y hábitats.', 'El polvo es un problema de diseño, no una sorpresa.'],
+  'EM-COM-1': ['El polvo golpea la nave', 'Granos de polvo del cometa golpean la nave.', 'En el cometa Halley, en 1986, Giotto recibió cerca de 12.000 impactos de polvo, y un grano de 1 g la hizo girar.', 'Más gas cerca del cometa también significa más polvo.'],
+  'EM-COM-2': ['El cometa despierta', 'Cerca del Sol el cometa libera más gas, y también más polvo.', 'El cometa 67P llegó a su punto más cercano al Sol el 13 de agosto de 2015, con Rosetta a su lado.', 'La actividad es a la vez la ciencia y el peligro.'],
+  'EM-COM-3': ['Gas inesperado', 'El espectrómetro detecta un gas que nadie esperaba.', 'ROSINA hizo la primera detección de oxígeno molecular en un cometa, en más de 3.000 muestras entre septiembre de 2014 y marzo de 2015.', 'Mantén el instrumento encendido el tiempo suficiente para sorprenderte.'],
+  'EM-COM-4': ['Moléculas de la vida', 'Los instrumentos encuentran los bloques de construcción de la vida.', 'Rosetta encontró glicina, un aminoácido, y fósforo en el cometa 67P.', 'Los cometas pueden llevar ingredientes para la vida.'],
+  'EM-COM-5': ['La luz se apaga', 'El cometa se aleja y los paneles dan menos energía.', 'Los paneles de Rosetta daban 850 W a 3,4 UA, pero solo 395 W a 5,25 UA.', 'La luz solar cae con el cuadrado de la distancia.'],
+  'EM-COM-6': ['La nave no despierta', 'Tras años dormida, la nave no responde a la llamada de despertar.', 'Rosetta durmió 31 meses, del 8 de junio de 2011 al 20 de enero de 2014, y despertó a tiempo. El juego pregunta qué habría pasado si no.', 'El despertar es el día más arriesgado de un sueño largo.'],
+};
+const ES_CT = {
+  'CT-MER-1': ['Margen de empuje', 'Combustible extra y un modo de propulsor de reserva para el viaje.'],
+  'CT-MER-2': ['Plan de calibración del ruido', 'Un plan para quitar el ruido de la luz solar de los datos de radio.'],
+  'CT-MER-3': ['Escudo térmico de la antena', 'Aislamiento extra para la antena.'],
+  'CT-MER-4': ['Margen de inclinación de los paneles', 'Celdas con espejos y espacio para inclinar los paneles lejos del Sol.'],
+  'CT-LUN-1': ['Válvula de respaldo', 'Una válvula de repuesto y una prueba de presión antes de cada encendido.'],
+  'CT-LUN-2': ['Patas de aterrizaje anchas', 'Patas más anchas y una lista de revisión de cada interruptor.'],
+  'CT-LUN-3': ['Calentadores extra', 'Más calentadores y mantas más gruesas para el frío.'],
+  'CT-LUN-4': ['Tapa antipolvo de la lente', 'Una tapa que se abre solo cuando observas.'],
+  'CT-COM-1': ['Escudo antipolvo', 'Un escudo que protege la nave de los granos.'],
+  'CT-COM-2': ['Plan de ahorro de energía', 'Una batería más grande y un plan para apagar sistemas.'],
+  'CT-COM-3': ['Plan de despertar', 'Computador de repuesto y calentadores listos para el despertar.'],
+  'CT-COM-4': ['Sonda de respaldo', 'Una sonda desechable de repuesto por si el polvo destruye una.'],
+};
+for (const [id, [n, t, c]] of Object.entries(ES_ED)) { const e = EVENTOS_DISENO[id]; e.nombre.es = n; e.texto.es = t; e.casoReal.es = c; }
+for (const [id, [n, t, c, l]] of Object.entries(ES_EM)) { const e = EVENTOS_MISION[id]; e.nombre.es = n; e.texto.es = t; e.casoReal.es = c; e.leccion.es = l; }
+for (const [id, [n, t]] of Object.entries(ES_CT)) { const k = CONTINGENCIAS[id]; k.nombre.es = n; k.texto.es = t; }
 
 export default { EVENTOS_DISENO, EVENTOS_MISION, CONTINGENCIAS };

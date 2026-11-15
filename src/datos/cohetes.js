@@ -67,4 +67,25 @@ export const COHETES = {
   },
 };
 
+// Español de los campos visibles (el inglés queda en el dato original; tx() usa el idioma activo).
+const NOTAS_ES = {
+  electron: 'Lanzador pequeño: el dato real es 200 kg a una órbita heliosíncrona de 500 km.',
+  falcon9: 'Real: 22.800 kg a órbita baja y 8.300 kg a GTO (sin recuperar la primera etapa). El precio es lo que pagó la NASA por PACE.',
+  falconheavy: 'Los precios reales de lanzamiento de la NASA van de 117 M USD (Psyche) a 256,6 M USD (Dragonfly). La capacidad es un valor de juego.',
+  vulcan: 'Aún no se encontró capacidad ni precio. Valores de juego.',
+  atlasv: 'Se está retirando. La capacidad depende de la versión (401, 541) y no se encontró. Valores de juego.',
+  pegasus: 'Cohete pequeño que se lanza desde un avión. No se encontró la capacidad. Valores de juego.',
+  minotaur4: 'No se encontró la capacidad. Valores de juego.',
+  sls: 'No se encontraron capacidad ni precio. Valores de juego.',
+};
+const USO_ES = {
+  electron: 'CubeSats; CAPSTONE (2022)',
+  vulcan: 'Sucesor del Atlas V (uso de la NASA por comprobar)',
+  sls: 'Artemis I (CubeSats secundarios)',
+};
+for (const [id, k] of Object.entries(COHETES)) {
+  if (NOTAS_ES[id] && k.nota) k.nota.es = NOTAS_ES[id];
+  if (USO_ES[id]) k.usoNasaEs = USO_ES[id];
+}
+
 export default COHETES;

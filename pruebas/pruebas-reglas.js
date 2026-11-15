@@ -120,8 +120,12 @@ function enDiseno(misionId = 'T-ORB', dificultad = 'facil', opciones) {
   const e = partida(opciones);
   const quien = Object.keys(e.jugadores)[0];
   ok(e, quien, 'elegirMision', { id: misionId, dificultad });
-  ok(e, quien, 'cambiarFase', { fase: 'diseno' });
+  todosListos(e);
   return e;
+}
+// Todos los conectados pulsan "listo": el último lleva la partida a diseño.
+function todosListos(e) {
+  for (const [id, j] of Object.entries(e.jugadores)) if (j.conectado && j.rol && e.fase === 'briefing') ok(e, id, 'listo', { on: true });
 }
 // Diseño con todas las barras en verde (masa 76/100, potencia 60/100, presupuesto 58/100…).
 function montarBueno(e) {
@@ -412,8 +416,79 @@ const pruebas = {
     afirmar(e.porRol.ciencia.piezas['T-inst1'], 'cambiar solo la dificultad no vacía los talleres');
     ok(e, 'jvuelo', 'elegirMision', { escenario: 'landing', id: 'T-LND' });
     afirmar(Object.keys(e.porRol.ciencia.piezas).length === 0 && e.porRol.ciencia.nota === 'x', 'cambiar de misión vacía las piezas y conserva notas');
-    ok(e, 'jvuelo', 'cambiarFase', { fase: 'diseno' });
+    rechaza(e, 'jvuelo', 'cambiarFase', { fase: 'diseno' }, /Ready/);
+    todosListos(e);
     afirmar(e.fase === 'diseno', 'no pasó a diseño');
+  },
+
+  'Reglas · briefing: reparto de carpetas con la semilla, jugable incluida'() {
+    const e = partida({ semilla: 4242 });
+    for (let i = 0; i < 6; i++) D.MISIONES['T-X' + i] = { ...D.MISIONES['T-NOJ'], id: 'T-X' + i };
+    ok(e, 'jvuelo', 'elegirMision', { escenario: 'orbita' });
+    const r1 = e.briefing.reparto;
+    afirmar(Array.isArray(r1) && r1.length === 3 && new Set(r1).size === 3, `reparto: ${JSON.stringify(r1)}`);
+    afirmar(r1.includes('T-ORB') && r1.every((id) => D.MISIONES[id].escenario === 'orbita'), 'falta la jugable o hay de otro escenario');
+    const e2 = partida({ semilla: 4242 });
+    ok(e2, 'jciencia', 'elegirMision', { escenario: 'orbita' });
+    afirmar(JSON.stringify(e2.briefing.reparto) === JSON.stringify(r1), 'misma semilla, distinto reparto');
+    ok(e, 'jvuelo', 'elegirMision', { escenario: 'orbita' });
+    afirmar(e.briefing.repartos === 1, 'repetir el mismo escenario no reparte otra vez');
+    ok(e, 'jvuelo', 'elegirMision', { escenario: 'landing' });
+    afirmar(e.briefing.repartos === 2 && e.briefing.reparto.includes('T-LND'), 'otro escenario reparte');
+  },
+
+  'Reglas · expediente: objetivos marcados, prioridad fija y dificultad por ambición'() {
+    const e = partida();
+    rechaza(e, 'jvuelo', 'objetivo', { id: 'x', on: true }, /mission/i);
+    ok(e, 'jvuelo', 'elegirMision', { id: 'T-ORB' });
+    const ids = D.MISIONES['T-ORB'].objetivos.map((o) => o.id);
+    afirmar(JSON.stringify(e.mision.objetivos) === JSON.stringify(ids), 'al elegir vienen todos marcados');
+    const prio = D.MISIONES['T-ORB'].objetivos.find((o) => o.prioridad);
+    const otros = D.MISIONES['T-ORB'].objetivos.filter((o) => !o.prioridad);
+    rechaza(e, 'jciencia', 'objetivo', { id: prio.id, on: false }, /priority/);
+    for (const o of otros) ok(e, 'jciencia', 'objetivo', { id: o.id, on: false });
+    afirmar(e.mision.objetivos.join() === prio.id && e.mision.dificultad === 'facil', `solo prioritario: ${JSON.stringify(e.mision)}`);
+    const res = resumen(e, D);
+    afirmar(res.ciencia.objetivos.length === 1 && res.ciencia.objetivos[0].id === prio.id, 'el resumen cuenta objetivos no marcados');
+    if (otros.length) { ok(e, 'jciencia', 'objetivo', { id: otros[0].id, on: true }); afirmar(e.mision.dificultad === 'normal', 'un secundario: normal'); }
+  },
+
+  'Reglas · listo: todos los conectados, y cambiar el expediente lo anula'() {
+    const e = partida();
+    rechaza(e, 'jvuelo', 'listo', { on: true }, /mission/i);
+    ok(e, 'jvuelo', 'elegirMision', { id: 'T-NOJ' });
+    rechaza(e, 'jvuelo', 'listo', { on: true }, /playable/);
+    ok(e, 'jvuelo', 'elegirMision', { id: 'T-ORB' });
+    for (const r of ['vuelo', 'ciencia', 'potencia']) ok(e, 'j' + r, 'listo', { on: true });
+    afirmar(e.fase === 'briefing', 'empezó sin el cuarto');
+    const otro = D.MISIONES['T-ORB'].objetivos.find((o) => !o.prioridad);
+    if (otro) { ok(e, 'jcomms', 'objetivo', { id: otro.id, on: false }); afirmar(!Object.values(e.briefing.listos).some(Boolean), 'cambiar el expediente no anuló los listos'); }
+    e.jugadores.jcomms.conectado = false; // un desconectado no bloquea
+    for (const r of ['vuelo', 'ciencia', 'potencia']) ok(e, 'j' + r, 'listo', { on: true });
+    afirmar(e.fase === 'diseno', `no pasó a diseño: ${e.fase}`);
+  },
+
+  'Reglas · contingencias por departamento y activación en la sala de control'() {
+    const e = montarBueno(enDiseno());
+    D.CONTINGENCIAS['T-c1'].rol = 'vuelo'; // el fixture es compartido: se restaura al final
+    try {
+      rechaza(e, 'jcomms', 'contingencia', { id: 'T-c1', on: false }, /Flight/);
+      ok(e, 'jvuelo', 'contingencia', { id: 'T-c1', on: false });
+      ok(e, 'jvuelo', 'contingencia', { id: 'T-c1', on: true });
+      afirmar(e.porRol.comms.contingencias.includes('T-c1'), 'se guarda donde siempre');
+    } finally { delete D.CONTINGENCIAS['T-c1'].rol; }
+    // Vuelo con un paso mitigado: hay que activarla antes de avanzar.
+    const v = estadoVuelo('T-ORB', { contingencias: ['T-c4'] });
+    Object.assign(v.jugadores, partida().jugadores);
+    v.resultado = conMision('T-ORB', { eventosMision: ['EM-falla'] }, () => simular(v, D)); // EM-falla sale seguro en F1
+    v.fase = 'mision'; v.vista = { paso: 0, activadas: [] };
+    afirmar(v.resultado.pasos[0].mitigador === 'T-c4', `paso 0: ${JSON.stringify(v.resultado.pasos[0])}`);
+    rechaza(v, 'jvuelo', 'avanzar', { paso: 0 }, /Activate/);
+    rechaza(v, 'jvuelo', 'activarContingencia', { id: 'T-c1' }, /not needed/);
+    rechaza(v, 'jvuelo', 'activarContingencia', { id: 'T-c4' }, /Comms/); // T-c4 sin rol: comms
+    ok(v, 'jcomms', 'activarContingencia', { id: 'T-c4' });
+    ok(v, 'jvuelo', 'avanzar', { paso: 0 });
+    afirmar(v.vista.paso === 1 && v.vista.activadas.includes('T-c4'), 'no avanzó tras activar');
   },
 
   'Reglas · simular es determinista con la semilla'() {
@@ -562,7 +637,7 @@ const pruebas = {
   },
 
   'Reglas · estado inicial y fusión de talleres (unirse)'() {
-    afirmar(VERSION_PROTOCOLO === 2, 'versión del protocolo');
+    afirmar(VERSION_PROTOCOLO === 3, 'versión del protocolo');
     afirmar(FASES.join() === 'lobby,briefing,diseno,restricciones,verificacion,mision,informe', 'FASES');
     const e = estadoInicial();
     afirmar(e.mision === null && e.resultado === null && e.vista.paso === 0 && e.diseno.eventos.length === 0, 'campos nuevos');

@@ -1,5 +1,6 @@
 // Briefing panel over the 3D room (MEC-02): scenario -> 3 mission folders -> difficulty -> mission sheet.
 import { T } from '../textos.js';
+import { idioma } from '../i18n.js';
 import { h, en, lista, valor, DIFICULTADES } from './ui.js';
 
 function escenarios(c) {
@@ -19,7 +20,7 @@ function ficha(c, m) {
     h('dl', {},
       h('dt', {}, T.target), h('dd', {}, en(m.cuerpo) || '-'),
       h('dt', {}, T.budget), h('dd', {}, valor(c, m.presupuesto, 'M USD')),
-      h('dt', {}, T.realMissionRef), h('dd', {}, [ref.mision, ref.agencia && `(${ref.agencia})`].filter(Boolean).join(' ') || '-')),
+      h('dt', {}, T.realMissionRef), h('dd', {}, [ref.mision, ref.agencia && `(${(idioma() === 'es' && ref.agenciaEs) || ref.agencia})`].filter(Boolean).join(' ') || '-')),
     h('h5', {}, T.goals),
     h('ul', { class: 'objetivos' }, lista(m.objetivos).map((o) => h('li', { class: o.prioridad ? 'prio' : '' }, en(o.nombre) || o.id, o.prioridad ? h('b', { class: 'etq' }, T.priorityGoal) : null))),
     en(m.brief) ? h('p', { class: 'tenue pequeno' }, en(m.brief)) : null);
