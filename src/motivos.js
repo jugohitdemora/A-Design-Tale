@@ -1,8 +1,9 @@
 // Motivos de rechazo del anfitrión (src/red/protocolo.js, src/reglas/motor.js) → texto en el idioma activo.
 // El servidor manda cadenas fijas en inglés (y algunas en español). traducirMotivo() las reconoce en cualquiera de las dos
 // lenguas y devuelve la del idioma activo. Lo desconocido se devuelve tal cual.
-import { idioma, depto } from './i18n.js';
+import { idioma, depto, tx } from './i18n.js';
 import { T } from './textos.js';
+import { CONTINGENCIAS } from './datos/eventos.js';
 
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const ROLES = ['vuelo', 'ciencia', 'potencia', 'comms'];
@@ -22,6 +23,14 @@ function rolId(nombre) {
 }
 const rol = (nombre) => { const id = rolId(nombre); return id ? depto(id) : nombre; };
 const roles = (lista) => String(lista).split(', ').map(rol).join(', ');
+// El anfitrión escribe el nombre de la contingencia en inglés (o con su id si no lo tiene): se busca en los datos y se da en el idioma activo.
+function nombreContingencia(nombre) {
+  const n = String(nombre ?? '').trim();
+  for (const [id, k] of Object.entries(CONTINGENCIAS)) {
+    if (id === n || k?.nombre?.en === n || k?.nombre?.es === n) return tx(k.nombre, n);
+  }
+  return n;
+}
 const barra = (nombre) => { const k = BARRAS_EN[nombre] ?? Object.keys(T.bars).find((x) => T.bars[x] === nombre); return k && T.bars[k] ? T.bars[k] : nombre; };
 
 // Cada entrada: [regex inglés, regex español, (…grupos) => inglés, (…grupos) => español].
@@ -46,7 +55,7 @@ plantilla(/^Waiting for (.+) to press Ready$/, /^Esperando a que (.+) pulse "Lis
 plantilla(/^Missing signatures: (.+)$/, /^Faltan firmas: (.+)$/,
   (l) => `Missing signatures: ${roles(l)}`, (l) => `Faltan firmas: ${roles(l)}`);
 plantilla(/^Activate the contingency first: (.+) \((.+)\)$/, /^Primero activa la contingencia: (.+) \((.+)\)$/,
-  (c, r) => `Activate the contingency first: ${c} (${rol(r)})`, (c, r) => `Primero activa la contingencia: ${c} (${rol(r)})`);
+  (c, r) => `Activate the contingency first: ${nombreContingencia(c)} (${rol(r)})`, (c, r) => `Primero activa la contingencia: ${nombreContingencia(c)} (${rol(r)})`);
 plantilla(/^That would raise (.+), which is over its limit$/, /^Eso subiría (.+), que ya pasa su límite$/,
   (b) => `That would raise ${barra(b)}, which is over its limit`, (b) => `Eso subiría ${barra(b)}, que ya pasa su límite`);
 plantilla(/^That would push (.+) over its limit$/, /^Eso haría que (.+) pase su límite$/,
