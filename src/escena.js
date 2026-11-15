@@ -356,6 +356,32 @@ export function crearEscena() {
       const orden = carpetas.map((c) => ({ c, d: c.grupo.position.distanceToSquared(posCamara) })).sort((a, b) => a.d - b.d);
       orden.forEach(({ c }, k) => { c.pista.position.y = 0.12 + k * 0.15; });
     },
+    // Después de pintar las etiquetas: si dos pistas se tocan en pantalla, sube la de arriba hasta que no se pisen.
+    // La que está bajo el puntero (abierta) queda por encima de las demás.
+    desencimarPistas() {
+      const cajas = [];
+      for (const c of carpetas) {
+        const el = c.pista.element;
+        if (!c.pista.visible || el.style.display === 'none') continue;
+        el.style.translate = '';
+        const r = el.getBoundingClientRect();
+        if (!r.width) continue;
+        cajas.push({ el, top: r.top, bottom: r.bottom, left: r.left, right: r.right, abierta: el.classList.contains('encima') });
+      }
+      cajas.sort((a, b) => b.bottom - a.bottom); // de abajo (más cerca) hacia arriba
+      const puestas = [];
+      for (const k of cajas) {
+        let dy = 0;
+        for (let vuelta = 0; vuelta < 4; vuelta++) {
+          const choca = puestas.find((p) => k.left < p.right + 4 && k.right > p.left - 4 && k.top - dy < p.bottom + 4 && k.bottom - dy > p.top - 4);
+          if (!choca) break;
+          dy = k.bottom - choca.top + 4;
+        }
+        if (dy) k.el.style.translate = `0 ${-dy}px`;
+        puestas.push({ ...k, top: k.top - dy, bottom: k.bottom - dy });
+        if (k.abierta) k.el.style.zIndex = '1000';
+      }
+    },
     marcarCarpeta,
     // Pantalla del portátil de un asiento: esquinas en el mundo, centro, normal (hacia el jugador) y "arriba".
     pantallaLaptop(i) {

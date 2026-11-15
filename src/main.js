@@ -634,7 +634,7 @@ function bucle() {
       render.render(control.escena, camaraSala);
     } else {
       render.render(sala.escena, camaraSala);
-      if (vista === 'sala') { sala.escalonarPistas(camaraSala.position); renderEtiquetas.render(sala.escena, camaraSala); }
+      if (vista === 'sala') { sala.escalonarPistas(camaraSala.position); renderEtiquetas.render(sala.escena, camaraSala); sala.desencimarPistas(); }
     }
     colocarPantalla();
   } else {
