@@ -132,15 +132,7 @@ input[type=range] { accent-color: var(--acento); }
 /* ============ Pantallas de juego (src/pantallas/) ============ */
 :root { --ok: #3fa66b; --aviso: #e0b040; --mal: #d05050; --caja: #121821; --plano: #14324f; --plano-linea: #2c5a86; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-#franja { position: fixed; top: 0; left: 0; right: 0; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px;
-  padding: 6px 12px; background: rgba(10, 13, 19, 0.97); border-bottom: 1px solid var(--borde); font-size: 13px; }
-.f-pasos { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; flex-wrap: wrap; }
-.f-pasos li { padding: 3px 9px; border: 1px solid var(--borde); border-radius: 12px; color: var(--tenue); }
-.f-pasos li.hecho { color: var(--texto); border-color: #3b4a5c; }
-.f-pasos li.actual { background: var(--acento); color: #1a1a1a; border-color: var(--acento); font-weight: 600; }
-.f-yo { font-weight: 600; }
-.f-aviso { flex: 1 1 200px; color: var(--acento); min-height: 1.2em; }
-#franja .btn-plano { margin-left: auto; padding: 3px 10px; }
+/* #franja: aviso y tarjeta de guía (estilos/guia.css). Ya no hay barra superior. */
 
 #pantalla { position: fixed; inset: 0; z-index: 4; overflow: auto; padding: 52px 12px 16px; background: rgba(8, 11, 16, 0.97); }
 #pantalla.fase-briefing { background: none; pointer-events: none; overflow: hidden; padding: 52px 12px 12px; display: flex; justify-content: flex-end; align-items: flex-start; }
@@ -301,5 +293,4 @@ sup.src { font-size: 10px; color: var(--tenue); margin-left: 2px; }
   .cohete-vista { grid-template-columns: auto 1fr auto; }
   .cohete-vista .carpeta { grid-column: 1 / -1; }
   .carpetas { grid-template-columns: 1fr; }
-  #franja .btn-plano { margin-left: 0; }
 }

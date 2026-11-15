@@ -7,7 +7,7 @@
 import { T } from '../textos.js';
 import { textos, tx } from '../i18n.js';
 import { traducirMotivo } from '../motivos.js';
-import { h, en, lista, nombreRol } from './ui.js';
+import { h, en, lista, nombreRol, resumenSeguro, ROLES_IDS } from './ui.js';
 import { pantallaLaptop, alCargarApps } from './laptop.js';
 import { expedienteCompleto, expedienteMini } from './expediente.js';
 import { pantallaControl } from '../control/index.js';
@@ -17,11 +17,110 @@ export const FASES_JUEGO = ['briefing', 'diseno', 'restricciones', 'verificacion
 export const LOGICO = { laptop: { w: 1280, h: 800 }, control: { w: 1600, h: 800 } };
 
 const TV = textos({
-  es: { laptop: 'Portátil', sala: 'Mirar la sala', control: 'Sala de control', briefing: 'Sala de briefing', manualTitulo: 'MANUAL DE PROCEDIMIENTOS', cerrar: 'Cerrar',
-    cargando: 'Cargando…', esc: 'Esc: levantar la vista' },
-  en: { laptop: 'Laptop', sala: 'Look around', control: 'Control room', briefing: 'Briefing room', manualTitulo: 'STANDARD OPERATING PROCEDURES', cerrar: 'Close',
-    cargando: 'Loading…', esc: 'Esc: look up' },
+  es: { laptop: 'Portátil', sala: 'Sala', control: 'Sala de control', briefing: 'Sala de briefing', manualTitulo: 'MANUAL DE PROCEDIMIENTOS', cerrar: 'Cerrar',
+    cargando: 'Cargando…', esc: 'Esc: levantar la vista', lobby: 'Salir al lobby', siguiente: 'Siguiente', y: 'y',
+    g: {
+      proyector: 'Elige un escenario en el proyector.',
+      carpeta: 'Abre una carpeta de la mesa y elige la misión.',
+      listo: 'Marca los objetivos en el expediente y pulsa Listo.',
+      esperaListos: (a, b) => `Esperando a la tripulación (${a}/${b} listos).`,
+      piezas: 'Abre tu portátil y monta piezas en el Constructor.',
+      cohete: 'Elige un cohete en la Cámara de lanzamiento.',
+      ruta: 'Planifica la ruta en la sala de control.',
+      revision: 'Cuando el equipo esté listo, pulsa Pedir revisión.',
+      exceso: (b) => `Reduce ${b}: hay exceso sobre el límite.`,
+      recorta: (b) => `Recorta ${b} hasta quedar dentro del límite.`,
+      gonogo: 'Ve a la sala de control y da GO.',
+      fallaCheck: 'Hay comprobaciones en rojo: vuelve al diseño.',
+      esperaGo: (l) => `Esperando GO de: ${l}.`,
+      lanzar: 'Todo en GO. Pulsa Lanzar.',
+      mision: 'Sigue el vuelo y pulsa Siguiente paso.',
+      informe: 'Lee el informe. Vuela de nuevo o elige otra misión.',
+    } },
+  en: { laptop: 'Laptop', sala: 'Room', control: 'Control room', briefing: 'Briefing room', manualTitulo: 'STANDARD OPERATING PROCEDURES', cerrar: 'Close',
+    cargando: 'Loading…', esc: 'Esc: look up', lobby: 'Leave to lobby', siguiente: 'Next', y: 'and',
+    g: {
+      proyector: 'Choose a scenario on the projector.',
+      carpeta: 'Open a folder on the table and choose the mission.',
+      listo: 'Tick the goals in the dossier and press Ready.',
+      esperaListos: (a, b) => `Waiting for the crew (${a}/${b} ready).`,
+      piezas: 'Open your laptop and add parts in the Builder.',
+      cohete: 'Choose a rocket in the Launch camera.',
+      ruta: 'Plan the route in the control room.',
+      revision: 'When the team is ready, press Request review.',
+      exceso: (b) => `Reduce ${b}: over the limit.`,
+      recorta: (b) => `Cut ${b} until it is within the limit.`,
+      gonogo: 'Go to the control room and give your GO.',
+      fallaCheck: 'Some checks are red: return to design.',
+      esperaGo: (l) => `Waiting for GO from: ${l}.`,
+      lanzar: 'All GO. Press Launch.',
+      mision: 'Follow the flight and press Next step.',
+      informe: 'Read the report. Fly again or choose another mission.',
+    } },
 });
+
+// Siguiente paso para ESTE jugador, sacado del estado (nunca un texto fijo por fase).
+// objetivo: qué objeto del mundo lleva ahí ('proyector', 'carpeta', 'laptop', 'control', null).
+function calcularGuia(c, fase) {
+  const e = c.e ?? {};
+  const g = TV.g;
+  const i = FASES_JUEGO.indexOf(fase);
+  const base = { fase, i, total: FASES_JUEGO.length, nombre: T.phases[fase] ?? fase };
+  const r = (texto, objetivo = null) => ({ ...base, texto, objetivo });
+  try {
+    if (fase === 'briefing') {
+      if (!e.mision?.escenario) return r(g.proyector, 'proyector');
+      if (!e.mision?.id) return r(g.carpeta, 'carpeta');
+      const tripu = Object.entries(e.jugadores ?? {}).filter(([, j]) => j.conectado && j.rol);
+      const listos = tripu.filter(([id]) => e.briefing?.listos?.[id]).length;
+      if (!e.briefing?.listos?.[c.id]) return r(g.listo, 'carpeta');
+      return r(g.esperaListos(listos, tripu.length));
+    }
+    if (fase === 'diseno' || fase === 'restricciones') {
+      const res = resumenSeguro(c);
+      const nombreBarra = (b) => (T.bars?.[b] ?? b).toLowerCase();
+      const unir = (l) => (l.length > 1 ? `${l.slice(0, -1).join(', ')} ${TV.y} ${l[l.length - 1]}` : l[0] ?? '');
+      if (fase === 'restricciones') {
+        const k = res && c.motor?.cumple ? c.motor.cumple(res) : null;
+        if (k?.barras?.length) return r(g.recorta(unir(k.barras.map(nombreBarra))), 'laptop');
+        return r(g.revision, 'laptop');
+      }
+      const mias = Object.keys(c.e?.porRol?.[c.rol]?.piezas ?? {}).length;
+      if (!mias) return r(g.piezas, 'laptop');
+      if (!e.porRol?.vuelo?.cohete) return r(g.cohete, 'laptop');
+      if (!e.porRol?.vuelo?.ruta) return r(g.ruta, 'control');
+      const k = res && c.motor?.cumple ? c.motor.cumple(res) : null;
+      if (k?.nivel === 'fuera') return r(g.exceso(unir(k.barras.map(nombreBarra))), 'laptop');
+      return r(g.revision, 'laptop');
+    }
+    if (fase === 'verificacion') {
+      let v = null;
+      try { v = c.motor?.verificar && c.mision ? c.motor.verificar(c.e, c.D) : null; } catch { v = null; }
+      if (v && !v.pasa) return r(g.fallaCheck, 'control');
+      const faltan = ROLES_IDS.filter((x) => !e.firmas?.[x]);
+      if (!faltan.length) return r(g.lanzar, 'control');
+      if (!e.firmas?.[c.rol]) return r(g.gonogo, 'control');
+      return r(g.esperaGo(faltan.map(nombreRol).join(', ')), 'control');
+    }
+    if (fase === 'mision') return r(g.mision, 'control');
+    if (fase === 'informe') return r(g.informe, 'control');
+  } catch (err) { console.warn('guía', err); }
+  return r('');
+}
+
+// Fases como puntos (hecho / actual / pendiente) con el nombre de la actual. Se usa en el portátil, la sala de control y el HUD.
+export function pasosFase(guia) {
+  if (!guia) return null;
+  return h('div', { class: 'g-pasos', title: FASES_JUEGO.map((f) => T.phases[f]).join(' › ') },
+    h('ol', { 'aria-label': guia.nombre }, FASES_JUEGO.map((f, k) => h('li', { class: k === guia.i ? 'actual' : k < guia.i ? 'hecho' : '', ...(k === guia.i ? { 'aria-current': 'step' } : {}) }))),
+    h('span', { class: 'g-fase' }, `${guia.i + 1}/${guia.total} · ${guia.nombre}`));
+}
+// Línea "Siguiente: …" que va dentro de cada pantalla.
+export function lineaGuia(guia, extra = '') {
+  if (!guia?.texto) return null;
+  return h('p', { class: 'g-linea ' + extra, role: 'status' }, h('b', {}, TV.siguiente, ' ›'), ' ', guia.texto);
+}
+export const textosVista = TV;
 
 async function cargarModulos(simulado) {
   if (simulado) {
@@ -44,7 +143,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     irA: (v) => ultimo?.irA?.(v),
   };
   let ultimo = null, errorCarga = null, firma = '', avisoTxt = '', avisoTimer = null;
-  let arrastrando = false;
+  let arrastrando = false, faseVista = null;
   const vistos = new Set(); let lineaBase = false; const cola = [];
 
   cargarModulos(simulado).then(({ motor, D }) => { c.motor = motor; c.D = D; dibujar(true); })
@@ -59,25 +158,30 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
   function limpiarAviso() { avisar(''); }
   function avisar(t) {
     avisoTxt = t ? traducirMotivo(t) : '';
-    const el = franja.querySelector('.f-aviso'); if (el) el.textContent = avisoTxt;
+    const el = franja.querySelector('.f-aviso'); if (el) { el.textContent = avisoTxt; el.classList.toggle('vacio', !avisoTxt); }
     clearTimeout(avisoTimer);
     if (avisoTxt) avisoTimer = setTimeout(() => avisar(''), 8000);
   }
 
-  function pintarFranja(fase) {
-    const i = FASES_JUEGO.indexOf(fase);
+  // Ya no hay franja superior. Quedan: el aviso (abajo al centro, solo cuando hay algo que decir) y,
+  // mirando la sala, una tarjeta pequeña abajo a la izquierda con la fase, el siguiente paso y los atajos.
+  // Dentro del portátil y de la sala de control esa misma guía va en su propia barra (laptop.js, control/index.js).
+  function pintarFranja() {
     const vista = ultimo?.vista ?? 'sala';
-    const boton = (v, icono, txt) => h('button', { class: 'f-vista' + (vista === v ? ' activa' : ''), type: 'button', onclick: () => c.irA(v), title: txt }, icono, ' ', txt);
-    franja.replaceChildren(
-      h('ol', { class: 'f-pasos' }, FASES_JUEGO.map((f, k) => h('li', { class: k === i ? 'actual' : k < i ? 'hecho' : '', ...(k === i ? { 'aria-current': 'step' } : {}) }, T.phases[f]))),
-      h('span', { class: 'f-yo' }, ultimo?.nick ?? '', ' · ', c.rol ? nombreRol(c.rol) : T.noRole),
-      h('span', { class: 'f-red tenue' }, ultimo?.enLinea ?? ''),
-      h('span', { class: 'f-aviso', role: 'status', 'aria-live': 'polite' }, avisoTxt),
-      h('nav', { class: 'f-vistas' },
-        vista !== 'control' ? boton('laptop', '💻', TV.laptop) : null,
-        vista !== 'control' ? boton('sala', '👀', TV.sala) : boton('sala', '🚪', TV.briefing),
-        vista !== 'control' ? boton('control', '🛰', TV.control) : null),
-      h('button', { class: 'btn-plano', type: 'button', onclick: () => ultimo?.volverAlLobby?.() }, T.toLobby));
+    const nodos = [h('p', { class: 'f-aviso' + (avisoTxt ? '' : ' vacio'), role: 'status', 'aria-live': 'polite' }, avisoTxt)];
+    if (vista === 'sala') {
+      const boton = (v, icono, txt) => h('button', { class: 'f-vista' + (c.guia?.objetivo === v ? ' guia' : ''), type: 'button', onclick: () => c.irA(v) }, icono, ' ', txt);
+      nodos.push(h('aside', { class: 'f-hud' },
+        pasosFase(c.guia),
+        lineaGuia(c.guia),
+        h('div', { class: 'f-vistas' },
+          boton('laptop', '💻', TV.laptop),
+          boton('control', '🛰', TV.control)),
+        h('div', { class: 'f-pie' },
+          h('span', {}, ultimo?.nick ?? '', ' · ', c.rol ? nombreRol(c.rol) : T.noRole, ' · ', ultimo?.enLinea ?? ''),
+          h('button', { class: 'f-salir', type: 'button', onclick: () => ultimo?.volverAlLobby?.() }, TV.lobby))));
+    }
+    franja.replaceChildren(...nodos);
   }
 
   // ---- eventos de diseño (modal) ----
@@ -151,9 +255,12 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     capa.classList.toggle('oculto', !activo);
     if (!activo) { modal.classList.add('oculto'); c.ui.overlay = null; return; }
 
-    if (c.e?.fase && c.e.fase !== e.fase) c.ui.overlay = null; // al cambiar de fase se cierran expediente y manual
+    // Al cambiar de fase se cierran expediente y manual. Se guarda la fase aparte: el estado puede llegar mutado en el mismo objeto.
+    if (faseVista && faseVista !== e.fase) c.ui.overlay = null;
+    faseVista = e.fase;
     c.e = e; c.rol = p.rol; c.id = p.jugadorId; c.nick = p.nick; c.vista = vista;
     c.mision = c.D?.MISIONES?.[e.mision?.id] ?? null;
+    c.guia = c.D && c.motor ? calcularGuia(c, e.fase) : null;
     revisarEventos();
 
     const nueva = JSON.stringify([e, p.rol, p.enLinea, !!c.D, errorCarga, c.ui, vista, conPantalla]);
@@ -161,7 +268,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     if (arrastrando) return;
     firma = nueva;
 
-    pintarFranja(e.fase);
+    pintarFranja();
     const scroll = {};
     for (const zona of [raiz, capa]) zona.querySelectorAll('[data-scroll]').forEach((n) => { scroll[n.dataset.scroll] = n.scrollTop; });
     capa.replaceChildren(...construirCapa(e.fase));
@@ -180,6 +287,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     abrir,
     cerrar: cerrarOverlay,
     get overlay() { return c.ui.overlay; },
+    get guia() { return c.guia ?? null; },
     contexto: c,
   };
 }

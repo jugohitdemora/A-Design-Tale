@@ -10,14 +10,6 @@
 #fundido { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 40; transition: opacity 0.3s; }
 #fundido.on { opacity: 1; }
 
-/* ---------- Franja superior: botones de vista ---------- */
-.f-vistas { display: flex; gap: 4px; margin-left: auto; }
-.f-vista { font: 12px var(--ui); color: var(--texto); background: rgba(255,255,255,0.06); border: 1px solid var(--borde); border-radius: 12px; padding: 3px 10px; cursor: pointer; }
-.f-vista:hover { border-color: var(--acento); }
-.f-vista.activa { background: var(--acento); color: #1a1a1a; border-color: var(--acento); }
-#franja .f-vistas + .btn-plano { margin-left: 0; }
-#franja { background: rgba(10, 13, 18, 0.82); }
-
 /* ---------- Capa: HUD del expediente y modales ---------- */
 #capa { position: fixed; inset: 0; z-index: 8; pointer-events: none; }
 #capa > * { pointer-events: auto; }
@@ -137,8 +129,8 @@ body.en-juego:has(#pantalla:not(.oculto)) .exp-mini { opacity: 0.92; }
 #proyector-ui p { margin: 0; font-size: 14px; color: var(--tenue); }
 #proyector-ui button { white-space: nowrap; font-weight: 600; }
 #proyector-ui button:disabled { opacity: 0.5; cursor: default; }
-/* Durante la elección se esconden los botones de vista de la franja (no se puede salir del proyector). */
-body.en-proyector #franja .f-vistas { visibility: hidden; }
+/* Durante la elección se esconden los botones de vista (no se puede salir del proyector). */
+body.en-proyector #franja .f-vistas { display: none; }
 
 /* Pista de cada carpeta de misión */
 .carpeta-pista { font: 11px/1.3 var(--ui); color: #2b2210; background: #f6ecd0; border: 1px solid #c99a3a; border-radius: 4px;

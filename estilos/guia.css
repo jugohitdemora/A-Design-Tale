@@ -1,0 +1,67 @@
+/* Guía del jugador: sustituye a la antigua franja superior.
+   - .f-aviso: aviso de reglas, abajo al centro, solo cuando hay texto.
+   - .f-hud: tarjeta pequeña abajo a la izquierda mientras se mira la sala (fase, siguiente paso, atajos).
+   - .g-pasos / .g-linea: fase como puntos y línea "Siguiente ›", reutilizadas en el portátil y en la sala de control.
+   Criterio: un solo mensaje de "qué hago ahora" por pantalla y nada fijo encima de la interfaz proyectada. */
+
+#franja { position: fixed; inset: 0; z-index: 6; pointer-events: none; font: 13px/1.35 var(--ui); }
+#franja > * { pointer-events: auto; }
+
+.f-aviso { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); margin: 0;
+  padding: 8px 14px; border-radius: 8px; background: rgba(12, 16, 23, 0.94); border: 1px solid var(--acento); color: var(--acento);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); z-index: 30; transition: opacity 0.2s, transform 0.2s; }
+.f-aviso.vacio { opacity: 0; transform: translate(-50%, 8px); pointer-events: none; }
+
+.f-hud { position: fixed; left: 16px; bottom: 16px; width: min(320px, calc(100vw - 32px)); padding: 12px 14px; display: grid; gap: 8px;
+  background: rgba(12, 16, 23, 0.86); border: 1px solid var(--borde); border-radius: 10px; color: var(--texto);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); }
+.f-hud .g-linea { font-size: 14px; }
+.f-vistas { display: flex; gap: 6px; flex-wrap: wrap; }
+.f-vista { font: 13px var(--ui); color: var(--texto); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--borde); border-radius: 14px;
+  padding: 5px 12px; cursor: pointer; }
+.f-vista:hover, .f-vista:focus-visible { border-color: var(--acento); }
+.f-vista.guia { border-color: var(--acento); color: var(--acento); }
+.f-pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: var(--tenue); }
+.f-salir { font: 11px var(--ui); color: var(--tenue); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.f-salir:hover { color: var(--texto); }
+
+/* Fases como puntos */
+.g-pasos { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.g-pasos ol { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
+.g-pasos li { width: 8px; height: 8px; border-radius: 50%; border: 1px solid currentColor; opacity: 0.45; }
+.g-pasos li.hecho { background: currentColor; opacity: 0.7; }
+.g-pasos li.actual { background: var(--acento); border-color: var(--acento); opacity: 1; width: 18px; border-radius: 4px; }
+.g-fase { font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase; opacity: 0.85; }
+.g-linea { margin: 0; }
+.g-linea b { color: var(--acento); font-weight: 600; margin-right: 2px; }
+.f-hud .g-pasos { color: var(--tenue); }
+body.en-proyector .f-hud .g-linea { display: none; } /* la barra del proyector ya dice qué hacer */
+
+/* Brillo suave en el control que lleva al siguiente paso */
+@keyframes guia-pulso { 0%, 100% { box-shadow: 0 0 0 0 rgba(242, 184, 68, 0.0); } 50% { box-shadow: 0 0 0 3px rgba(242, 184, 68, 0.45); } }
+.f-vista.guia, .mc-ir.guia, .lp-icono.guia { animation: guia-pulso 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .f-vista.guia, .mc-ir.guia, .lp-icono.guia { animation: none; } }
+
+/* Barra del portátil: fase + siguiente paso en el centro, salida a la derecha */
+.lp-barra .g-pasos { color: #c9d6e2; }
+.lp-barra .g-linea.lp-guia { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eef4f8; font-size: 14px; }
+.lp-salir { font: 12px var(--lp-ui, var(--ui)); color: #eef4f8; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px; padding: 3px 10px; cursor: pointer; }
+.lp-salir:hover { background: rgba(255, 255, 255, 0.2); }
+.lp-icono.lp-ir-control { margin-top: auto; }
+
+/* Cabecera de la sala de control */
+.mc-cab .g-pasos { color: var(--mc-tenue, #7f98b3); }
+.mc-cab .g-linea.mc-guia { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mc-tinta, #d8e6f4); font-size: 14px; }
+.mc-cab .mc-yo { margin-left: 0; }
+.mc-cab { gap: 14px; }
+.mc-cab > .mc-logo, .mc-cab > .mc-modo, .mc-cab > .mc-yo, .mc-cab > .mc-reloj { white-space: nowrap; flex: none; }
+.mc-cab .g-fase { display: none; } /* el modo (PLANIFICACIÓN, GO / NO-GO…) ya nombra la fase */
+.mc-nav { display: flex; gap: 6px; }
+.mc-ir { font: 12px var(--ui); color: var(--mc-tinta, #d8e6f4); background: var(--mc-panel, #0d1d33); border: 1px solid var(--mc-borde, #2c4a6e);
+  border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+.mc-ir:hover { border-color: var(--acento); }
+
+@media (max-width: 700px) {
+  .f-hud { left: 8px; right: 8px; bottom: 8px; width: auto; }
+}

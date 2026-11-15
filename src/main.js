@@ -33,7 +33,7 @@ contenedor.appendChild(renderEtiquetas.domElement);
 
 const centro = crearCentroDeControl();   // fondo del inicio
 const sala = crearEscena();              // sala de briefing
-const control = crearCentroDeControl();  // sala de control de misión (misma sala, otra instancia)
+const control = crearCentroDeControl({ holograma: false }); // sala de control de misión (misma sala, sin la Tierra: encima va la interfaz)
 const camaraSala = new THREE.PerspectiveCamera(70, 1, 0.03, 60);
 camaraSala.rotation.order = 'YXZ';
 // Pared principal de la sala de control (ver inicio.js: pantalla(7.2, 3.6, 0, 3.3) en z = -7.35 + 0.1).
@@ -234,8 +234,8 @@ function vistaAutomatica(fase) {
   const antes = faseVista;
   faseVista = fase;
   if (fase === 'briefing') irA('sala', !antes);
-  else if (['diseno', 'restricciones', 'verificacion'].includes(fase)) { if (!(lugar === 'control' && antes && antes !== 'informe' && antes !== 'mision')) irA('laptop', !antes); }
-  else if (fase === 'mision' || fase === 'informe') irA('control', !antes);
+  else if (['diseno', 'restricciones'].includes(fase)) { if (!(lugar === 'control' && antes && antes !== 'informe' && antes !== 'mision' && antes !== 'verificacion')) irA('laptop', !antes); }
+  else if (['verificacion', 'mision', 'informe'].includes(fase)) irA('control', !antes); // GO / NO-GO, vuelo e informe: en la sala de control
 }
 
 let fundido = null;
@@ -294,6 +294,9 @@ function actualizarTodo() {
     volverAlLobby: () => { lobbyForzado = true; pantalla = 'lobby'; actualizarTodo(); },
     irA: (v) => irA(v),
   });
+  // Baliza 3D sobre el siguiente objeto (solo mirando la sala de briefing).
+  const g = ui.guia;
+  sala.guiar(enJuego() && lugar === 'briefing' && vista === 'sala' && !sala.enCinematica ? g?.objetivo : null, Math.max(0, indiceRol(rol)));
   if (pantalla === 'inicio') return;
 
   const ul = $('tripulacion');

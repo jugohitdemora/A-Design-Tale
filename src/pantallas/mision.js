@@ -31,7 +31,7 @@ export function pantallaMision(c) {
     ol.append(h('li', { class: 'paso ' + (p.ok ? 'ok' : 'mal') + (i === paso ? ' actual' : '') },
       h('div', { class: 'paso-cab' }, h('b', {}, nombre), h('span', {}, `${redondear((p.p ?? 0) * 100, 0)}%`), h('b', { class: 'etq ' + (p.ok ? 'ok' : 'mal') }, p.ok ? T.success : T.failure)),
       ev ? h('div', { class: 'pequeno' }, `${T.eventFired}: `, h('b', {}, `${ev.signo ?? ''} ${en(ev.nombre) || ev.id}`),
-        ev.signo === '+' ? null : ` — ${p.mitigado ? T.mitigatedBy : T.notMitigatedShort}`,
+        ev.signo === '+' ? null : ` · ${p.mitigado ? T.mitigatedBy : T.notMitigatedShort}`,
         en(ev.texto) ? h('div', { class: 'tenue' }, en(ev.texto)) : null) : null));
   });
   raiz.append(ol);

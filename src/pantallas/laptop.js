@@ -10,22 +10,25 @@ import { pantallaInforme } from './informe.js';
 import { expedienteCompleto } from './expediente.js';
 import { resumenSeguro } from './ui.js';
 import { panelGlobal } from './panel-global.js';
+import { pasosFase, lineaGuia } from './index.js';
 
 const T = textos({
   es: {
-    so: 'AGENCIA·OS', apps: { constructor: 'Constructor', cohete: 'Cámara de lanzamiento', contingencias: 'Contingencias', ruta: 'Ruta',
+    so: 'AGENCIA·OS', apps: { constructor: 'Constructor', cohete: 'Cámara de lanzamiento', contingencias: 'Contingencias', ruta: 'Sala de control',
       expediente: 'Expediente', manual: 'Manual SOP', estado: 'Estado', verificacion: 'Verificación', informe: 'Informe' },
+    levantarse: 'Sala (Esc)',
     bloqueada: 'Disponible cuando empiece el diseño', ruta: 'La ruta se planifica en la SALA DE CONTROL DE MISIÓN.',
     rutaTxt: 'Ventana de lanzamiento, trayectoria y sitio de descenso u órbita con capas de datos satelitales.', irControl: 'Ir a la sala de control',
-    esperandoBriefing: 'Briefing en curso', esperandoTxt: 'Lee el expediente, marca los objetivos y pulsa "Listo". El constructor se abre cuando toda la tripulación esté lista.',
+    esperandoBriefing: 'Briefing en curso', esperandoTxt: 'Marca los objetivos en el expediente y pulsa Listo.',
     cargando: 'Cargando…', enControl: 'La misión se sigue desde la sala de control.',
   },
   en: {
-    so: 'AGENCY·OS', apps: { constructor: 'Builder', cohete: 'Launch camera', contingencias: 'Contingencies', ruta: 'Route',
+    so: 'AGENCY·OS', apps: { constructor: 'Builder', cohete: 'Launch camera', contingencias: 'Contingencies', ruta: 'Control room',
       expediente: 'Dossier', manual: 'SOP manual', estado: 'Status', verificacion: 'Verification', informe: 'Report' },
+    levantarse: 'Room (Esc)',
     bloqueada: 'Available once design starts', ruta: 'The route is planned in the MISSION CONTROL ROOM.',
     rutaTxt: 'Launch window, trajectory and landing site or orbit with satellite data layers.', irControl: 'Go to the control room',
-    esperandoBriefing: 'Briefing in progress', esperandoTxt: 'Read the dossier, tick the goals and press "Ready". The builder opens when the whole crew is ready.',
+    esperandoBriefing: 'Briefing in progress', esperandoTxt: 'Tick the goals in the dossier and press Ready.',
     cargando: 'Loading…', enControl: 'The mission is followed from the control room.',
   },
 });
@@ -45,15 +48,14 @@ cargar('cohete', '../laptop/camara-lanzamiento.js', 'appCohete');
 cargar('manual', '../laptop/manual.js', 'appManual');
 export function alCargarApps(f) { avisarCarga = f; }
 
+// La verificación (votación GO / NO-GO) y el informe ya no van en el portátil: están en la sala de control.
+// El icono "Sala de control" del dock no abre una ventana: lleva directamente allí.
 function appsDeFase(fase) {
   if (fase === 'briefing') return ['expediente', 'manual'];
-  if (fase === 'diseno' || fase === 'restricciones') return ['constructor', 'cohete', 'contingencias', 'ruta', 'estado', 'expediente', 'manual'];
-  if (fase === 'verificacion') return ['verificacion', 'estado', 'expediente', 'manual'];
-  if (fase === 'informe') return ['informe', 'ruta', 'expediente', 'manual'];
-  if (fase === 'mision') return ['ruta', 'estado', 'expediente', 'manual'];
-  return ['expediente', 'manual'];
+  if (fase === 'diseno' || fase === 'restricciones') return ['constructor', 'cohete', 'contingencias', 'estado', 'expediente', 'manual'];
+  return ['estado', 'expediente', 'manual'];
 }
-const TODAS = ['constructor', 'cohete', 'contingencias', 'ruta', 'verificacion', 'informe', 'estado', 'expediente', 'manual'];
+const TODAS = ['constructor', 'cohete', 'contingencias', 'estado', 'expediente', 'manual'];
 
 function reloj() {
   const d = new Date();
@@ -99,8 +101,10 @@ export function pantallaLaptop(c, fase, { irA }) {
   if (fase === 'briefing' && app === 'expediente' && !c.e?.mision?.id) { /* espera */ }
   const barra = h('header', { class: 'lp-barra' },
     h('span', { class: 'lp-logo' }, T.so),
-    h('span', { class: 'lp-mision' }, c.mision ? `${c.mision.id}` : ''),
+    pasosFase(c.guia),
+    lineaGuia(c.guia, 'lp-guia'),
     h('span', { class: 'lp-usuario', style: `--rol: var(--lp-rol-${c.rol})` }, c.nick, ' · ', depto(c.rol)),
+    h('button', { class: 'lp-salir', type: 'button', title: T.levantarse, onclick: () => irA('sala') }, '⏏ ', T.levantarse),
     h('span', { class: 'lp-reloj' }, reloj()));
   const dock = h('nav', { class: 'lp-dock', role: 'tablist' }, TODAS.filter((a) => apps.includes(a) || a === 'constructor').map((a) => {
     const ok = apps.includes(a);
@@ -109,7 +113,10 @@ export function pantallaLaptop(c, fase, { irA }) {
       disabled: !ok, title: ok ? T.apps[a] : T.bloqueada,
       onclick: () => { c.ui.app = a; if (a === 'manual') c.ui.manualRol = c.rol; c.repintar(); },
     }, h('span', { class: 'lp-icono-dib', 'aria-hidden': 'true' }, ICONOS[a]), h('span', { class: 'lp-icono-txt' }, T.apps[a]));
-  }));
+  }), h('button', {
+    class: 'lp-icono lp-ir-control' + (c.guia?.objetivo === 'control' ? ' guia' : ''), type: 'button', title: T.irControl,
+    disabled: fase === 'briefing', onclick: () => irA('control'),
+  }, h('span', { class: 'lp-icono-dib', 'aria-hidden': 'true' }, '🛰'), h('span', { class: 'lp-icono-txt' }, T.apps.ruta)));
   const ventana = h('section', { class: 'lp-ventana', 'data-app': app },
     h('div', { class: 'lp-ventana-titulo' }, h('span', {}, `${ICONOS[app]} ${T.apps[app]}`), h('span', { class: 'lp-ventana-botones', 'aria-hidden': 'true' }, '▁ ▢ ✕')),
     h('div', { class: 'lp-ventana-cuerpo', 'data-scroll': 'app-' + app }, contenidoApp(c, app, fase, irA)));

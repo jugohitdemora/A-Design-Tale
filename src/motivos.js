@@ -43,13 +43,13 @@ const plantilla = (reEn, reEs, en, es) => TABLA.push([reEn, reEs, en, es]);
 plantilla(/^Only (.+) can do that$/, /^Solo (.+) puede hacerlo$/,
   (r) => `Only ${rol(r)} can do that`, (r) => `Solo ${rol(r)} puede hacerlo`);
 plantilla(/^(.+) has a player: only they can do that$/, /^(.+) tiene un jugador: solo esa persona puede hacerlo$/,
-  (r) => `${rol(r)} has a player: only they can do that`, (r) => `${rol(r)} tiene un jugador: solo esa persona puede hacerlo`);
+  (r) => `Only the ${rol(r)} player can do that`, (r) => `Solo el jugador de ${rol(r)} puede hacerlo`);
 plantilla(/^That part belongs to (.+)$/, /^Esa pieza pertenece a (.+)$/,
   (r) => `That part belongs to ${rol(r)}`, (r) => `Esa pieza pertenece a ${r === 'another role' ? 'otro departamento' : rol(r)}`);
 plantilla(/^Usage must be between (.+) and (.+) h\/day$/, /^El uso debe estar entre (.+) y (.+) h\/día$/,
   (a, b) => `Usage must be between ${a} and ${b} h/day`, (a, b) => `El uso debe estar entre ${a} y ${b} h/día`);
 plantilla(/^You can buy at most (\d+) contingencies$/, /^Puedes tomar como máximo (\d+) contingencias$/,
-  (n) => `You can buy at most ${n} contingencies`, (n) => `Puedes tomar como máximo ${n} contingencias`);
+  (n) => `You can take at most ${n} contingencies`, (n) => `Puedes tomar como máximo ${n} contingencias`);
 plantilla(/^Waiting for (.+) to press Ready$/, /^Esperando a que (.+) pulse "Listo"$/,
   (n) => `Waiting for ${n} to press Ready`, (n) => `Esperando a que ${n} pulse "Listo"`);
 plantilla(/^Missing signatures: (.+)$/, /^Faltan firmas: (.+)$/,
@@ -57,7 +57,7 @@ plantilla(/^Missing signatures: (.+)$/, /^Faltan firmas: (.+)$/,
 plantilla(/^Activate the contingency first: (.+) \((.+)\)$/, /^Primero activa la contingencia: (.+) \((.+)\)$/,
   (c, r) => `Activate the contingency first: ${nombreContingencia(c)} (${rol(r)})`, (c, r) => `Primero activa la contingencia: ${nombreContingencia(c)} (${rol(r)})`);
 plantilla(/^That would raise (.+), which is over its limit$/, /^Eso subiría (.+), que ya pasa su límite$/,
-  (b) => `That would raise ${barra(b)}, which is over its limit`, (b) => `Eso subiría ${barra(b)}, que ya pasa su límite`);
+  (b) => `You cannot raise ${barra(b)}: it is over its limit`, (b) => `No puedes subir ${barra(b)}: ya pasa su límite`);
 plantilla(/^That would push (.+) over its limit$/, /^Eso haría que (.+) pase su límite$/,
   (b) => `That would push ${barra(b)} over its limit`, (b) => `Eso haría que ${barra(b)} pase su límite`);
 
@@ -71,7 +71,7 @@ plantilla(/^Falta que (.+) elija rol$/, /^Falta que (.+) elija rol$/,
 const FASES = { briefing: 'briefing', diseno: 'diseno', restricciones: 'restricciones', verificacion: 'verificacion', mision: 'mision', informe: 'informe', lobby: 'lobby' };
 const fase = (f) => (T.phases?.[FASES[f]] ?? (f === 'lobby' ? T.toLobby : f));
 plantilla(/^No se puede pasar de (\S+) a (\S+)$/, /^No se puede pasar de (\S+) a (\S+)$/,
-  (a, b) => `You cannot go from ${fase(a)} to ${fase(b)}`, (a, b) => `No se puede pasar de ${fase(a)} a ${fase(b)}`);
+  (a, b) => `You cannot move from ${fase(a)} to ${fase(b)}`, (a, b) => `No se puede pasar de ${fase(a)} a ${fase(b)}`);
 
 // --- Cadenas fijas ---
 fijo('You need a role', 'Necesitas un rol');
@@ -97,7 +97,8 @@ fijo('That launch vehicle is not allowed (DEC-09)', 'Ese cohete no está permiti
 fijo('Unknown route for this mission', 'Ruta desconocida para esta misión');
 fijo('Unknown contingency for this mission', 'Contingencia desconocida para esta misión');
 fijo('A review was already requested', 'Ya se pidió una revisión');
-fijo('Some checks fail: go back to design', 'Algunas comprobaciones fallan: vuelve al diseño');
+plantilla(/^Some checks fail: go back to design$/, /^Algunas comprobaciones fallan: vuelve al diseño$/,
+  () => 'Some checks fail: return to design', () => 'Algunas comprobaciones fallan: vuelve a diseño');
 fijo('Already advanced', 'Ya se avanzó');
 fijo('That contingency is not needed now', 'Esa contingencia no hace falta ahora');
 fijo('Unknown launch day', 'Día de lanzamiento desconocido');

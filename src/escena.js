@@ -248,8 +248,26 @@ export function crearEscena() {
     });
   }
 
+  // Baliza de guía: flecha ámbar que flota sobre el siguiente objeto que toca usar (portátil propio o puerta).
+  const baliza = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.07, 4),
+    new THREE.MeshStandardMaterial({ color: 0xf2c14e, emissive: 0xf2c14e, emissiveIntensity: 0.9, flatShading: true }));
+  baliza.rotation.x = Math.PI; // punta hacia abajo
+  baliza.visible = false;
+  escena.add(baliza);
+  const posBaliza = new THREE.Vector3();
+  function guiar(tipo, asiento = 0) {
+    if (tipo === 'laptop' && laptops[asiento]) { laptops[asiento].grupo.getWorldPosition(posBaliza); posBaliza.y += 0.32; baliza.scale.setScalar(1); baliza.visible = true; }
+    else if (tipo === 'control') { posBaliza.set(3.2, 2.4, -2.75); baliza.scale.setScalar(3); baliza.visible = true; }
+    else baliza.visible = false;
+  }
+
   function actualizar(dt) {
     t += dt;
+    if (baliza.visible) {
+      baliza.position.set(posBaliza.x, posBaliza.y + Math.sin(t * 3) * 0.02, posBaliza.z);
+      baliza.rotation.y = t * 1.5;
+      baliza.material.emissiveIntensity = 0.7 + Math.sin(t * 4) * 0.3;
+    }
     // Proyector: sube o se guarda (escala y altura), con los hologramas girando encima.
     const metaU = proy.activo ? 1 : 0;
     proy.u = proy.u + Math.sign(metaU - proy.u) * Math.min(Math.abs(metaU - proy.u), dt / 0.6);
@@ -315,6 +333,7 @@ export function crearEscena() {
   return {
     escena, avatares, casillas, carpetas, laptops, manuales, clicables, jefe,
     actualizar,
+    guiar,
     puntoCinematica,
     get enCinematica() { return !!cine; },
     // Centro del proyector, para encuadrar la cámara en el modo de elección.

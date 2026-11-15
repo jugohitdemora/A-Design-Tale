@@ -9,35 +9,35 @@ import { h, lista, valor, puedoPor, resumenSeguro, ROLES_IDS, MAX_CONTINGENCIAS 
 
 const T = textos({
   es: {
-    riesgos: 'RIESGOS DEL DISEÑO', riesgosLead: 'Lo que puede pasar durante el vuelo con esta misión. Una contingencia comprada mitiga su evento.',
-    nEventos: (n) => `${n} eventos`, sinRiesgos: 'Esta misión no tiene eventos de vuelo.',
+    riesgos: 'RIESGOS DEL DISEÑO', riesgosLead: 'Lo que puede pasar en vuelo.',
+    nEventos: (n) => `${n} eventos`, sinRiesgos: 'Sin eventos de vuelo.',
     fase: 'Fase', critica: 'crítica', prob: 'Probabilidad', mitigado: 'MITIGADO', abierto: 'SIN MITIGAR', oportunidad: 'OPORTUNIDAD',
     mitigaCon: 'Se mitiga con', nadaMitiga: 'Ninguna contingencia lo cubre.', casoReal: 'Caso real', verCaso: 'Ver caso real', ocultarCaso: 'Ocultar caso real',
     leccion: 'Lección',
-    plan: 'PLAN DE CONTINGENCIA', usadas: (n, m) => `${n}/${m} usadas`, cupoLleno: (m) => `Máximo ${m} contingencias para todo el equipo: quita otra primero.`,
+    plan: 'PLAN DE CONTINGENCIA', usadas: (n, m) => `${n}/${m} usadas`, cupoLleno: (m) => `Máximo ${m} para todo el equipo. Quita otra primero.`,
     tuDepto: 'TU DEPARTAMENTO', vacante: 'VACANTE · puedes operarlo', soloLectura: 'SOLO LECTURA',
-    soloPuede: (d) => `Solo ${d} puede cambiar esto.`, sinMias: 'Tu departamento no tiene contingencias en esta misión.',
-    sinContingencias: 'Esta misión no tiene contingencias.',
+    soloPuede: (d) => `Solo ${d} puede cambiar esto.`, sinMias: 'Tu departamento no tiene contingencias.',
+    sinContingencias: 'Sin contingencias.',
     masa: 'Masa', coste: 'Coste', creditos: 'créditos', mitiga: 'Mitiga', comprar: 'Comprar', quitar: 'Quitar',
     comprada: 'COMPRADA', impacto: 'Coste del plan', recursoMasa: 'Masa', recursoPres: 'Presupuesto',
-    restr: 'Restricciones: solo se acepta un cambio que no suba ninguna barra. Si lo rechaza, verás el motivo arriba.',
-    nota: 'Durante la misión, cuando salga el evento, el departamento dueño tiene que ACTIVAR su contingencia desde la SALA DE CONTROL DE MISIÓN. Comprarla aquí no basta: hasta que alguien de ese departamento la active, el vuelo no avanza.',
+    restr: 'Restricciones: no se acepta un cambio que suba una barra.',
+    nota: 'Cuando salga el evento, su departamento debe activar la contingencia en la sala de control. El vuelo espera hasta entonces.',
     notaTit: 'IMPORTANTE',
   },
   en: {
-    riesgos: 'DESIGN RISKS', riesgosLead: 'What can happen during the flight on this mission. A bought contingency mitigates its event.',
-    nEventos: (n) => `${n} events`, sinRiesgos: 'This mission has no flight events.',
+    riesgos: 'DESIGN RISKS', riesgosLead: 'What can happen in flight.',
+    nEventos: (n) => `${n} events`, sinRiesgos: 'No flight events.',
     fase: 'Phase', critica: 'critical', prob: 'Probability', mitigado: 'MITIGATED', abierto: 'NOT MITIGATED', oportunidad: 'OPPORTUNITY',
     mitigaCon: 'Mitigated by', nadaMitiga: 'No contingency covers it.', casoReal: 'Real case', verCaso: 'Show real case', ocultarCaso: 'Hide real case',
     leccion: 'Lesson',
-    plan: 'CONTINGENCY PLAN', usadas: (n, m) => `${n}/${m} used`, cupoLleno: (m) => `At most ${m} contingencies for the whole team: drop another one first.`,
+    plan: 'CONTINGENCY PLAN', usadas: (n, m) => `${n}/${m} used`, cupoLleno: (m) => `Maximum ${m} for the whole team. Drop another first.`,
     tuDepto: 'YOUR DEPARTMENT', vacante: 'VACANT · you can operate it', soloLectura: 'READ ONLY',
-    soloPuede: (d) => `Only ${d} can change this.`, sinMias: 'Your department has no contingencies in this mission.',
-    sinContingencias: 'This mission has no contingencies.',
+    soloPuede: (d) => `Only ${d} can change this.`, sinMias: 'Your department has no contingencies.',
+    sinContingencias: 'No contingencies.',
     masa: 'Mass', coste: 'Cost', creditos: 'credits', mitiga: 'Mitigates', comprar: 'Buy', quitar: 'Drop',
     comprada: 'BOUGHT', impacto: 'Plan cost', recursoMasa: 'Mass', recursoPres: 'Budget',
-    restr: 'Constraints: only changes that raise no bar are accepted. If one is rejected, the reason shows at the top.',
-    nota: 'During the mission, when the event fires, the owning department must ACTIVATE its contingency from the MISSION CONTROL ROOM. Buying it here is not enough: the flight does not go on until someone from that department activates it.',
+    restr: 'Constraints: do not raise any bar.',
+    nota: 'When the event occurs, its department must activate the contingency in the control room. The flight waits until then.',
     notaTit: 'IMPORTANT',
   },
 });
@@ -118,7 +118,6 @@ function columnaRiesgos(c, u, res) {
   }
   return h('section', { class: 'ct-col ct-riesgos' },
     h('header', { class: 'ct-cab' }, h('h3', {}, T.riesgos), h('span', { class: 'ct-cuenta' }, T.nEventos(riesgos.length))),
-    h('p', { class: 'ct-lead' }, T.riesgosLead),
     cuerpo);
 }
 

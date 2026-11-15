@@ -13,7 +13,9 @@ const linea = (puntos, color, cerrada = false) => {
   return cerrada ? new THREE.LineLoop(g, m) : new THREE.Line(g, m);
 };
 
-export function crearCentroDeControl() {
+// holograma: false quita la Tierra, la órbita y el indicador de la pantalla central. La sala de control de misión
+// proyecta su interfaz encima de esa pantalla y la Tierra (que sobresale de la pared) asomaba por debajo.
+export function crearCentroDeControl({ holograma = true } = {}) {
   const escena = new THREE.Scene();
   escena.background = new THREE.Color(0x0b0e13);
   escena.fog = new THREE.Fog(0x0b0e13, 14, 30);
@@ -79,6 +81,7 @@ export function crearCentroDeControl() {
   plano.position.set(c.x + 0.4, yBorde - 1.5, c.z + 0.05);
   plano.scale.z = 0.2;
   plano.add(tierra);
+  plano.visible = holograma;
   escena.add(plano);
   animados.push((t) => { tierra.rotation.y = t * 0.06; });
   const orbita = [];
@@ -96,6 +99,7 @@ export function crearCentroDeControl() {
     const panel = caja(0.3, 0.12, 0.02, brillo(0x4b8fe0, 1.3)); panel.position.x = s * 0.27; satelite.add(panel);
   }
   grupoOrbita.add(satelite);
+  grupoOrbita.visible = holograma;
   escena.add(grupoOrbita);
   animados.push((t) => {
     const a = t * 0.25;
