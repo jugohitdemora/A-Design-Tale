@@ -10,6 +10,7 @@ import { crearSesion } from './red/sesion.js';
 import { crearTransporteMqtt } from './red/transporte-mqtt.js';
 import { MAX_JUGADORES, conectados, duenoDeRol } from './red/protocolo.js';
 import { T } from './textos.js';
+import { traducirMotivo } from './motivos.js';
 import { crearPantallas, LOGICO } from './pantallas/index.js';
 
 const $ = (id) => document.getElementById(id);
@@ -224,7 +225,7 @@ $('iniciar').addEventListener('click', () => {
   actualizarTodo();
 });
 
-function avisar(t) { $('aviso').textContent = t; ui.aviso(t); }
+function avisar(t) { t = t ? traducirMotivo(t) : ''; $('aviso').textContent = t; ui.aviso(t); }
 function colorCss(c) { return '#' + c.toString(16).padStart(6, '0'); }
 
 // ---------- Vistas: dónde está la cámara ----------

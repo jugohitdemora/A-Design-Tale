@@ -38,8 +38,11 @@ function esNegativo(ev) {
 //     hallazgos: [{ id, nombre, presente, capturado, valor, detector }],
 //     datos: { generadosMB, bajadosMB, perdidosMB },
 //     ciencia: [{ id, prioridad, valor, conseguido }],
-//     puntos, veredicto: 'total'|'parcial'|'fallida', causas: [{ en, tipo, fase? }],
-//     puntuacion, cienciaTotal, diasPrevistos, diasConseguidos, perdida, golpes }
+//     puntos, veredicto: 'total'|'parcial'|'fallida', causas: [{ en, es, tipo, fase? }],
+//     puntuacion, cienciaTotal, diasPrevistos, diasConseguidos, perdida, golpes,
+//     mision, fallos: [{ codigo, fase, p?, tirada?, desglose?, decision?, evitar }], lanzamiento: { mes, sitio, scrub, tormenta } | null,
+//     reloj: { mes, plazo, retraso, recorte, bono, cancelada } | null, cometa }
+//   pasos[i].tirada solo en las fases que fallan. `fallos` es lo que explicar.js convierte en "Causa → Decisión → Qué lo evitaba".
 export function simular(estado, D) {
   const m = misionDe(estado, D);
   if (!m) {
@@ -47,11 +50,14 @@ export function simular(estado, D) {
       pasos: [], hallazgos: [], datos: { generadosMB: 0, bajadosMB: 0, perdidosMB: 0 }, ciencia: [], puntos: 0,
       veredicto: 'fallida', causas: [{ en: 'No mission was chosen.', es: 'No se eligió ninguna misión.', tipo: 'veredicto' }],
       puntuacion: null, cienciaTotal: 0, diasPrevistos: 0, diasConseguidos: 0, perdida: false, golpes: 0,
+      mision: null, fallos: [], lanzamiento: null, reloj: null, cometa: null,
     };
   }
   const semilla = estado?.semilla ?? 0;
   const res = resumen(estado, D);
   const azar = prng(derivar(semilla, 'mision', m.id));
+  const cond = res.plan?.cond ?? null;
+  const fallos = [];
   const EV = obj(D?.EVENTOS_MISION), CO = obj(D?.CONTINGENCIAS);
   const compradas = new Set(contingenciasCompradas(estado, D).map((c) => c.id));
   const nombreConting = (id) => textoEn(CO[id]?.nombre, id);
@@ -67,7 +73,8 @@ export function simular(estado, D) {
       return;
     }
     // Tiradas siempre en el mismo orden (fase y luego cada evento de la fase), salga lo que salga.
-    const ok = azar() < f.p;
+    const tirada = azar();
+    const ok = tirada < f.p;
     const candidatos = arr(m.eventosMision).filter((id) => EV[id] && EV[id].fase === f.id);
     let ev = null;
     for (const id of candidatos) { const sale = azar() < clamp01(num(EV[id].p)); if (sale && !ev) ev = { id, ...EV[id] }; }
@@ -75,6 +82,8 @@ export function simular(estado, D) {
     let golpesAqui = 0;
 
     if (!ok) {
+      paso.tirada = r3(tirada);
+      fallos.push(falloDeFase(f, i, tirada, m, cond));
       if (f.critica) { golpesAqui++; causas.push({ en: `${nombre} (critical phase) failed its ${Math.round(f.p * 100)} % check.`, es: `${nombreEs} (fase crítica) falló su prueba del ${Math.round(f.p * 100)} %.`, tipo: 'fase', fase: f.id }); }
       else { fCiencia *= FACTOR_DEGRADA; causas.push({ en: `${nombre} had problems (${Math.round(f.p * 100)} % check failed): science degraded.`, es: `${nombreEs} tuvo problemas (falló la prueba del ${Math.round(f.p * 100)} %): la ciencia se degrada.`, tipo: 'fase', fase: f.id }); }
     }
@@ -95,6 +104,8 @@ export function simular(estado, D) {
           if (ef.ciencia != null) fCiencia *= Math.max(FACTOR_MIN_EVENTO, Math.min(1, num(ef.ciencia)));
           if (ef.dias != null) fDias *= Math.max(FACTOR_MIN_EVENTO, Math.min(1, num(ef.dias)));
           if (ef.falla) { if (f.critica) golpesAqui++; else fCiencia *= FACTOR_DEGRADA; }
+          fallos.push({ codigo: 'evento', fase: f.id, evento: ev.id, critica: !!f.critica, falla: !!ef.falla,
+            evitar: arr(ev.mitigadoPor).length ? 'ct:' + arr(ev.mitigadoPor)[0] : 'suerte' });
           const faltan = arr(ev.mitigadoPor).map(nombreConting);
           const leccion = textoEn(ev.leccion, '');
           const faltanEs = arr(ev.mitigadoPor).map(nombreContingEs);
@@ -128,6 +139,27 @@ export function simular(estado, D) {
     pasos.push(paso);
   });
 
+  // Condiciones del mes (contrato-reloj.md §2, §4). Sorteos propios por mes ('clima', 'reloj'): no tocan la secuencia de 'mision'.
+  let lanzamiento = null;
+  if (cond) {
+    const EF = obj(D?.CALENDARIO?.EFECTOS);
+    const azarClima = prng(derivar(semilla, 'clima', m.id, cond.mesAbs));
+    const scrub = azarClima() < clamp01(cond.pScrub) ? 1 + Math.floor(azarClima() * 4) : 0;
+    const azarReloj = prng(derivar(semilla, 'reloj', m.id, cond.mesAbs));
+    const tormenta = azarReloj() < clamp01(cond.pKp7);
+    lanzamiento = { mes: cond.mesAbs, sitio: cond.sitioLanz, scrub, tormenta };
+    if (scrub) {
+      causas.push({ en: `Launch delayed ${scrub} day(s) by weather (${Math.round(cond.pScrub * 100)} % chance that month).`,
+        es: `El lanzamiento se retrasó ${scrub} día(s) por el tiempo (${Math.round(cond.pScrub * 100)} % de probabilidad ese mes).`, tipo: 'clima' });
+    }
+    if (tormenta && !perdida) {
+      fCiencia *= Math.max(FACTOR_MIN_EVENTO, Math.min(1, num(EF.tormentaCiencia) || 1));
+      causas.push({ en: `A geomagnetic storm (Kp ≥ 7, ${Math.round(cond.pKp7 * 100)} % chance that month) disturbed the mission: science degraded a little.`,
+        es: `Una tormenta geomagnética (Kp ≥ 7, ${Math.round(cond.pKp7 * 100)} % de probabilidad ese mes) perturbó la misión: la ciencia baja un poco.`, tipo: 'espacio' });
+      fallos.push({ codigo: 'tormenta', fase: null, p: r3(cond.pKp7), decision: { mes: cond.mesAbs, pKp7: r3(cond.pKp7) }, evitar: 'mesSolCalmo' });
+    }
+  }
+
   // Vida útil y datos (MEC-19).
   const nFases = res.fases.length || 1;
   const diasPrevistos = num(m.diasPrevistos) || 1;
@@ -138,6 +170,7 @@ export function simular(estado, D) {
   const bajadosMB = Math.min(generadosMB, capDia * diasConseguidos);
   const fracDatos = genDia > 0 ? Math.min(1, capDia / genDia) : 1;
   if (generadosMB - bajadosMB > 0.05) {
+    fallos.push({ codigo: 'datos', fase: null, mb: r1(generadosMB - bajadosMB), evitar: 'enlace' });
     causas.push({ en: `${r1(generadosMB - bajadosMB)} MB of data could not be sent home: the link was too small for what the instruments produced.`, es: `${r1(generadosMB - bajadosMB)} MB de datos no se pudieron enviar a casa: el enlace era demasiado pequeño para lo que producían los instrumentos.`, tipo: 'datos' });
   }
 
@@ -207,5 +240,53 @@ export function simular(estado, D) {
     ciencia: cienciaObj, puntos: r1(puntos), veredicto, causas,
     puntuacion: regla ?? null, cienciaTotal: r3(cienciaTotal), diasPrevistos: r1(diasPrevistos), diasConseguidos: r1(diasConseguidos),
     perdida, golpes,
+    // Explicación compacta (contrato §6): códigos que src/reglas/explicar.js traduce al pintar.
+    mision: m.id, fallos, lanzamiento, reloj: relojCompacto(res.reloj), cometa: res.plan?.cometa ?? null,
+  };
+}
+
+const relojCompacto = (rl) => (rl?.activo ? { mes: rl.mes, plazo: rl.plazo, lanzamiento: rl.lanzamiento ?? null, retraso: rl.retraso, recorte: r3(rl.recorte), bono: rl.bono, cancelada: !!rl.cancelada } : null);
+const DECISION_DE = { clima: 1, espacio: 1, conjuncion: 1, sitio: 1, ruta: 1 }; // aportes que vienen de una decisión del equipo
+const EVITAR_DE = { clima: 'mesSeco', espacio: 'mesSolCalmo', conjuncion: 'sinConjuncion', sitio: 'otroSitio', ruta: 'otraRuta' };
+
+// Fallo de una fase: p, tirada y los 3 aportes más negativos, con la decisión que los causó y qué lo habría evitado.
+// desglose: [[fuente, ref, dp]] (compacto). decision: datos de la decisión del aporte más negativo (mes, sitio, lluvia…).
+// evitar: código ('mesSeco', 'mesSolCalmo', 'sinConjuncion', 'otroSitio', 'otraRuta', 'mejora:<id>', 'suerte').
+function falloDeFase(f, i, tirada, m, cond) {
+  const negativos = arr(f.desglose).filter((x) => x.dp < 0).sort((a, b) => a.dp - b.dp).slice(0, 3);
+  const peor = negativos[0] ?? null;
+  // La decisión: el mes y sus condiciones (si hay calendario) y, si pesa, el sitio o la ruta.
+  const decision = cond ? { mes: cond.mesAbs, sitio: cond.sitioLanz, lluvia: cond.lluvia, viento50: cond.viento50, pKp7: r3(cond.pKp7), elong: cond.elong, dias: cond.diasConj } : {};
+  // Solo se culpa a una decisión si sin ella la tirada habría pasado: tirada < p sin los aportes negativos de decisiones.
+  // Lo mismo con una mejora sin montar: tirada < p + su dp. Si no, fue mala suerte (y se listan los factores).
+  let evitar = 'suerte';
+  const negDecision = arr(f.desglose).filter((x) => x.dp < 0 && DECISION_DE[x.fuente]).reduce((s, x) => s + x.dp, 0);
+  const pCruda = Number.isFinite(f.pCruda) ? f.pCruda : f.p;
+  if (peor && DECISION_DE[peor.fuente] && tirada < clamp01(pCruda - negDecision)) {
+    evitar = EVITAR_DE[peor.fuente];
+    if (peor.fuente === 'sitio' || peor.fuente === 'ruta') decision[peor.fuente] = peor.ref;
+  } else {
+    const puestas = new Set(arr(f.desglose).map((x) => x.ref));
+    const def = arr(m?.fases).find((x) => x?.id === f.id);
+    const libre = arr(def?.mejoras).filter((x) => x?.por != null && !puestas.has(String(x.por)) && num(x.dp) > 0)
+      .sort((a, b) => num(b.dp) - num(a.dp))[0];
+    if (libre && tirada < clamp01(pCruda + num(libre.dp))) { evitar = 'mejora:' + libre.por; decision.dpMejora = r3(num(libre.dp)); }
+    if (i !== 0) { delete decision.lluvia; delete decision.viento50; }
+  }
+  return { codigo: 'fase', fase: f.id, critica: !!f.critica, p: r3(f.p), tirada: r3(tirada),
+    desglose: negativos.map((x) => [x.fuente, x.ref, r3(x.dp)]), decision: Object.keys(decision).length ? decision : null, evitar };
+}
+
+// Resultado de una misión cancelada por los inversores (retraso > 12 meses): no hay vuelo.
+export function resultadoCancelado(estado, D) {
+  const m = misionDe(estado, D);
+  const rl = resumen(estado, D).reloj;
+  return {
+    pasos: [], hallazgos: [], datos: { generadosMB: 0, bajadosMB: 0, perdidosMB: 0 }, ciencia: [], puntos: 0, veredicto: 'fallida',
+    causas: [{ en: `Investors pulled out: the launch slipped ${rl?.retraso ?? 0} months past the commitment (more than 12).`,
+      es: `Los inversores se retiraron: el lanzamiento se retrasó ${rl?.retraso ?? 0} meses sobre el compromiso (más de 12).`, tipo: 'cancelada' }],
+    puntuacion: m?.puntuacion ?? null, cienciaTotal: 0, diasPrevistos: r1(num(m?.diasPrevistos)), diasConseguidos: 0, perdida: false, golpes: 0,
+    mision: m?.id ?? null, fallos: [{ codigo: 'cancelada', fase: null, retraso: rl?.retraso ?? 0, evitar: 'plazo' }], lanzamiento: null,
+    reloj: relojCompacto(rl), cometa: null, cancelada: true,
   };
 }

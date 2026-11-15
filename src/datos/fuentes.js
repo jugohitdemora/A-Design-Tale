@@ -1,9 +1,14 @@
 // Fuentes de todos los datos del juego. Cada `src` de los demás archivos de datos es una clave de este objeto.
-// Formato: { titulo, url, agencia, conf, urls?, nota? }.  `conf` es la etiqueta del equipo ('V', 'A', 'CG', 'INF', 'JUEGO').
+// Formato: { titulo: {es,en}, url, agencia: {es,en}, conf, urls?, nota?: {es,en}, fecha? }; los lectores usan tx().  `conf` es la etiqueta del equipo ('V', 'A', 'CG', 'INF', 'JUEGO').
 // [V-calc] se guarda como 'V'; [A✓] como 'A'. Los IDs son los de los md del equipo (BG-, BC-, CM-, GEN-, ORB-, LND-, EXP-, RES-, DS-).
 // Entradas sin URL: GAP-xx (lagunas abiertas), JUEGO, PRECIO, CG, F-06b y documentos internos.
 
 const F = (titulo, url, agencia, conf, extra = {}) => ({ titulo, url, agencia, conf, ...extra });
+// Fuente del lote 1 con texto bilingüe: titulo, agencia y nota son { es, en }. Los lectores deben pasarlos por tx().
+const F2 = (tEs, tEn, url, [aEs, aEn], conf, extra = {}) => {
+  const { nota, ...resto } = extra;
+  return { titulo: { es: tEs, en: tEn }, url, agencia: { es: aEs, en: aEn }, conf, ...resto, ...(nota ? { nota: { es: nota[0], en: nota[1] } } : {}), fecha: '2026-11-15' };
+};
 const GAP = (titulo) => ({ titulo, url: null, agencia: 'Team', conf: 'JUEGO', nota: 'Open gap in the team documents: the real value was not found.' });
 
 export const FUENTES = {
@@ -153,6 +158,242 @@ export const FUENTES = {
   'DS-06': F('NASA Lessons Learned Information System (LLIS)', 'https://llis.nasa.gov/llis_lib/pdf/1009464main1_0641-mr.pdf', 'NASA', 'A'),
   'DS-07': F('NASA Open APIs (APOD, Mars Rover Photos, NEO)', 'https://api.nasa.gov/', 'NASA', 'A', { nota: 'Mars Rover Photos API is archived; the old APOD is archived on 1 Dec 2026.' }),
   'DS-08': F('NASA GeneLab', null, 'NASA', 'A'),
+
+  // ---- Lote 1 (2026-11-15): instrumentos y cohetes de investigacion-instrumentos-2.md ----
+  // Formato bilingüe: titulo, agencia y nota son { es, en }; `fecha` es la de consulta.
+  'BC-13': F2('MERTIS: 3,07 kg, 9,9-12,4 W y 180 x 180 x 130 mm (DLR; Hiesinger et al., Space Sci. Rev. 216:110)', 'MERTIS: 3.07 kg, 9.9-12.4 W and 180 x 180 x 130 mm (DLR; Hiesinger et al., Space Sci. Rev. 216:110)',
+    'https://www.dlr.de/en/wr/research-transfer/projects/planetary-research/bepicolombo-1/mercury-radiometer-and-thermal-infrared-spectrometer-mertis', ['DLR', 'DLR'], 'A',
+    { nota: ['Masa de 3.068,5 g vista en un resumen de búsqueda; potencia y dimensiones en la página de DLR.', 'Mass of 3,068.5 g seen in a search summary; power and dimensions on the DLR page.'], urls: ['https://doi.org/10.1007/s11214-020-00732-4'] }),
+  'BC-14': F2('MIXS: 10,8 kg y 24 W (Universidad de Leicester)', 'MIXS: 10.8 kg and 24 W (University of Leicester)', 'https://le.ac.uk/bepicolombo/mixs', ['Universidad de Leicester', 'University of Leicester'], 'A',
+    { nota: ['Visto en un resumen de búsqueda; la página dio error 403 al leerla. BC-11 daba 11,4 kg y 19,3 W.', 'Seen in a search summary; the page returned error 403 when read. BC-11 gave 11.4 kg and 19.3 W.'] }),
+  'BC-15': F2('MGNS: 5,5 kg y 5,0 W (EGU/EPSC)', 'MGNS: 5.5 kg and 5.0 W (EGU/EPSC)', 'https://meetingorganizer.copernicus.org/EGU2020/EGU2020-9657.html', ['EGU', 'EGU'], 'A',
+    { nota: ['Conflicto sin resolver: 5,0 W aquí frente a 6,4 W en BC-11 (tabla posterior); el juego conserva 6,4 W, con ±1,4 W.', 'Unresolved conflict: 5.0 W here versus 6.4 W in BC-11 (a later table); the game keeps 6.4 W, with ±1.4 W.'] }),
+  'BC-16': F2('BELA: 33-45 W en el plan de 2006 y 15 kg en 2024 (ILRS y EPSC2024-474)', 'BELA: 33-45 W in the 2006 plan and 15 kg in 2024 (ILRS and EPSC2024-474)', 'https://meetingorganizer.copernicus.org/EPSC2024/EPSC2024-474.html', ['ILRS y EPSC', 'ILRS and EPSC'], 'A',
+    { nota: ['Rango de potencia visto en resúmenes de búsqueda; el juego usa el punto medio, 39 W. El láser solo, menos de 5 kg y 20 W.', 'Power range seen in search summaries; the game uses the midpoint, 39 W. The laser alone is under 5 kg and 20 W.'], urls: ['https://ilrs.cddis.eosdis.nasa.gov/lw15/docs/papers/'] }),
+  'BC-17': F2('ESA, hoja de datos de BepiColombo: carga útil del MPO de 80 kg y 100-150 W', 'ESA, BepiColombo fact sheet: MPO payload of 80 kg and 100-150 W', 'https://sci.esa.int/web/bepicolombo/-/47346-fact-sheet', ['ESA', 'ESA'], 'A',
+    { nota: ['Sirve como tope de cordura para la suma de los instrumentos.', 'Used as a sanity cap on the sum of the instruments.'] }),
+  'BG-11': F2('LuGRE: 4,64 kg y 14 W como máximo (NASA NTRS, MGA 2026)', 'LuGRE: 4.64 kg and 14 W maximum (NASA NTRS, MGA 2026)', 'https://ntrs.nasa.gov/api/citations/20260002034/downloads/MGA2026_LuGRE_v2.pdf', ['NASA', 'NASA'], 'A',
+    { nota: ['Masa de 4,64 kg del NTRS; máximo de 14 W de la revista Navigation.', 'Mass of 4.64 kg from the NTRS; 14 W maximum from the journal Navigation.'], urls: ['https://navi.ion.org/content/73/1/navi.756'] }),
+  'BG-12': F2('LMS: unos 6,4 kg (14 lb) y 11 W (SwRI)', 'LMS: about 6.4 kg (14 lb) and 11 W (SwRI)', 'https://www.swri.org/newsroom/press-releases/swri-led-sounder-instrument-deploys-across-lunar-surface', ['SwRI', 'SwRI'], 'A',
+    { nota: ['Visto en un resumen de búsqueda de un comunicado de prensa.', 'Seen in a search summary of a press release.'] }),
+  'BG-13': F2('SCALPSS 1.1: seis cámaras y tasas de imagen (NASA Langley, SciTech 2026)', 'SCALPSS 1.1: six cameras and frame rates (NASA Langley, SciTech 2026)', 'https://ntrs.nasa.gov/api/citations/20250010973/downloads/2026_SciTech_SCALPSS_MissionOverview_FINAL.pdf', ['NASA Langley', 'NASA Langley'], 'V',
+    { nota: ['Leído con pdftotext. No da masa ni potencia del conjunto.', 'Read with pdftotext. It gives no mass or power for the set.'] }),
+  'BG-14': F2('EDS: escudo electrodinámico de polvo (NASA NTRS, boletín ESA 2025)', 'EDS: electrodynamic dust shield (NASA NTRS, ESA newsletter 2025)', 'https://ntrs.nasa.gov/api/citations/20250009407/downloads/EDS_ESA%20Newsletter%20paper%202025_Final_WithAuthors.pdf', ['NASA', 'NASA'], 'V',
+    { nota: ['Describe el sistema; no da masa total. La fuente de alto voltaje usa unos 2-4 W (NTRS 20150016082, A).', 'Describes the system; no total mass. The high-voltage supply uses about 2-4 W (NTRS 20150016082, A).'] }),
+
+  'BC-18': F2('ESA, cómo llegar a Mercurio: velocidad de exceso hiperbólico de 3,475 km/s al salir de la Tierra (C3 = 12,1 km2/s2, calculado)', 'ESA, getting to Mercury: hyperbolic excess velocity of 3.475 km/s on leaving Earth (C3 = 12.1 km2/s2, derived)', 'https://sci.esa.int/web/bepicolombo/-/48871-getting-to-mercury', ['ESA', 'ESA'], 'A',
+    { nota: ['Visto en un resumen de búsqueda; ninguna fuente da el C3 directamente, se calcula como v∞ al cuadrado. Ariane 5, 20 de octubre de 2018.', 'Seen in a search summary; no source gives C3 directly, it is computed as v∞ squared. Ariane 5, 20 October 2018.'] }),
+  'CM-17': F2('ESA/ESOC, rediseño de la misión Rosetta: velocidad de exceso hiperbólico de 3,515 km/s al lanzamiento (C3 = 12,4 km2/s2, calculado)', 'ESA/ESOC, Rosetta mission redesign: launch hyperbolic excess velocity of 3.515 km/s (C3 = 12.4 km2/s2, derived)', 'https://www.issfd.org/ISSFD_2004/papers/P0122.pdf', ['ESA', 'ESA'], 'A',
+    { nota: ['Visto en un resumen de búsqueda (candidato Chury-Ger, Ariane 5 G+); un blog da 3,545 km/s. El C3 se calcula como v∞ al cuadrado. Lanzamiento el 2 de marzo de 2004.', 'Seen in a search summary (Chury-Ger candidate, Ariane 5 G+); a blog gives 3.545 km/s. C3 is computed as v∞ squared. Launched 2 March 2004.'] }),
+
+  // ---- cohetes (ORB-40 a ORB-48): las páginas de Wikipedia se leyeron el 15 de noviembre de 2026 ----
+  'ORB-40': F2('Wikipedia, Electron: 300 kg a órbita baja, 7,5 M USD, 100 lanzamientos', 'Wikipedia, Electron: 300 kg to low orbit, 7.5 M USD, 100 launches', 'https://en.wikipedia.org/wiki/Electron_(rocket)', ['Otra (Wikipedia)', 'Other (Wikipedia)'], 'V',
+    { nota: ['Con Photon, hasta 30 kg en órbita lunar (CAPSTONE voló en Electron con Photon).', 'With Photon, up to 30 kg in lunar orbit (CAPSTONE flew on Electron with Photon).'] }),
+  'ORB-41': F2('Wikipedia, Falcon 9: 22.800 kg a órbita baja y 8.300 kg a GTO, 74 M USD, 702 lanzamientos', 'Wikipedia, Falcon 9: 22,800 kg to low orbit and 8,300 kg to GTO, 74 M USD, 702 launches', 'https://en.wikipedia.org/wiki/Falcon_9', ['Otra (Wikipedia)', 'Other (Wikipedia)'], 'V',
+    { nota: ['Cifras desechables; 17.500 y 5.500 kg con barcaza. Estado al 12 nov. 2026.', 'Expendable figures; 17,500 and 5,500 kg with drone ship. Status as of 12 Nov 2026.'] }),
+  'ORB-42': F2('Wikipedia, Falcon Heavy: 63.800 kg a órbita baja y 26.700 kg a GTO, 14 lanzamientos', 'Wikipedia, Falcon Heavy: 63,800 kg to low orbit and 26,700 kg to GTO, 14 launches', 'https://en.wikipedia.org/wiki/Falcon_Heavy', ['Otra (Wikipedia)', 'Other (Wikipedia)'], 'V',
+    { nota: ['Precios NASA: Psyche 117 M, GOES-19 152,5 M, Europa Clipper 178 M, Roman unos 255 M, Dragonfly 256,6 M USD.', 'NASA prices: Psyche 117 M, GOES-19 152.5 M, Europa Clipper 178 M, Roman about 255 M, Dragonfly 256.6 M USD.'] }),
+  'ORB-43': F2('Wikipedia y resumen técnico de ULA, Vulcan Centaur: 27.200 kg a órbita baja, 14.500 a GTO, 11.500 a inyección lunar (VC6)', 'Wikipedia and ULA technical summary, Vulcan Centaur: 27,200 kg to low orbit, 14,500 to GTO, 11,500 to lunar injection (VC6)', 'https://en.wikipedia.org/wiki/Vulcan_Centaur', ['ULA', 'ULA'], 'V',
+    { nota: ['Orden de columnas leído como 0/2/4/6 propulsores sólidos; Wikipedia da 11.300-12.100 kg para VC6. Precio de unos 110 M USD.', 'Column order read as 0/2/4/6 solid boosters; Wikipedia gives 11,300-12,100 kg for VC6. Price about 110 M USD.'] }),
+  'ORB-44': F2('ULA, resumen técnico de Atlas V y Delta IV: 401 con 9.800 kg a órbita baja, 4.750 a GTO y 3.160 a inyección lunar', 'ULA, Atlas V and Delta IV technical summary: 401 with 9,800 kg to low orbit, 4,750 to GTO and 3,160 to lunar injection', 'https://www.ulalaunch.com/docs/default-source/rockets/atlas-v-and-delta-iv-technical-summary.pdf', ['ULA', 'ULA'], 'V',
+    { nota: ['La 551 llega a 18.850 kg, 8.900 y 6.330 kg. Precio base: 401 109 M USD, 551 153 M USD.', 'The 551 reaches 18,850 kg, 8,900 and 6,330 kg. Base price: 401 109 M USD, 551 153 M USD.'] }),
+  'ORB-45': F2('Wikipedia, Pegasus XL: 443-450 kg a órbita baja, 40 M USD (2017), 46 lanzamientos', 'Wikipedia, Pegasus XL: 443-450 kg to low orbit, 40 M USD (2017), 46 launches', 'https://en.wikipedia.org/wiki/Pegasus_(rocket)', ['Otra (Wikipedia)', 'Other (Wikipedia)'], 'V',
+    { nota: ['Su último vuelo fue el 3 jul. 2026; el contrato de ICON fue de 56,3 M USD.', 'Its last flight was 3 Jul 2026; the ICON contract was 56.3 M USD.'] }),
+  'ORB-46': F2('Wikipedia, Minotaur IV: 1.591 kg a órbita baja (IV+ 1.837 kg), unos 50 M USD (2010)', 'Wikipedia, Minotaur IV: 1,591 kg to low orbit (IV+ 1,837 kg), about 50 M USD (2010)', 'https://en.wikipedia.org/wiki/Minotaur_IV', ['Otra (Wikipedia)', 'Other (Wikipedia)'], 'V'),
+  'ORB-47': F2('Wikipedia, SLS: unos 95.000 kg a órbita baja y más de 27.000 kg a inyección lunar, al menos 2.500 M USD', 'Wikipedia, SLS: about 95,000 kg to low orbit and over 27,000 kg to lunar injection, at least 2,500 M USD', 'https://en.wikipedia.org/wiki/Space_Launch_System', ['Otra (Wikipedia)', 'Other (Wikipedia)'], 'V',
+    { nota: ['El inspector general de la NASA da al menos 2.500 M USD por lanzamiento; la administradora en funciones citó 4.000 M en 2025.', 'The NASA inspector general gives at least 2,500 M USD per launch; the acting administrator quoted 4,000 M in 2025.'] }),
+  'ORB-48': F2('Falcon Heavy, capacidad frente a C3: 15.010 kg a C3 = 0, 4.690 kg a C3 = 55; con boosters recuperados 6.690 kg a C3 = 0 y 3.845 a C3 = 20', 'Falcon Heavy capacity versus C3: 15,010 kg at C3 = 0, 4,690 kg at C3 = 55; boosters recovered 6,690 kg at C3 = 0 and 3,845 at C3 = 20', null, ['Otra (diapositivas de las Academias Nacionales)', 'Other (National Academies slides)'], 'A',
+    { nota: ['Visto en un resumen de búsqueda de unas diapositivas. NASA elvperf no tiene curvas estáticas (hace falta su herramienta de consulta).', 'Seen in a search summary of a slide deck. NASA elvperf has no static curves (its query tool is needed).'] }),
+
+  // ---- ecuaciones de estimación (investigacion-instrumentos-2.md, parte C) ----
+  'EQ-DENS': F2('Ecuación C3: volumen = masa / densidad; densidad de instrumentos empaquetados de unos 230 kg/m3', 'Equation C3: volume = mass / density; packaged-instrument density of about 230 kg/m3', null, ['Equipo (derivada)', 'Team (derived)'], 'INF',
+    { nota: ['Mediana de tres instrumentos medidos: LEXI 162 kg/m3 (11,1 kg en 68,6 L), ALICE 230 (2,7 kg en 11,8 L) y MERTIS 740 (3,1 kg en 4,2 L). El rango es amplio.', 'Median of three measured instruments: LEXI 162 kg/m3 (11.1 kg in 68.6 L), ALICE 230 (2.7 kg in 11.8 L) and MERTIS 740 (3.1 kg in 4.2 L). The spread is wide.'] }),
+  'EQ-W': F2('Ecuación C2: potencia = 1,7 W/kg x masa (rango 0,9-3,3 W/kg)', 'Equation C2: power = 1.7 W/kg x mass (range 0.9-3.3 W/kg)', null, ['Equipo (derivada)', 'Team (derived)'], 'INF',
+    { nota: ['Mediana de 11 instrumentos de vuelo (ROSINA, ALICE, MIRO, GIADA, OSIRIS, COSIMA, MIDAS, MERTIS, MGNS, LuGRE, LEXI). Los instrumentos pasivos como LEXI están muy por debajo (0,14).', 'Median of 11 flight instruments (ROSINA, ALICE, MIRO, GIADA, OSIRIS, COSIMA, MIDAS, MERTIS, MGNS, LuGRE, LEXI). Passive instruments such as LEXI sit far below (0.14).'] }),
+  'EQ-SCALE': F2('Escalado de la masa de un instrumento con su tamaño: M = M_ref x (X / X_ref)^a, a = 2,0-2,8 (arXiv 1906.05079)', 'Scaling of instrument mass with size: M = M_ref x (X / X_ref)^a, a = 2.0-2.8 (arXiv 1906.05079)', 'https://arxiv.org/abs/1906.05079', ['Otra (arXiv)', 'Other (arXiv)'], 'A',
+    { nota: ['Estudio del telescopio MODE; a = 3 es la cota geométrica de volumen.', 'MODE telescope study; a = 3 is the geometric volume bound.'] }),
+  'EQ-BAT': F2('Ecuación C11: masa de batería = E / (DoD x e), con e = 150 Wh/kg (packs de 150-250 Wh/kg)', 'Equation C11: battery mass = E / (DoD x e), with e = 150 Wh/kg (packs of 150-250 Wh/kg)', 'https://www.nasa.gov/smallsat-institute/sst-soa/power-subsystems', ['NASA', 'NASA'], 'A',
+    { nota: ['Tablas 3-4 a 3-6 de la NASA SmallSat State of the Art: celdas de 150-270 Wh/kg y packs de hasta 250 Wh/kg. El DoD es un supuesto de ingeniería (0,3 con eclipses diarios, 0,5 con pocos ciclos, 0,8 con una descarga).', 'NASA SmallSat State of the Art tables 3-4 to 3-6: cells of 150-270 Wh/kg and packs up to 250 Wh/kg. DoD is an engineering assumption (0.3 with daily eclipses, 0.5 with few cycles, 0.8 with one discharge).'] }),
+  'EQ-C13': F2('Ecuación C13: capacidad frente a C3, m = m_ref x exp(-k x dC3)', 'Equation C13: capacity versus C3, m = m_ref x exp(-k x dC3)', null, ['Equipo (derivada)', 'Team (derived)'], 'INF',
+    { nota: ['k = 0,0277 sale de los puntos de Falcon Heavy con boosters recuperados (6.690 kg a C3 = 0, 3.845 a C3 = 20); k = 0,0232 es el último tramo de la curva desechable. C3 de salida de la Luna -2 km2/s2 (ULA), de Mercurio 12,1 (BC-18) y del cometa 12,4 (CM-17), los reales de las rutas con asistencias gravitatorias. Es una ecuación de ingeniería, no la curva oficial de NASA elvperf.', 'k = 0.0277 comes from the Falcon Heavy booster-recovered points (6,690 kg at C3 = 0, 3,845 at C3 = 20); k = 0.0232 is the last stretch of the expendable curve. Departure C3 of the Moon -2 km2/s2 (ULA), of Mercury 12.1 (BC-18) and of the comet 12.4 (CM-17), the real ones of the gravity-assist routes. It is an engineering equation, not the official NASA elvperf curve.'] }),
+  'EQ-SB': F2('Ley de Stefan-Boltzmann: radiador, A = Q / (e x sigma x (T^4 - T_sumidero^4))', 'Stefan-Boltzmann law: radiator, A = Q / (e x sigma x (T^4 - T_sink^4))', null, ['Física (conocimiento general)', 'Physics (general knowledge)'], 'CG',
+    { nota: ['Con e = 0,85 y 300 K se evacuan unos 390 W/m2 (sin Sol ni albedo).', 'With e = 0.85 and 300 K about 390 W/m2 is rejected (no Sun or albedo).'] }),
+  'EQ-TSIO': F2('Ecuación de Tsiolkovsky: m_propelente = m_seca x (exp(dv / (Isp x g0)) - 1)', 'Tsiolkovsky equation: m_propellant = m_dry x (exp(dv / (Isp x g0)) - 1)', null, ['Física (conocimiento general)', 'Physics (general knowledge)'], 'CG',
+    { nota: ['Isp de referencia: bipropelente hipergólico 310-330 s; Merlin 1D de vacío 348 s; BE-4 340 s; RL10 unos 450 s.', 'Reference Isp: hypergolic bipropellant 310-330 s; Merlin 1D vacuum 348 s; BE-4 340 s; RL10 about 450 s.'] }),
+  'EQ-FRIIS': F2('Ecuación de Friis y ganancia de antena: G = e x (pi x D / lambda)^2; P_r = P_t x G_t x G_r x (lambda / (4 x pi x d))^2', 'Friis equation and antenna gain: G = e x (pi x D / lambda)^2; P_r = P_t x G_t x G_r x (lambda / (4 x pi x d))^2', null, ['Física (conocimiento general)', 'Physics (general knowledge)'], 'CG',
+    { nota: ['Stutzman y Thiele; Wertz y Larson. Con banda X de 8,4 GHz, D = 1,5 m y e = 0,55 la ganancia es unos 39,8 dBi.', 'Stutzman and Thiele; Wertz and Larson. At X-band 8.4 GHz, D = 1.5 m and e = 0.55 the gain is about 39.8 dBi.'] }),
+  'EQ-SOA': F2('NASA, estado del arte de naves pequeñas: potencia, comunicaciones, guiado y control térmico', 'NASA, small-spacecraft state of the art: power, communications, guidance and thermal control', 'https://www.nasa.gov/smallsat-institute/sst-soa/', ['NASA', 'NASA'], 'A',
+    { nota: ['Celdas triple unión de 30 % (403-433 W/m2 a 1 UA), paneles de unos 30 W/kg, ruedas de reacción de 3,2 kg (4 N m s) y 7,5 kg (16 N m s), antenas de alta ganancia de 1,3-11 kg.', 'Triple-junction cells of 30 % (403-433 W/m2 at 1 AU), arrays of about 30 W/kg, reaction wheels of 3.2 kg (4 N m s) and 7.5 kg (16 N m s), high-gain antennas of 1.3-11 kg.'], urls: ['https://www.nasa.gov/smallsat-institute/sst-soa/power-subsystems', 'https://www.nasa.gov/smallsat-institute/sst-soa/communications', 'https://www.nasa.gov/smallsat-institute/sst-soa/guidance-navigation-and-control', 'https://www.nasa.gov/smallsat-institute/sst-soa/thermal-control'] }),
 };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Forma única: todas las entradas anteriores pasan a { es, en } en titulo, agencia y nota (el inglés queda en el dato original).
+// Las notas internas del equipo se reescriben como "estimación de los diseñadores del juego".
+// ---------------------------------------------------------------------------------------------------------------------
+const ES_T = {
+  JUEGO: 'Valor de juego: no hay un dato real detrás (se muestra con ≈)',
+  PRECIO: 'Precio estimado por los diseñadores del juego: el real si se conoce; si no, el promedio de una carga de Blue Ghost o 0,5 M USD por kg',
+  CG: 'Conocimiento general, sin fuente (por verificar)',
+  'F-06b': 'Flujo del juego: evento de diseño genérico (entra o sale un inversor)',
+  'GAP-M04': 'Masa del módulo Blue Ghost y masas de sus cargas',
+  'GAP-P01': 'Masa y potencia de las 10 cargas de Blue Ghost; masa del módulo',
+  'GAP-P02': 'Masa, potencia y datos de cada instrumento de BepiColombo; baterías',
+  'GAP-P03': 'Cohete de la NASA capaz de llegar a Mercurio y al cometa (energía de lanzamiento C3, en elvperf)',
+  'GAP-P07': 'Masa y potencia de cada instrumento de Rosetta; delta-v de llegada y distancias de órbita en torno a 67P',
+  'GAP-P08': 'Costo de BepiColombo y Rosetta',
+  'GAP-P12': 'Masa, potencia, volumen y datos de las cargas de Blue Ghost (solo LEXI tiene ficha completa)',
+  'GAP-P13': 'Masa y potencia de los instrumentos SERENA, PHEBUS, MERTIS, SIXS y Mio; potencia de BELA',
+  'GAP-P14': 'Ancho de banda de casi todos los instrumentos y antenas; memoria a bordo de MPO y Rosetta',
+  'GAP-P15': 'Capacidad de las baterías (Blue Ghost, MPO, Rosetta, Philae)',
+  'GAP-P16': 'Precio de las piezas de plataforma (paneles, baterías, antenas) y la regla final de precios',
+  'GAP-P17': 'Capacidad del Falcon Heavy a la Luna, Mercurio y el cometa',
+  'GAP-M01': 'Precios oficiales de Electron y de lanzamientos compartidos; costo y potencia de Landsat 9',
+  'BG-01': 'Firefly, página de Blue Ghost Mission 1',
+  'BG-02': 'NASA, comunicado del alunizaje (2 de marzo de 2025)',
+  'BG-03': 'SpacePolicyOnline, Firefly y la NASA celebran el éxito de Blue Ghost (19 de marzo de 2025)',
+  'BG-04': 'EGU26-22820: resultados de las 10 cargas de Blue Ghost',
+  'BG-05': 'Universidad de Boston, LEXI',
+  'BG-06': 'Williams, Turyshev y Boggs: telemetría láser lunar y principio de equivalencia',
+  'BG-07': 'Walsh et al. 2024, la misión LEXI (tabla de parámetros del instrumento)',
+  'BG-08': 'NGLR-1, Universidad de Maryland e ILRS',
+  'BG-09': 'NASA, cargas de la entrega TO19D',
+  'BG-10': 'Masa de aterrizaje de Blue Ghost (IAA RAS) y capacidad de carga de 155 kg (fuente de baja autoridad)',
+  'BC-01': 'ESA, hoja de datos de BepiColombo',
+  'BC-02': 'ESA, ingeniería de BepiColombo (actualizado en 2019)',
+  'BC-03': 'ESA, la nave MPO (actualizado en 2020)',
+  'BC-04': 'ESA, las 12 preguntas científicas de BepiColombo (2019)',
+  'BC-05': 'ESA, prueba térmica del MPO; JAXA, antena de Mio',
+  'BC-06': 'Wikipedia, BepiColombo',
+  'BC-07': 'ESA, BepiColombo inicia su llegada a Mercurio con la separación del MTM; Space.com',
+  'BC-08': 'Los experimentos de conjunción solar de BepiColombo, revisados',
+  'BC-09': 'Lo que MESSENGER reveló sobre Mercurio (Universe Today; Discover)',
+  'BC-10': 'ESA, folleto de BepiColombo BR-335',
+  'BC-11': 'Benkhoff et al. 2021, visión general y objetivos científicos de BepiColombo',
+  'BC-12': 'CNES, instrumentos de Mio',
+  'CM-01': 'ESA, hoja de datos de Rosetta',
+  'CM-02': 'ESA, resumen de la misión Rosetta',
+  'CM-03': 'ESA, el módulo de aterrizaje de Rosetta',
+  'CM-04': 'ESA, cometa 67P/Churyumov-Gerasimenko',
+  'CM-05': 'ESA y JPL, primera medición de la razón D/H del agua de un cometa (Altwegg et al., Science, 2014)',
+  'CM-06': 'ESA, primera detección de oxígeno molecular en un cometa (Bieler et al., Nature, 2015)',
+  'CM-07': 'Relatos del aterrizaje de Philae (Space.com, CBS News, COBS)',
+  'CM-08': 'DLR, Rosetta en cifras',
+  'CM-09': 'Giotto en el cometa Halley (verificado contra la fuente primaria)',
+  'CM-10': 'ESA, la nave e instrumentos de Comet Interceptor',
+  'CM-11': 'ESA, instrumentos del orbitador de Rosetta (masas, potencias, dimensiones)',
+  'CM-12': 'ESA, instrumentos del módulo Philae',
+  'CM-13': 'ESA, ingeniería y hoja de datos de Rosetta',
+  'CM-14': 'NASA PDS, catálogo de la nave Rosetta (bandas S y X)',
+  'CM-15': 'Presentación de la ESA sobre Rosetta (ROLIS)',
+  'CM-16': 'Solarserver, celdas de silicio de Rosetta',
+  'GEN-01': 'Precios de lanzamiento de la NASA: Europa Clipper, Roman, Psyche, Dragonfly, COSI, NEO Surveyor; precio de lista del Falcon Heavy',
+  'GEN-02': 'Celdas solares de triple unión: hojas de datos de CESI CTJ30 y SolAero ZTJ',
+  'GEN-03': 'NASA, estado del arte de naves pequeñas: propulsión en el espacio',
+  'ORB-01': 'Rocket Lab, guía del usuario de carga de Electron 7.0',
+  'ORB-04': 'SpaceX, Falcon 9',
+  'ORB-05': 'La NASA adjudica el contrato de lanzamiento de PACE (unos 80,4 millones de USD)',
+  'ORB-07': 'Iniciativa de lanzamiento de CubeSats de la NASA (CSLI / ELaNa)',
+  'ORB-14': 'NASA, Landsat 9 (2.710 kg; Atlas V 401, 27 de septiembre de 2021)',
+  'ORB-15': 'NOAA, nave GOES-R',
+  'ORB-17': 'La NASA y Rocket Lab lanzan el primer par de CubeSats TROPICS que observan tormentas',
+  'ORB-19': 'ARRL, una tormenta geomagnética causa la pérdida de hasta 40 satélites Starlink',
+  'ORB-20': 'Spaceflight Now, TROPICS-1 en Astra (12 de junio de 2022)',
+  'ORB-23': 'NASA, resumen de la investigación del percance del ABI del GOES-17',
+  'ORB-25': 'NASA CSLI, CubeSat 101',
+  'ORB-31': 'APIs abiertas de la NASA, clima espacial DONKI',
+  'ORB-32': 'NASA, misiones de servicio al Hubble',
+  'ORB-33': 'NASA, misión de servicio 1 al Hubble',
+  'ORB-34': 'NASA, misión de servicio 3B al Hubble',
+  'ORB-35': 'NASA, misión de servicio 4 al Hubble',
+  'LND-01': 'JPL, datos rápidos del aterrizaje de Mars 2020 (Perseverance)',
+  'LND-04': 'ISRO, detalles de Chandrayaan-3',
+  'LND-06': 'NASA, comunicado del alunizaje de Blue Ghost (lanzamiento el 15 de enero de 2025)',
+  'LND-09': 'JPL, entrada, descenso y aterrizaje de Mars 2020',
+  'LND-10': 'NASA, afinando la puntería (elipses de aterrizaje en Marte)',
+  'LND-12': 'JAXA, resultados del alunizaje de SLIM',
+  'LND-18': 'NASA, Blue Ghost M1 (10 cargas de la NASA, Mare Crisium)',
+  'LND-20': 'NASA, Mars Polar Lander y Deep Space 2',
+  'LND-21': 'ESA, concluye la investigación del aterrizaje de Schiaparelli',
+  'LND-24': 'Astrobotic, actualización 8 de Peregrine Mission One',
+  'LND-25': 'SpacePolicyOnline, el módulo Odysseus de IM no quedó vertical después de todo',
+  'LND-26': 'JAXA, resultados del alunizaje de SLIM (pérdida de empuje de un motor)',
+  'LND-27': 'SpaceNews, tasa histórica de éxito de los módulos lunares',
+  'LND-36': 'NASA NSSDC, hoja de datos planetarios (tiempo de viaje de la luz a la Luna, unos 1,3 s)',
+  'LND-38': 'NASA Moon Trek WMTS (mosaico global LRO WAC)',
+  'LND-41': 'NASA PGDA, productos LOLA del polo sur',
+  'EXP-01': 'NASA NSSDC, Centaur de LCROSS',
+  'EXP-02': 'NASA NTRS, resultados de agua de LCROSS',
+  'EXP-03': 'La NASA termina el proyecto VIPER y continúa la exploración lunar',
+  'EXP-04': 'La NASA elige a Blue Origin para llevar VIPER al polo sur lunar',
+  'EXP-07': 'NASA, Perseverance rumbo a un récord mundial de distancia (11 de octubre de 2026)',
+  'EXP-10': 'NASA, helicóptero Ingenuity de Marte',
+  'EXP-23': 'NASA, LRO muestra que los depósitos de hielo lunar son extensos (2024)',
+  'EXP-29': 'NASA NSSDC, sistema de espectrómetro de neutrones (NSS) de VIPER',
+  'EXP-31': 'NASA NSSDC, NIRVSS de VIPER',
+  'EXP-32': 'NASA NSSDC, MSolo de VIPER',
+  'EXP-33': 'NASA NSSDC, TRIDENT de VIPER',
+  'EXP-42': 'JPL, termina la misión del róver de Marte (polvo y energía)',
+  'EXP-43': 'NASA, componentes del róver Perseverance (MMRTG, 43 tubos)',
+  'EXP-49': 'JPL, primera investigación de un accidente aéreo en otro mundo (Ingenuity)',
+  'EXP-52': 'NASA, red de retransmisión de Marte (MAVEN se perdió en junio de 2026)',
+  'EXP-58': 'PDS ODE, producto de recursos polares de Diviner',
+  'RES-01': 'Diseñar y desarrollar misiones científicas',
+  'RES-02': 'Herramienta general de análisis de misiones (GMAT)',
+  'RES-03': 'Niveles de madurez de conceptos (JPL)',
+  'RES-04': 'Laboratorio de diseño de misiones (GSFC)',
+  'RES-05': 'NASA Mission Viz',
+  'RES-06': 'Un juego sobre telescopios (constrúyelo tú mismo)',
+  'RES-07': 'CubeSat 101',
+  'RES-08': 'Reto de Space Apps 2023: visualizar una misión espacial con realidad virtual',
+  'RES-09': 'Juegos y actividades digitales de la ASC',
+  'DS-01': 'NASA GIBS (WMTS EPSG:4326)',
+  'DS-02': 'NASA FIRMS (archivo de incendios activos)',
+  'DS-03': 'Catálogo de clima espacial DONKI de la NASA',
+  'DS-04': 'Estado del arte de tecnología de naves pequeñas de la NASA (Ames)',
+  'DS-05': 'NASA LSP elvperf (desempeño de vehículos de lanzamiento)',
+  'DS-06': 'Sistema de información de lecciones aprendidas de la NASA (LLIS)',
+  'DS-07': 'APIs abiertas de la NASA (APOD, fotos de róveres de Marte, NEO)',
+  'DS-08': 'NASA GeneLab',
+};
+// Inglés reescrito donde el original era interno del equipo.
+const EN_T = {
+  PRECIO: 'Price estimate by the game designers: real price if known; otherwise the Blue Ghost payload average or 0.5 M USD per kg',
+  'CM-09': 'Giotto at comet Halley (checked against the primary source)',
+};
+const ES_N = {
+  PRECIO: ['An estimate by the game designers, not a measured datum.', 'Estimación de los diseñadores del juego, no un dato medido.'],
+  'BG-09': ['Part literal, part summarised.', 'En parte literal y en parte resumido.'],
+  'BC-11': ['Per-instrument mass and power seen in a search excerpt.', 'Masa y potencia por instrumento vistas en un extracto de búsqueda.'],
+  'CM-09': ['Checked against the primary source.', 'Verificado contra la fuente primaria.'],
+  'GEN-01': ['Search excerpts; nasa.gov returned error 429 when read.', 'Extractos de búsqueda; nasa.gov devolvió el error 429 al leerlo.'],
+  'ORB-19': ['Secondary source quoting SpaceX.', 'Fuente secundaria que cita a SpaceX.'],
+  'ORB-31': ['Not checked: the DEMO_KEY returned error 429. Needs its own key and cached data.', 'Sin comprobar: la DEMO_KEY devolvió el error 429. Necesita su propia clave y datos guardados.'],
+  'LND-01': ['Mass [V]; rocket [A].', 'Masa [V]; cohete [A].'],
+  'LND-06': ['Date [V]; Falcon 9 [A].', 'Fecha [V]; Falcon 9 [A].'],
+  'LND-18': ['Site [V]; 119 GB total [A].', 'Sitio [V]; 119 GB en total [A].'],
+  'LND-21': ['Page title only; no URL available.', 'Solo el título de la página; no hay URL.'],
+  'LND-25': ['Laser fact [V].', 'Dato del láser [V].'],
+  'EXP-02': ['Water figures do not agree.', 'Las cifras de agua no coinciden.'],
+  'DS-02': ['Download format still to confirm.', 'Falta confirmar el formato de descarga.'],
+  'DS-05': ['Not an API; says it is updated when new information is available (checked 10 Feb 2026).', 'No es una API; dice que se actualiza cuando hay información nueva (revisado el 10 feb. 2026).'],
+  'DS-07': ['Mars Rover Photos API is archived; the old APOD is archived on 1 Dec 2026.', 'La API de fotos de róveres de Marte está archivada; el APOD antiguo se archiva el 1 dic. 2026.'],
+  'F-06b': ['Game flow step: an investor joins or leaves.', 'Paso del flujo del juego: entra o sale un inversor.'],
+};
+const GAP_N = ['Open gap: the real value was not found, so the game uses an estimate.', 'Laguna abierta: no se encontró el valor real, así que el juego usa una estimación.'];
+const ES_A = {
+  Team: 'Diseñadores del juego', 'Other (press)': 'Otra (prensa)', 'Other (EGU abstract)': 'Otra (resumen de EGU)', 'Other (arXiv)': 'Otra (arXiv)',
+  'Other (journal paper)': 'Otra (artículo de revista)', 'Other (University of Maryland)': 'Otra (Universidad de Maryland)', Other: 'Otra',
+  'Other (CNES)': 'Otra (CNES)', 'Other (DLR)': 'Otra (DLR)', 'Other (industry)': 'Otra (industria)', 'Other (Astrobotic)': 'Otra (Astrobotic)',
+  'Boston University': 'Universidad de Boston', 'Firefly Aerospace': 'Firefly Aerospace', ISRO: 'ISRO', JAXA: 'JAXA', CSA: 'ASC',
+};
+const EN_A = { Team: 'Game designers' };
+for (const [id, f] of Object.entries(FUENTES)) {
+  if (typeof f.titulo === 'string') {
+    f.titulo = { es: ES_T[id] ?? f.titulo, en: EN_T[id] ?? f.titulo };
+    if (id.startsWith('GAP-')) f.nota = { en: GAP_N[0], es: GAP_N[1] };
+  }
+  if (typeof f.agencia === 'string') f.agencia = { es: ES_A[f.agencia] ?? f.agencia, en: EN_A[f.agencia] ?? f.agencia };
+  if (typeof f.nota === 'string') { const n = ES_N[id]; f.nota = n ? { en: n[0], es: n[1] } : { en: f.nota, es: f.nota }; }
+}
 
 export default FUENTES;

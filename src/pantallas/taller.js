@@ -1,6 +1,6 @@
 // Workshop screen (phases `diseno` and `restricciones`): tabs + parts list + blueprint + global panel.
 import { T } from '../textos.js';
-import { h, en, lista, valor, redondear, panelVacio, ROLES_IDS, ROL_COLOR, nombreRol, puedoPor, rolesQuePuedo, conRol, piezasMontadas, resumenSeguro } from './ui.js';
+import { h, en, lista, valor, redondear, dinero, panelVacio, ROLES_IDS, ROL_COLOR, nombreRol, puedoPor, rolesQuePuedo, conRol, piezasMontadas, resumenSeguro } from './ui.js';
 import { panelGlobal } from './panel-global.js';
 import { pestanaCohete } from './cohete.js';
 import { pestanaRuta } from './ruta.js';
@@ -19,14 +19,18 @@ function datosOpcion(c, op) {
     aporta.length ? h('div', { class: 'aporta-fila' }, aporta) : null);
 }
 
-function aQuienSirve(c, pieza) {
-  const objs = lista(c.mision?.objetivos).filter((o) => lista(o.requiere).includes(pieza.id));
-  return objs.length ? h('div', { class: 'sirve' }, T.contribTo, ': ', objs.map((o) => en(o.nombre) || o.id).join(', ')) : null;
+// Pros y contras de la opción elegida (compactos): ayudan a decidir sin decir cuál es la buena.
+function prosContras(op) {
+  const p = lista(op?.pros).map((x) => en(x)).filter(Boolean), q = lista(op?.contras).map((x) => en(x)).filter(Boolean);
+  if (!p.length && !q.length) return null;
+  return h('div', { class: 'pros-contras pequeno' },
+    p.length ? h('span', { class: 'pros' }, '+ ', p.join(' · ')) : null,
+    q.length ? h('span', { class: 'contras' }, '− ', q.join(' · ')) : null);
 }
 
 function selectorOpcion(pieza, actual, onchange) {
   const s = h('select', { 'aria-label': T.option, onchange: (ev) => onchange(ev.target.value) },
-    lista(pieza.opciones).map((o) => h('option', { value: o.id }, `${T.option} ${o.id}${en(o.nombre) ? ' - ' + en(o.nombre) : ''}`)));
+    lista(pieza.opciones).map((o) => h('option', { value: o.id }, en(o.nombre) || '—')));
   s.value = actual;
   return s;
 }
@@ -44,15 +48,16 @@ function columnaPiezas(c, rol, restr) {
     const opId = c.ui.op[p.id] ?? m?.op ?? p.opciones?.[0]?.id;
     const op = lista(p.opciones).find((o) => o.id === opId) ?? p.opciones?.[0];
     cuerpo.append(h('div', { class: 'pieza' + (m ? ' montada' : '') },
-      h('div', { class: 'pieza-cab' }, h('b', {}, en(p.nombre) || p.id), h('small', { class: 'tenue' }, T.categories?.[p.categoria] ?? p.categoria ?? '')),
+      h('div', { class: 'pieza-cab' }, h('b', {}, en(p.nombre) || '—'), h('small', { class: 'tenue' }, T.categories?.[p.categoria] ?? p.categoria ?? '')),
       en(p.desc) ? h('div', { class: 'tenue pequeno' }, en(p.desc)) : null,
+      en(p.usoPara) ? h('div', { class: 'uso-para pequeno', title: en(p.usoPara) }, en(p.usoPara)) : null,
       lista(p.opciones).length > 1 ? selectorOpcion(p, opId, (v) => {
         c.ui.op[p.id] = v;
         if (m && editable) c.enviar('montar', conRol(c, rol, { pieza: p.id, op: v, uso: m.uso }));
         else c.repintar();
       }) : null,
       datosOpcion(c, op),
-      aQuienSirve(c, p),
+      prosContras(op),
       h('div', { class: 'acciones izq' },
         m ? h('span', { class: 'etq ok' }, T.mounted)
           : h('button', {
@@ -77,7 +82,7 @@ function loteRol(c, rol, activo) {
     const p = c.D?.PIEZAS?.[id];
     const op = lista(p?.opciones).find((o) => o.id === m.op) ?? p?.opciones?.[0];
     const baldosa = h('div', { class: 'baldosa', 'data-pieza': id },
-      h('div', { class: 'baldosa-cab' }, h('b', {}, en(p?.nombre) || id)));
+      h('div', { class: 'baldosa-cab' }, h('b', {}, en(p?.nombre) || '—')));
     if (editable) {
       if (p && lista(p.opciones).length > 1) baldosa.append(selectorOpcion(p, m.op, (v) => c.enviar('montar', conRol(c, rol, { pieza: id, op: v, uso: m.uso }))));
       if (p?.uso) {
@@ -91,7 +96,7 @@ function loteRol(c, rol, activo) {
       } else baldosa.append(h('small', { class: 'tenue' }, T.alwaysOn));
       baldosa.append(h('button', { class: 'boton peligro', type: 'button', onclick: () => c.enviar('quitar', conRol(c, rol, { pieza: id })) }, T.remove));
     } else {
-      baldosa.append(h('small', { class: 'tenue' }, `${T.option} ${m.op ?? '?'}${p?.uso ? ` · ${m.uso ?? '?'} ${T.hoursPerDay}` : ''}`));
+      baldosa.append(h('small', { class: 'tenue' }, `${en(op?.nombre) || '—'}${p?.uso ? ` · ${m.uso ?? '?'} ${T.hoursPerDay}` : ''}`));
     }
     baldosa.append(datosOpcion(c, op));
     caja.append(baldosa);
@@ -126,7 +131,7 @@ function avisoRestricciones(c, res) {
   for (const id of mal) {
     const b = res.barras[id];
     const pct = redondear(((b.limite > 0 ? b.usado / b.limite : 9) - 1) * 100, 0);
-    ul.append(h('li', { class: b.estado }, T.over(T.bars[id], redondear(b.usado, 1), redondear(b.limite, 1), pct, T.units[id])));
+    ul.append(h('li', { class: b.estado }, id === 'presupuesto' ? T.overMoney(T.bars[id], dinero(b.usado), dinero(b.limite), pct) : T.over(T.bars[id], redondear(b.usado, 1), redondear(b.limite, 1), pct, T.units[id])));
   }
   caja.append(ul);
   return caja;

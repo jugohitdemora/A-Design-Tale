@@ -97,3 +97,4 @@
   display: inline-block; margin: 0 0 var(--e-2); padding: 0 var(--e-2); font: var(--tp-etq) var(--lp-pixel); color: var(--lp-ok); border: 3px solid var(--lp-ok);
   border-radius: var(--lp-radio); background: var(--lp-panel);
 }
+.cam-carpeta dd.dato { font-weight: 400; font-size: var(--t-meta); line-height: 1.3; }

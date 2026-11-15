@@ -5,20 +5,21 @@
 // Contrato del host: appContingencias(c) devuelve el nodo raíz. El host reconstruye el DOM en cada cambio: todo sale de c.e.
 // c.ui.contingencias = { abierto: { [eventoId]: bool } } (casos reales desplegados).
 import { textos, tx, depto, idioma } from '../i18n.js';
-import { h, lista, valor, puedoPor, resumenSeguro, ROLES_IDS, MAX_CONTINGENCIAS } from '../pantallas/ui.js';
+import { T as TU } from '../textos.js';
+import { h, lista, dinero, puedoPor, resumenSeguro, ROLES_IDS, MAX_CONTINGENCIAS } from '../pantallas/ui.js';
 
 const T = textos({
   es: {
     riesgos: 'RIESGOS DEL DISEÑO', riesgosLead: 'Lo que puede pasar en vuelo.',
     nEventos: (n) => `${n} eventos`, sinRiesgos: 'Sin eventos de vuelo.',
     fase: 'Fase', critica: 'crítica', prob: 'Probabilidad', mitigado: 'MITIGADO', abierto: 'SIN MITIGAR', oportunidad: 'OPORTUNIDAD',
-    mitigaCon: 'Se mitiga con', nadaMitiga: 'Ninguna contingencia lo cubre.', casoReal: 'Caso real', verCaso: 'Ver caso real', ocultarCaso: 'Ocultar caso real',
+    casoReal: 'Caso real', verCaso: 'Ver caso real', ocultarCaso: 'Ocultar caso real',
     leccion: 'Lección',
     plan: 'PLAN DE CONTINGENCIA', usadas: (n, m) => `${n}/${m} usadas`, cupoLleno: (m) => `Máximo ${m} para todo el equipo. Quita otra primero.`,
     tuDepto: 'TU DEPARTAMENTO', vacante: 'VACANTE · puedes operarlo', soloLectura: 'SOLO LECTURA',
     soloPuede: (d) => `Solo ${d} puede cambiar esto.`, sinMias: 'Tu departamento no tiene contingencias.',
     sinContingencias: 'Sin contingencias.',
-    masa: 'Masa', coste: 'Coste', creditos: 'créditos', mitiga: 'Mitiga', comprar: 'Comprar', quitar: 'Quitar',
+    masa: 'Masa', comprar: 'Comprar', quitar: 'Quitar',
     comprada: 'COMPRADA', impacto: 'Coste del plan', recursoMasa: 'Masa', recursoPres: 'Presupuesto',
     restr: 'Restricciones: no se acepta un cambio que suba una barra.',
     nota: 'Cuando salga el evento, su departamento activa la contingencia en la sala de control.',
@@ -28,13 +29,13 @@ const T = textos({
     riesgos: 'DESIGN RISKS', riesgosLead: 'What can happen in flight.',
     nEventos: (n) => `${n} events`, sinRiesgos: 'No flight events.',
     fase: 'Phase', critica: 'critical', prob: 'Probability', mitigado: 'MITIGATED', abierto: 'NOT MITIGATED', oportunidad: 'OPPORTUNITY',
-    mitigaCon: 'Mitigated by', nadaMitiga: 'No contingency covers it.', casoReal: 'Real case', verCaso: 'Show real case', ocultarCaso: 'Hide real case',
+    casoReal: 'Real case', verCaso: 'Show real case', ocultarCaso: 'Hide real case',
     leccion: 'Lesson',
     plan: 'CONTINGENCY PLAN', usadas: (n, m) => `${n}/${m} used`, cupoLleno: (m) => `Maximum ${m} for the whole team. Drop another first.`,
     tuDepto: 'YOUR DEPARTMENT', vacante: 'VACANT · you can operate it', soloLectura: 'READ ONLY',
     soloPuede: (d) => `Only ${d} can change this.`, sinMias: 'Your department has no contingencies.',
     sinContingencias: 'No contingencies.',
-    masa: 'Mass', coste: 'Cost', creditos: 'credits', mitiga: 'Mitigates', comprar: 'Buy', quitar: 'Drop',
+    masa: 'Mass', comprar: 'Buy', quitar: 'Drop',
     comprada: 'BOUGHT', impacto: 'Plan cost', recursoMasa: 'Mass', recursoPres: 'Budget',
     restr: 'Constraints: do not raise any bar.',
     nota: 'When the event occurs, its department activates the contingency in the control room.',
@@ -42,6 +43,14 @@ const T = textos({
   },
 });
 
+// Valor {v, conf, ec}: "≈" en los estimados (la ayuda explica el cálculo), sin códigos de fuente; dinero con `dinero`.
+function val(c, x, unidad, dineroSi = false) {
+  if (x == null) return h('span', { class: 'val tenue' }, '-');
+  const n = num(c, x);
+  const est = typeof x === 'object' && (x.conf === 'EST' || x.conf === 'JUEGO' || x.v == null);
+  return h('span', { class: 'val' + (est ? ' juego' : ''), title: est ? (tx(x.ec) || (TU.estimateValue ?? TU.gameValue)) : null },
+    (est ? '≈ ' : '') + (dineroSi ? dinero(n) : fmt(n, 2) + (unidad ? ' ' + unidad : '')));
+}
 const colorRol = (r) => `var(--lp-rol-${ROLES_IDS.includes(r) ? r : 'comms'})`;
 const fmt = (n, d = 1) => (Number.isFinite(n) ? n.toLocaleString(idioma() === 'es' ? 'es-ES' : 'en-US', { maximumFractionDigits: d }) : '∞');
 const num = (c, x) => (c.motor?.num ? c.motor.num(x) : typeof x === 'number' ? x : x?.v ?? x?.juego ?? 0);
@@ -91,7 +100,6 @@ function columnaRiesgos(c, u, res) {
     const positivo = signo === '+';
     const f = fases.find((x) => x?.id === (r.fase ?? ev.fase));
     const p = Math.max(0, Math.min(1, Number(r.p ?? ev.p) || 0));
-    const mit = lista(ev.mitigadoPor);
     const abiertoCaso = !!u.abierto[r.id];
     const estado = positivo ? 'oportunidad' : r.mitigado ? 'mitigado' : 'abierto';
     cuerpo.append(h('article', { class: `ct-riesgo ${estado}` },
@@ -104,13 +112,9 @@ function columnaRiesgos(c, u, res) {
       h('div', { class: 'ct-prob', title: T.prob },
         h('span', {}, T.prob), h('span', { class: 'ct-prob-pista' }, h('i', { style: `width:${p * 100}%` })), h('b', {}, `${fmt(p * 100, 0)} %`)),
       tx(ev.texto) ? h('p', { class: 'ct-r-txt' }, tx(ev.texto)) : null,
-      positivo ? null : h('p', { class: 'ct-r-mit' }, mit.length
-        ? [h('span', {}, T.mitigaCon + ': '), mit.map((id) => h('span', { class: 'ct-tag', style: `--rol:${colorRol(rolDe(c, id))}` },
-          tx(c.D?.CONTINGENCIAS?.[id]?.nombre) || id, h('small', {}, ` · ${depto(rolDe(c, id), 'sigla')}`)))]
-        : h('em', {}, T.nadaMitiga)),
       tx(ev.casoReal) ? h('details', { class: 'ct-caso', open: abiertoCaso ? '' : null, ontoggle: (ev2) => { u.abierto[r.id] = ev2.target.open; } },
         h('summary', {}, T.verCaso),
-        h('p', {}, h('b', {}, T.casoReal + ': '), tx(ev.casoReal), ev.src ? h('sup', { class: 'src' }, ev.src) : null),
+        h('p', {}, h('b', {}, T.casoReal + ': '), tx(ev.casoReal)),
         tx(ev.leccion) ? h('p', { class: 'ct-leccion' }, h('b', {}, T.leccion + ': '), tx(ev.leccion)) : null) : null));
   }
   return h('section', { class: 'ct-col ct-riesgos' },
@@ -129,22 +133,15 @@ function fila(c, id, tomadas, res) {
   const lleno = !on && tomadas.length >= MAX_CONTINGENCIAS;
   const bloqueada = !puedo || lleno;
   const motivo = !puedo ? T.soloPuede(depto(rol)) : lleno ? T.cupoLleno(MAX_CONTINGENCIAS) : null;
-  const riesgo = (e) => lista(res?.riesgos).find((r) => r.id === e);
   const alternar = () => { if (!bloqueada && unaVez(id)) c.enviar('contingencia', { id, on: !on }); };
   return h('div', { class: 'ct-fila' + (on ? ' on' : '') + (bloqueada ? ' bloqueada' : ''), style: `--rol:${colorRol(rol)}` },
     h('div', { class: 'ct-f-info' },
       h('b', {}, tx(k.nombre) || id, on ? h('span', { class: 'ct-badge comprada' }, T.comprada) : null),
       tx(k.texto) ? h('p', {}, tx(k.texto)) : null,
-      lista(k.mitiga).length ? h('p', { class: 'ct-f-mit' }, h('span', {}, T.mitiga + ': '), lista(k.mitiga).map((e) => {
-        const r = riesgo(e);
-        const ev = c.D?.EVENTOS_MISION?.[e];
-        const p = Number(r?.p ?? ev?.p);
-        return h('span', { class: 'ct-tag ev' }, tx(ev?.nombre) || e, Number.isFinite(p) ? h('small', {}, ` · ${fmt(p * 100, 0)} %`) : null);
-      })) : null,
       motivo ? h('p', { class: 'ct-solo' }, motivo) : null),
     h('div', { class: 'ct-f-coste' },
-      h('span', { class: 'ct-masa' }, valor(c, k.masa, 'kg')),
-      h('span', { class: 'ct-monedas' }, pixel('moneda', 'var(--lp-aviso)', 14), valor(c, k.precio, 'M USD')),
+      h('span', { class: 'ct-masa' }, h('small', {}, T.masa + ' '), val(c, k.masa, 'kg')),
+      h('span', { class: 'ct-monedas' }, pixel('moneda', 'var(--lp-aviso)', 14), val(c, k.precio, '', true)),
       h('button', {
         class: 'boton ancho' + (on ? ' on' : ''), type: 'button', role: 'checkbox', 'aria-checked': String(on), disabled: bloqueada,
         title: motivo ?? undefined, onclick: alternar,
@@ -177,7 +174,7 @@ function columnaPlan(c, res) {
 
   return h('section', { class: 'ct-col ct-plan' },
     h('header', { class: 'ct-cab' }, h('h3', {}, T.plan), cupo),
-    h('p', { class: 'ct-impacto' }, `${T.impacto}: +${fmt(masa)} kg · +${fmt(precio)} M USD`),
+    h('p', { class: 'ct-impacto' }, `${T.impacto}: +${fmt(masa)} kg · +${dinero(precio)}`),
     cuerpo);
 }
 

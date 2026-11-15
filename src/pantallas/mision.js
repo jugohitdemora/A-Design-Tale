@@ -25,13 +25,12 @@ export function pantallaMision(c) {
   const ol = h('ol', { class: 'pasos' });
   r.pasos.forEach((p, i) => {
     const fase = lista(c.mision?.fases).find((f) => f.id === p.fase);
-    const nombre = en(fase?.nombre) || p.fase || `#${i + 1}`;
+    const nombre = en(fase?.nombre) || `#${i + 1}`;
     if (i > paso) { ol.append(h('li', { class: 'paso pendiente' }, h('b', {}, nombre), ' ', h('span', { class: 'tenue' }, T.stepPending))); return; }
     const ev = eventoDe(c, p.evento);
     ol.append(h('li', { class: 'paso ' + (p.ok ? 'ok' : 'mal') + (i === paso ? ' actual' : '') },
       h('div', { class: 'paso-cab' }, h('b', {}, nombre), h('span', {}, `${redondear((p.p ?? 0) * 100, 0)}%`), h('b', { class: 'etq ' + (p.ok ? 'ok' : 'mal') }, p.ok ? T.success : T.failure)),
-      ev ? h('div', { class: 'pequeno' }, `${T.eventFired}: `, h('b', {}, `${ev.signo ?? ''} ${en(ev.nombre) || ev.id}`),
-        ev.signo === '+' ? null : ` · ${p.mitigado ? T.mitigatedBy : T.notMitigatedShort}`,
+      ev ? h('div', { class: 'pequeno' }, `${T.eventFired}: `, h('b', {}, `${ev.signo ?? ''} ${en(ev.nombre) || '—'}`),
         en(ev.texto) ? h('div', { class: 'tenue' }, en(ev.texto)) : null) : null));
   });
   raiz.append(ol);

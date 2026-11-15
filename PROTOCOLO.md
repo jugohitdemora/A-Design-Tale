@@ -63,7 +63,8 @@ fase             lobby | briefing | diseno | restricciones | verificacion | misi
 jugadores        jugadorId → { nick, rol, orden, conectado, desconectadoEn, ultimaIntencion }
 semilla          sorteada por el anfitrión al iniciar la misión; de ella salen eventos de diseño y vuelo
 briefing         { objetivos, tareas, riesgos, carpetas }
-mision           null | { escenario, id, dificultad: 'facil'|'normal'|'dificil' }
+mision           null | { escenario, id, dificultad: 'facil'|'normal'|'dificil', objetivos: [ids], plazo }
+                 plazo = mes de lanzamiento comprometido con los inversores (meses desde reloj.inicio), de m.reloj.plazos; null sin reloj
 porRol           vuelo    { piezas, cohete, ruta }
                  ciencia  { piezas }
                  potencia { piezas }
@@ -74,11 +75,17 @@ diseno           { revisiones, eventos: [{ id }], ultima }     eventos de diseñ
                  { tipo: 'evento', id } | { tipo: 'revision', nivel, barras } (resultado de la última revisión)
 firmas           { vuelo, ciencia, potencia, comms }           booleanos
 resultado        null | lo que devolvió simular() al lanzar
-vista            { paso }                                      pasos del vuelo ya revelados
+vista            { paso, activadas }                           pasos del vuelo ya revelados, contingencias activadas
+ruta             { mes, sitio }                                planificación en la sala de control: mes de lanzamiento (meses desde
+                 reloj.inicio, null sin elegir) y sitio/órbita. `ventana` = copia de `mes` para la interfaz antigua (se quita
+                 en el lote 2). v3 guardaba ahí un día: sin `mes`, se vacía al completar el estado
+reloj            { mes }                                       meses de diseño transcurridos desde m.reloj.inicio (contrato-reloj.md)
 registro         eventos ya resueltos por el anfitrión (fases futuras)
 ```
 
 - **Los valores derivados no se guardan.** Las barras, la ciencia, los riesgos y los efectos de los eventos de diseño se calculan en cada cliente con `resumen(estado, DATOS)` (`src/reglas/motor.js`). En el estado solo hay ids, opción y uso. La excepción es `resultado`: lo calcula el anfitrión una vez, al lanzar, y es igual para todos.
+- **Reloj de misión (v4, contrato-reloj.md).** El tiempo solo avanza en acciones validadas del anfitrión: `pedirRevision` +2 meses (más `efecto.meses` del evento de diseño que salga), rediseñar (informe → diseño) +6, misión nueva → 0. Todo lo que depende del reloj se deriva en `resumen()`: `res.reloj = { activo, mes, plazo, lanzamiento, retraso, recorte, bono, cancelada, presupuesto }` y `res.plan = { mes, mesAbs, perdida, factor, extraKg, dv, horasEnlace, cond, cometa, … }` (`dia` = `mes` y `optimo: false` solo por compatibilidad). Presupuesto = misión · (1 + bono del plazo) · (1 − recorte por retraso); luego eventos: sumas primero, factores después. Con retraso > 12 meses los inversores se retiran: si ocurre al avanzar el reloj, el anfitrión guarda un `resultado` cancelado (`cancelada: true`, veredicto `fallida`) y pasa a informe. Los sorteos nuevos (`derivar(semilla, 'clima'|'reloj', misión, mesAbs)`) no consumen los de siempre.
+- **Explicación del vuelo.** `resultado.fallos = [{ codigo, fase, p, tirada, desglose: [[fuente, ref, dp]], decision, evitar }]`, `resultado.lanzamiento`, `resultado.reloj`: códigos compactos que `explicarCausas(resultado, DATOS, idioma)` (`src/reglas/explicar.js`) convierte en "Causa → Decisión → Qué lo evitaba". `resultado.causas` sigue con sus textos `{ en, es }`.
 - **Datos.** `protocolo.js` carga `src/datos/index.js` con un `import()` protegido: si falta o falla, el protocolo carga igual y las acciones de juego se rechazan con "Game data not loaded". `usarDatos(d)` o `ctx.datos` inyectan otros datos (las pruebas lo hacen).
 - **Fusión.** `unirse` solo copia el taller que trae un jugador si el del anfitrión está vacío (`tallerVacio`), y lo normaliza (`normalizarTaller`).
 - **Información "privada" de cada rol.** El estado se replica entero a todos: lo privado solo se oculta en la interfaz. En un juego cooperativo es suficiente, pero no es secreto de verdad.
@@ -93,15 +100,17 @@ registro         eventos ya resueltos por el anfitrión (fases futuras)
 | `iniciarMision` | lobby | Todos los conectados tienen rol. Sortea `semilla` |
 | `marcarPizarra`, `abrirCarpeta` | briefing | — |
 | `editarPropio` | briefing, diseño, restricciones | Notas libres en el taller de tu rol. Máximo 8 KB por dato y 32 KB por taller. No puede usar las claves `piezas`, `cohete`, `ruta`, `contingencias` |
-| `elegirMision` `{escenario?, id?, dificultad?}` | briefing | Valida contra los datos. Cambiar `id` vacía piezas, cohete, ruta, contingencias, eventos de diseño, firmas y resultado (las notas se conservan) |
+| `elegirMision` `{escenario?, id?, dificultad?}` | briefing | Valida contra los datos. Cambiar `id` vacía piezas, cohete, ruta, contingencias, eventos de diseño, firmas, resultado, `ruta` y `reloj` (las notas se conservan), y pone `plazo` = el del medio de `m.reloj.plazos` |
+| `comprometerPlazo` `{plazo}` | briefing | `plazo` tiene que estar en `m.reloj.plazos`. Primero = corto (+10 % de presupuesto), último = largo (−10 %). Anula los "listo" |
 | `montar` `{rol?, pieza, op?, uso?}`, `quitar` `{rol?, pieza}` | diseño, restricciones | La pieza es del rol y de la misión; `op` y `uso` dentro de la ficha. `rol` ajeno solo si está vacante (nadie conectado lo tiene, MEC-03). En restricciones, MEC-12. Borra las firmas |
 | `elegirCohete` `{id}`, `elegirRuta` `{id}` | diseño, restricciones | Rol vuelo (o vacante). De la lista de la misión; cohete con `cumpleDEC09`. `null` lo quita. Borra las firmas |
 | `contingencia` `{id, on}` | diseño, restricciones | Rol comms (o vacante). Máximo 3. Borra las firmas |
-| `pedirRevision` `{revision?}` | diseño, restricciones | Mientras queden eventos de diseño (1/2/3 por dificultad), sale uno en vez de la revisión (sorteado con la semilla, sin repetir). Después: exceso → diseño, tolerancia → restricciones, todo ok → verificación (MEC-10, MEC-11). `revision` (opcional) = `diseno.revisiones` esperado, evita dobles clics |
+| `pedirRevision` `{revision?}` | diseño, restricciones | Avanza el reloj 2 meses (+ `meses` del evento que salga); si los inversores se retiran, misión cancelada e informe. Mientras queden eventos de diseño (1/2/3 por dificultad), sale uno en vez de la revisión (sorteado con la semilla, sin repetir). Después: exceso → diseño, tolerancia → restricciones, todo ok → verificación (MEC-10, MEC-11). `revision` (opcional) = `diseno.revisiones` esperado, evita dobles clics |
 | `firmar` `{rol?, on}` | verificación | Tu rol, o uno vacante. Para firmar, `verificar()` tiene que pasar |
 | `lanzar` | verificación | Comprobaciones y 4 firmas. El anfitrión calcula `resultado = simular()` y pasa a misión |
 | `avanzar` `{paso?}` | misión | `vista.paso + 1`; con todos los pasos a la vista pasa a informe. `paso` (opcional) evita dobles clics |
-| `cambiarFase` | todas | Solo las transiciones de `TRANSICIONES`, salvo las que tienen acción propia (`SOLO_POR_ACCION`: revisión, lanzamiento, avance). briefing → diseño exige misión `jugable`. informe → diseño (rediseñar) conserva diseño, semilla y eventos de diseño; borra firmas y resultado. → lobby vacía la partida |
+| `planificarRuta` `{mes?, sitio?}` | diseño, restricciones, verificación | `mes` lo fija vuelo (o vacante), `sitio` vuelo o ciencia. `ventana` se acepta como nombre antiguo de `mes`. Mes entero en 0..mesMax; no anterior a `reloj.mes` ("Launch month already passed"); en diseño y restricciones, al menos `reloj.mes + 2`; como mucho 12 meses tras el plazo. En restricciones y verificación no puede subir una barra que acabe fuera de su límite, salvo para rehacer un plan perdido. Borra las firmas |
+| `cambiarFase` | todas | Solo las transiciones de `TRANSICIONES`, salvo las que tienen acción propia (`SOLO_POR_ACCION`: revisión, lanzamiento, avance). briefing → diseño exige misión `jugable`. informe → diseño (rediseñar) conserva diseño, semilla y eventos de diseño; borra firmas y resultado; el reloj avanza 6 meses (se rechaza con "Investors pulled out" si eso cancelaría la misión). → lobby vacía la partida |
 
 Los motivos de rechazo de estas acciones van en inglés: la interfaz los muestra tal cual.
 
@@ -109,7 +118,7 @@ Los motivos de rechazo de estas acciones van en inglés: la interfaz los muestra
 
 ## 8. Versiones
 
-Si llega un `hola` con otra `v`, se avisa ("recargad la página") y se ignoran sus mensajes. Un par conectado que en 8 s no ha saludado se trata igual: es una versión anterior a este protocolo. **Cuando un cambio rompa la compatibilidad, hay que subir `VERSION_PROTOCOLO`.**
+Si llega un `hola` con otra `v`, se avisa ("recargad la página") y se ignoran sus mensajes. Un par conectado que en 8 s no ha saludado se trata igual: es una versión anterior a este protocolo. **Cuando un cambio rompa la compatibilidad, hay que subir `VERSION_PROTOCOLO`.** Versión actual: 4 (reloj de misión: `reloj`, `mision.plazo`, `ruta.mes`, acción `comprometerPlazo`). `completarEstado` completa un estado v3: `ruta.ventana` → `ruta.mes = null`, `reloj = { mes: 0 }`, `mision.plazo = null` (sin regla de inversores).
 
 El anfitrión descarta las intenciones malformadas (sin `id` numérico, sin `tipo` o con un `payload` que no es un objeto).
 

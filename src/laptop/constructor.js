@@ -6,7 +6,8 @@
 // Contrato del host: appConstructor(c, { restr }) devuelve el nodo raíz. El host reconstruye el DOM en cada cambio, así que todo
 // sale de (c.e, c.ui.constructor). c.ui.constructor = { rol, cat, sel, op: {pieza: opId}, uso: {pieza: h} }.
 import { textos, tx, depto, idioma } from '../i18n.js';
-import { h, lista, valor, puedoPor, rolesQuePuedo, conRol, piezasMontadas, resumenSeguro, ROLES_IDS } from '../pantallas/ui.js';
+import { T as TU } from '../textos.js';
+import { h, lista, dinero, puedoPor, rolesQuePuedo, conRol, piezasMontadas, resumenSeguro, ROLES_IDS } from '../pantallas/ui.js';
 
 const T = textos({
   es: {
@@ -16,14 +17,14 @@ const T = textos({
     nodoLibre: 'Nodo libre', cajetin: { mision: 'MISIÓN', rev: 'REV', escala: 'ESCALA', esc: 'S/E', dib: 'DIBUJÓ' },
     montadasTit: 'MONTADO POR DEPARTAMENTO', ninguna: 'nada montado',
     ficha: 'FICHA DE LA PIEZA', cerrar: 'Cerrar ficha', categoria: 'Categoría', departamento: 'Departamento',
-    sirve: 'SIRVE PARA', noSirve: 'Ningún objetivo la pide. Sostiene la nave.', prioritario: 'PRIORITARIO', noMarcado: 'no marcado',
-    usoObj: (n) => `pide ${n} h/día`, mejoras: 'MEJORA FASES DEL VUELO', opciones: 'OPCIONES', opcion: 'Opción', enUso: 'EN USO',
+    sirve: 'PARA QUÉ SIRVE', pros: 'A favor', contras: 'En contra', opciones: 'OPCIONES', opcion: 'Opción', enUso: 'EN USO',
     num: { masa: 'Masa', potencia: 'Potencia', volumen: 'Volumen', tasa: 'Datos', precio: 'Precio' },
     aporta: 'APORTA', ap: { potencia: 'W de potencia', bateria: 'Wh de batería', bajada: 'kbps de bajada', volumen: 'L de volumen' },
     uso: 'USO', siempre: 'Siempre encendida (24 h/día)', hDia: 'h/día', montar: 'MONTAR', quitar: 'QUITAR',
     soloDe: (d) => `Solo ${d} puede cambiarla.`,
     restrNo: 'No se añaden piezas. Quita, baja el uso o cambia de opción.',
-    recursos: 'RECURSOS',
+    recursos: 'RECURSOS', mesReloj: (m, p) => (p != null ? `Mes ${m} · comprometido ${p}` : `Mes ${m}`), retrasoN: (n) => `retraso ${n} m`, cancelada: 'Los inversores se retiraron',
+    presu: { mision: 'Misión', bono: 'Inversores (plazo)', recorte: 'Recorte por retraso', eventos: 'Eventos' }, presuTit: 'PRESUPUESTO',
     barras: { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Datos', presupuesto: 'Presupuesto', volumen: 'Volumen' },
     sinLimite: { masa: 'Sin cohete: elígelo en la cámara de lanzamiento', potencia: 'Sin paneles', bateria: 'Sin batería',
       datos: 'Sin antena', presupuesto: 'Sin presupuesto', volumen: 'Sin estructura' },
@@ -45,14 +46,14 @@ const T = textos({
     nodoLibre: 'Free node', cajetin: { mision: 'MISSION', rev: 'REV', escala: 'SCALE', esc: 'NTS', dib: 'DRAWN' },
     montadasTit: 'MOUNTED BY DEPARTMENT', ninguna: 'nothing mounted',
     ficha: 'PART SHEET', cerrar: 'Close sheet', categoria: 'Category', departamento: 'Department',
-    sirve: 'USED FOR', noSirve: 'No goal needs it. It supports the spacecraft.', prioritario: 'PRIORITY', noMarcado: 'not ticked',
-    usoObj: (n) => `needs ${n} h/day`, mejoras: 'IMPROVES FLIGHT PHASES', opciones: 'OPTIONS', opcion: 'Option', enUso: 'IN USE',
+    sirve: 'USED FOR', pros: 'Pros', contras: 'Cons', opciones: 'OPTIONS', opcion: 'Option', enUso: 'IN USE',
     num: { masa: 'Mass', potencia: 'Power', volumen: 'Volume', tasa: 'Data', precio: 'Price' },
     aporta: 'PROVIDES', ap: { potencia: 'W of power', bateria: 'Wh of battery', bajada: 'kbps downlink', volumen: 'L of volume' },
     uso: 'USAGE', siempre: 'Always on (24 h/day)', hDia: 'h/day', montar: 'MOUNT', quitar: 'REMOVE',
     soloDe: (d) => `Only ${d} can change it.`,
     restrNo: 'Do not add parts. Remove, lower usage or change option.',
-    recursos: 'RESOURCES',
+    recursos: 'RESOURCES', mesReloj: (m, p) => (p != null ? `Month ${m} · committed ${p}` : `Month ${m}`), retrasoN: (n) => `${n} mo late`, cancelada: 'Investors pulled out',
+    presu: { mision: 'Mission', bono: 'Investors (term)', recorte: 'Late funding cut', eventos: 'Events' }, presuTit: 'BUDGET',
     barras: { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data', presupuesto: 'Budget', volumen: 'Volume' },
     sinLimite: { masa: 'No rocket: choose one in the launch camera', potencia: 'No panels', bateria: 'No battery',
       datos: 'No antenna', presupuesto: 'No budget', volumen: 'No structure' },
@@ -70,12 +71,20 @@ const T = textos({
 });
 
 const BARRAS = ['masa', 'potencia', 'bateria', 'datos', 'presupuesto', 'volumen'];
-const UNIDAD = { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB', presupuesto: 'M USD', volumen: 'L' };
+const UNIDAD = { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB', presupuesto: '', volumen: 'L' };
 const CATS = ['estructura', 'propulsion', 'actitud', 'guiado', 'camara', 'proteccion', 'sondas', 'instrumento', 'paneles', 'bateria', 'termica', 'polvo',
   'antena', 'computador', 'memoria', 'navegacion', 'tierra'];
 const colorRol = (r) => `var(--lp-rol-${ROLES_IDS.includes(r) ? r : 'comms'})`;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const fmt = (n, d = 1) => (Number.isFinite(n) ? n.toLocaleString(idioma() === 'es' ? 'es-ES' : 'en-US', { maximumFractionDigits: d }) : '∞');
+// Valor de datos {v, conf, src, juego}: sin códigos de fuente; "≈" en los estimados con la explicación como ayuda.
+function val(c, x, unidad = '', dinero_ = false) {
+  if (x == null) return h('span', { class: 'val tenue' }, '-');
+  const num = typeof x === 'number' ? x : (c.motor?.num ?? ((q) => q?.v ?? q?.juego ?? 0))(x);
+  const est = typeof x === 'object' && (x.conf === 'EST' || x.conf === 'JUEGO' || x.v == null);
+  const txt = dinero_ ? dinero(num) : fmt(num, 2) + (unidad ? ' ' + unidad : '');
+  return h('span', { class: 'val' + (est ? ' juego' : ''), title: est ? (tx(x.ec) || (TU.estimateValue ?? TU.gameValue)) : null }, (est ? '≈ ' : '') + txt);
+}
 const numUso = (x, d) => (typeof x === 'number' ? x : typeof x?.v === 'number' ? x.v : typeof x?.juego === 'number' ? x.juego : d);
 function nodoSVG(str) {
   const t = document.createElement('template');
@@ -302,7 +311,7 @@ function paleta(c, u, rol, todas) {
     ? h('div', { class: 'kb-deptos', role: 'tablist', 'aria-label': T.actuarComo }, puedo.map((r) => h('button', {
       class: 'boton kb-depto' + (r === rol ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': String(r === rol),
       title: depto(r, 'largo') + (r !== c.rol ? ` (${T.vacante})` : ''), onclick: () => { u.rol = r; u.cat = null; c.repintar(); },
-    }, depto(r, 'sigla'))))
+    }, depto(r))))
     : h('div', { class: 'kb-deptos solo' }, h('span', { class: 'kb-depto-solo', style: `--rol:${colorRol(rol)}` }, h('i', { class: 'kb-cuadro' }), depto(rol)),
       editable ? null : h('small', { class: 'kb-tenue' }, T.soloLectura));
 
@@ -343,17 +352,8 @@ function ficha(c, u, p, restr) {
   const m = piezasMontadas(c, rol)[p.id];
   const ops = lista(p.opciones);
   const opSel = m ? opcionDe(p, m.op) : opcionDe(p, u.op[p.id]);
-  const marcados = lista(c.e?.mision?.objetivos);
-
-  const objs = lista(c.mision?.objetivos).filter((o) => lista(o?.requiere).includes(p.id));
-  const sirve = objs.length
-    ? h('ul', { class: 'kb-lista' }, objs.map((o) => h('li', { class: !o.prioridad && !marcados.includes(o.id) ? 'tenue' : '' },
-      o.prioridad ? h('b', { class: 'kb-etq prio' }, T.prioritario) : null, ' ', tx(o.nombre) || o.id,
-      o.usoObjetivo != null ? h('small', {}, ` · ${T.usoObj(o.usoObjetivo)}`) : null,
-      !o.prioridad && !marcados.includes(o.id) ? h('small', {}, ` (${T.noMarcado})`) : null)))
-    : h('p', { class: 'kb-tenue' }, T.noSirve);
-
-  const mejoras = lista(c.mision?.fases).flatMap((f) => lista(f?.mejoras).filter((mj) => mj?.por === p.id).map((mj) => ({ f, dp: Number(mj.dp) || 0 })));
+  const lst = (xs) => lista(xs).slice(0, 3).map((x) => h('li', {}, tx(x)));
+  const usoPara = tx(p.usoPara);
 
   const tarjetas = ops.map((o) => {
     const activa = opSel?.id === o.id;
@@ -367,11 +367,14 @@ function ficha(c, u, p, restr) {
         if (m && editable) c.enviar('montar', conRol(c, rol, { pieza: p.id, op: o.id, ...(p.uso ? { uso: m.uso } : {}) }));
         else c.repintar();
       },
-    }, h('span', { class: 'kb-op-cab' }, h('b', {}, `${o.id}`), ' ', tx(o.nombre) || `${T.opcion} ${o.id}`, m?.op === o.id ? h('span', { class: 'kb-etq ok' }, T.enUso) : null),
+    }, h('span', { class: 'kb-op-cab' }, tx(o.nombre) || '—', m?.op === o.id ? h('span', { class: 'kb-etq ok' }, T.enUso) : null),
     h('span', { class: 'kb-nums' },
       ['masa', 'potencia', 'volumen', 'tasa', 'precio'].map((k) => h('span', { class: 'kb-num' }, h('small', {}, T.num[k]),
-        valor(c, o[k], { masa: 'kg', potencia: 'W', volumen: 'L', tasa: 'kbps', precio: 'M USD' }[k])))),
-    ap.length ? h('span', { class: 'kb-aporta' }, h('small', {}, T.aporta), ap.map(([k, x]) => h('span', {}, '+', valor(c, x, ''), ' ', T.ap[k] ?? k))) : null);
+        val(c, o[k], { masa: 'kg', potencia: 'W', volumen: 'L', tasa: 'kbps' }[k] ?? '', k === 'precio')))),
+    ap.length ? h('span', { class: 'kb-aporta' }, h('small', {}, T.aporta), ap.map(([k, x]) => h('span', {}, '+', val(c, x, ''), ' ', T.ap[k] ?? k))) : null,
+    lista(o.pros).length || lista(o.contras).length ? h('span', { class: 'kb-pc' },
+      h('span', { class: 'kb-pro' }, h('small', {}, T.pros), h('ul', {}, lst(o.pros))),
+      h('span', { class: 'kb-contra' }, h('small', {}, T.contras), h('ul', {}, lst(o.contras)))) : null);
   });
 
   let uso;
@@ -410,11 +413,10 @@ function ficha(c, u, p, restr) {
       h('div', { class: 'kb-ficha-dib' }, iconoPieza(p.categoria, colorRol(rol), 48)),
       h('div', {},
         h('h4', {}, tx(p.nombre) || p.id),
-        h('p', { class: 'kb-meta' }, `${T.cats[p.categoria] ?? p.categoria ?? '-'} · `, h('b', { class: 'kb-rol' }, depto(rol))),
+        h('p', { class: 'kb-meta' }, `${T.cats[p.categoria] ?? '—'} · `, h('b', { class: 'kb-rol' }, depto(rol))),
         m ? h('span', { class: 'kb-sello' }, T.montada) : null)),
     tx(p.desc) ? h('p', { class: 'kb-desc' }, tx(p.desc)) : null,
-    h('h5', {}, T.sirve), sirve,
-    mejoras.length ? [h('h5', {}, T.mejoras), h('ul', { class: 'kb-lista' }, mejoras.map(({ f, dp }) => h('li', {}, h('b', { class: 'kb-mas' }, `+${fmt(dp * 100, 0)} %`), ' ', tx(f.nombre) || f.id)))] : null,
+    usoPara ? [h('h5', {}, T.sirve), h('p', { class: 'kb-uso-para' }, usoPara)] : null,
     h('h5', {}, T.opciones), h('div', { class: 'kb-ops' }, tarjetas),
     h('h5', {}, T.uso), uso,
     acciones,
@@ -453,7 +455,7 @@ function centro(c, u, todas, restr) {
     h('div', { class: 'kb-plano-cab' }, T.plano),
     lienzo,
     hay ? null : h('p', { class: 'kb-plano-vacio' }, T.planoVacio),
-    h('div', { class: 'kb-leyenda' }, ROLES_IDS.map((r) => h('span', { style: `--rol:${colorRol(r)}`, title: resumenDepto(r) }, h('i', {}), depto(r, 'sigla')))));
+    h('div', { class: 'kb-leyenda' }, ROLES_IDS.map((r) => h('span', { style: `--rol:${colorRol(r)}`, title: resumenDepto(r) }, h('i', {}), depto(r)))));
 
   const p = u.sel ? c.D?.PIEZAS?.[u.sel] : null;
   return h('section', { class: 'kb-col kb-centro' + (p ? ' con-ficha' : '') }, plano, p ? ficha(c, u, p, restr) : null);
@@ -462,7 +464,8 @@ function centro(c, u, todas, restr) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Derecha: recursos del equipo
 // ---------------------------------------------------------------------------------------------------------------------
-function barra(c, id, b, restr) {
+const cantidad = (id, n) => (id === 'presupuesto' ? dinero(n) : `${fmt(n)} ${UNIDAD[id]}`);
+function barra(c, id, b, restr, extra = null) {
   const usado = Number(b?.usado) || 0, limite = Number(b?.limite) || 0;
   const ratio = limite > 0 ? usado / limite : usado > 0 ? Infinity : 0;
   const est = b?.estado ?? 'ok';
@@ -475,24 +478,42 @@ function barra(c, id, b, restr) {
     resto -= w;
     return h('i', { class: 'kb-seg ' + est, style: `width:${w}%;opacity:${0.55 + 0.15 * ROLES_IDS.indexOf(r)}` });
   });
-  const detalle = ROLES_IDS.filter((r) => porRol[r] > 0).map((r) => `${depto(r)}: ${fmt(porRol[r])} ${UNIDAD[id]}`).join('\n');
+  const detalle = ROLES_IDS.filter((r) => porRol[r] > 0).map((r) => `${depto(r)}: ${cantidad(id, porRol[r])}`).join('\n');
   const pct = limite > 0 ? ` · ${fmt(ratio * 100, 0)} %` : '';
   const tit = [`${T.barras[id]}${pct}`, detalle ? `${T.porDepto}\n${detalle}` : '', T.marcas].filter(Boolean).join('\n');
-  return h('div', { class: `kb-barra ${est}` + (restr && est !== 'ok' ? ' alerta' : ''), title: tit },
+  return h('div', { class: `kb-barra ${est}` + (id === 'presupuesto' ? ' presu' : '') + (restr && est !== 'ok' ? ' alerta' : ''), title: tit },
     h('div', { class: 'kb-barra-cab' },
       h('span', { class: 'kb-barra-nom' }, T.barras[id]),
-      h('span', { class: 'kb-barra-num' }, `${fmt(usado)} / ${limite > 0 ? fmt(limite) : '—'} ${UNIDAD[id]}`)),
+      h('span', { class: 'kb-barra-num' }, id === 'presupuesto' ? `${dinero(usado)} / ${limite > 0 ? dinero(limite) : '—'}` : `${fmt(usado)} / ${limite > 0 ? fmt(limite) : '—'} ${UNIDAD[id]}`)),
     h('div', { class: 'kb-pista' }, segs, limite > 0 ? [h('i', { class: 'kb-marca m100' }), h('i', { class: 'kb-marca m120' })] : null),
-    limite <= 0 && (usado > 0 || id !== 'presupuesto') ? h('small', { class: 'kb-sinlim' }, T.sinLimite[id]) : null);
+    limite <= 0 && (usado > 0 || id !== 'presupuesto') ? h('small', { class: 'kb-sinlim' }, T.sinLimite[id]) : null,
+    extra);
+}
+
+// Dinero del inversor: misión, bono por plazo, recorte por retraso y eventos (solo lo que no es cero).
+function desglosePresupuesto(pr) {
+  if (!pr) return null;
+  const pct = (x) => `${x > 0 ? '+' : '−'}${fmt(Math.abs(x) * 100, 0)} %`;
+  const f = [[T.presu.mision, dinero(pr.mision)]];
+  if (pr.bono) f.push([T.presu.bono, pct(pr.bono)]);
+  if (pr.recorte) f.push([T.presu.recorte, pct(-pr.recorte)]);
+  if (pr.eventos) f.push([T.presu.eventos, (pr.eventos > 0 ? '+' : '−') + dinero(Math.abs(pr.eventos))]);
+  if (f.length < 2) return null;
+  return h('small', { class: 'kb-presu-det' }, f.map(([k, v]) => h('span', {}, `${k} `, h('b', {}, v))));
 }
 
 function recursos(c, res, restr) {
-  const caja = h('aside', { class: 'kb-col kb-der' }, h('header', { class: 'kb-cab' }, h('h3', {}, T.recursos)));
+  const rl = res?.reloj;
+  const reloj = rl ? h('div', { class: 'kb-reloj' + (rl.cancelada ? ' cancelada' : rl.retraso > 0 ? ' retraso' : '') },
+    h('b', {}, T.mesReloj(rl.mes, rl.activo ? rl.plazo : null)),
+    rl.retraso > 0 ? h('span', {}, ` · ${T.retrasoN(rl.retraso)}`) : null,
+    rl.cancelada ? h('span', {}, ` · ${T.cancelada}`) : null) : null;
+  const caja = h('aside', { class: 'kb-col kb-der' }, h('header', { class: 'kb-cab' }, h('h3', {}, T.recursos), reloj));
   const cuerpo = h('div', { class: 'kb-der-cuerpo', 'data-scroll': 'kb-recursos' });
   let nivel = null;
   try { nivel = res && c.motor?.cumple ? c.motor.cumple(res)?.nivel : null; } catch { nivel = null; }
   if (nivel && nivel !== 'dentro') cuerpo.append(h('div', { class: 'kb-nivel ' + nivel }, T.nivel[nivel] ?? nivel));
-  cuerpo.append(h('div', { class: 'kb-barras' }, BARRAS.map((id) => barra(c, id, res?.barras?.[id], restr))));
+  cuerpo.append(h('div', { class: 'kb-barras' }, ['presupuesto', ...BARRAS.filter((k) => k !== 'presupuesto')].map((id) => barra(c, id, res?.barras?.[id], restr, id === 'presupuesto' ? desglosePresupuesto(rl?.presupuesto) : null))));
 
   cuerpo.append(h('h4', {}, T.ciencia));
   const objs = lista(res?.ciencia?.objetivos);

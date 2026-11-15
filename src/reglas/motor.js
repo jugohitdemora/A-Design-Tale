@@ -123,29 +123,114 @@ export function siguienteEventoDiseno(estado, D) {
   return orden.find((id) => !vistos.includes(id)) ?? null;
 }
 
+// ---------- Reloj de misión e inversores (contrato-reloj.md §1, §3) ----------
+// Solo vale para misiones con `reloj` y un plazo comprometido (estado.mision.plazo): sin eso, nada de esto cambia el juego.
+export const MESES_REVISION = 2;   // cada revisión de diseño (pedirRevision) cuesta 2 meses
+export const MESES_REDISENO = 6;   // volver a diseñar tras un vuelo (informe → diseño) cuesta 6 meses
+export const GRACIA_RETRASO = 1;   // 1 mes de retraso sin recorte
+export const RECORTE_MES = 0.04;   // después, −4 % del presupuesto por mes
+export const RECORTE_MAX = 0.4;    // como mucho −40 %
+export const RETRASO_CANCELA = 12; // con más de 12 meses de retraso, los inversores se retiran
+export const BONO_PLAZO = { corto: 0.1, medio: 0, largo: -0.1 }; // los inversores pagan la rapidez
+const entero = (x) => (Number.isInteger(x) ? x : null);
+
+export const plazosDe = (m) => arr(m?.reloj?.plazos).filter((x) => Number.isInteger(x) && x >= 0);
+// Plazo que se compromete por defecto al elegir la misión: el del medio.
+export const plazoPorDefecto = (m) => { const p = plazosDe(m); return p.length ? p[Math.floor((p.length - 1) / 2)] : null; };
+// Tipo de plazo por su posición en la lista: el primero es corto, el último largo, el resto medio.
+export function tipoPlazo(m, plazo) {
+  const p = plazosDe(m), i = p.indexOf(plazo);
+  if (i < 0 || p.length < 2) return 'medio';
+  return i === 0 ? 'corto' : i === p.length - 1 ? 'largo' : 'medio';
+}
+
+// → { activo, mes, plazo, inicio, lanzamiento (ruta.mes o null), retraso, recorte, bono, cancelada }. `activo` = hay plazo válido.
+// retraso = max(0, max(reloj.mes, ruta.mes ?? reloj.mes) − plazo); recorte = min(40 %, 4 % · max(0, retraso − 1)).
+export function relojDe(estado, D) {
+  const m = misionDe(estado, D);
+  const mes = Math.max(0, entero(estado?.reloj?.mes) ?? 0);
+  const inicio = Math.max(0, entero(m?.reloj?.inicio) ?? 0);
+  const plazo = m?.reloj && plazosDe(m).includes(estado?.mision?.plazo) ? estado.mision.plazo : null;
+  if (plazo == null) return { activo: false, mes, plazo: null, inicio, retraso: 0, recorte: 0, bono: 0, cancelada: false };
+  const rutaMes = entero(estado?.ruta?.mes);
+  const retraso = Math.max(0, Math.max(mes, rutaMes ?? mes) - plazo);
+  const recorte = Math.min(RECORTE_MAX, RECORTE_MES * Math.max(0, retraso - GRACIA_RETRASO));
+  return { activo: true, mes, plazo, inicio, lanzamiento: rutaMes, retraso, recorte, bono: BONO_PLAZO[tipoPlazo(m, plazo)], cancelada: retraso > RETRASO_CANCELA };
+}
+
+// ---------- Condiciones de un mes del calendario (D.CALENDARIO, src/datos/calendario.js) ----------
+const DIA_POR_MES = 30.4375;
+// Día (desde el 1/1/2027) del día 15 del mes mesAbs: el mismo que usa el cálculo del calendario.
+export const diaDeMes = (mesAbs) => Math.floor(mesAbs / 12) * 365.25 + (mesAbs % 12) * DIA_POR_MES + 14;
+// → null sin calendario; si no { mesAbs, sitioLanz, lluvia, viento50, nubes, pScrub, puntuacion, pKp7, pSep, elong, diasConj, factorDv }.
+export function condicionesMes(m, D, mesAbs, coheteId) {
+  const C = D?.CALENDARIO;
+  if (!C || typeof C !== 'object') return null;
+  const total = num(C.MESES) || 60;
+  const k = Math.min(total - 1, Math.max(0, Math.floor(finito(Number(mesAbs)))));
+  const idSitio = obj(C.SITIO_COHETE)[coheteId] ?? 'cabo';
+  const S = obj(C.SITIOS_LANZAMIENTO)[idSitio] ?? null;
+  const E = obj(C.ESPACIO), DE = obj(obj(C.DESTINOS)[m?.destino]);
+  const en = (a, i, d = null) => (typeof arr(a)[i] === 'number' && Number.isFinite(a[i]) ? a[i] : d);
+  const mc = k % 12;
+  return {
+    mesAbs: k, sitioLanz: S ? idSitio : null,
+    lluvia: en(S?.lluvia, mc), viento50: en(S?.viento50, mc), nubes: en(S?.nubes, mc), pScrub: en(S?.pScrub, mc, 0), puntuacion: en(S?.puntuacion, mc, 0),
+    pKp7: en(E.pKp7, k, 0), pSep: en(E.pSep, k, 0), elong: en(DE.elongMin, k), diasConj: en(DE.diasConj, k, 0), factorDv: Math.max(1, en(DE.factorDv, k, 1)),
+  };
+}
+
+// Cometa (contrato §2): ¿llega la nave al menos `margenMeses` antes de un perihelio que caiga dentro de la vida de la misión?
+// → null si no aplica; si no { llegadaDia, perihelioDia (el primero tras llegar), ok }.
+function reglaCometa(m, D, cond, ruta) {
+  const K = D?.CALENDARIO?.COMETA_67P;
+  if (!K || m?.destino !== 'cometa' || !cond || !ruta || !(num(ruta.dias) > 0)) return null;
+  const periodo = num(K.periodoAnios) * 365.25, margen = num(K.margenMeses) * DIA_POR_MES;
+  if (!(periodo > 0)) return null;
+  const llegadaDia = diaDeMes(cond.mesAbs) + num(ruta.dias);
+  const n = Math.ceil((llegadaDia - num(K.perihelioDia)) / periodo);
+  const perihelioDia = num(K.perihelioDia) + n * periodo;
+  let ok = false;
+  for (let j = n; j <= n + 3; j++) {
+    const p = num(K.perihelioDia) + j * periodo;
+    if (p >= llegadaDia + margen && p <= llegadaDia + (num(m.diasPrevistos) || 0)) ok = true;
+  }
+  return { llegadaDia: Math.round(llegadaDia), perihelioDia: Math.round(perihelioDia), ok };
+}
+
 // ---------- Planificación de ruta (sala de control) ----------
-// Factor de ΔV de un día de la ventana: 1 en el óptimo, crece como una parábola (corte de un porkchop plot), con tope.
+// COMPATIBILIDAD (lote 2 la quita): la interfaz anterior dibuja la curva de la ventana con esto. La ventana ya no tiene óptimo:
+// el ΔV depende del mes (calendario). Con los datos nuevos (k = 0) devuelve 1.
 export function factorVentana(v, dia) {
   const V = obj(v);
   const anchura = num(V.anchura) || 1;
   const x = (finito(Number(dia)) - num(V.optimo)) / anchura;
-  return Math.min(num(V.maxFactor) || 1.6, 1 + (num(V.k) || 0.3) * x * x);
+  return Math.min(num(V.maxFactor) || 1.6, 1 + num(V.k) * x * x);
 }
-// Margen (en anchuras) que cuenta como "día óptimo": da un pequeño extra de probabilidad a la fase de la ventana.
-export const MARGEN_OPTIMO = 0.35;
-export const BONO_OPTIMO = 0.02;
+// Mes más alto que se puede planificar (meses desde el inicio del diseño).
+export function mesMaxDe(P, m, D) {
+  const L = obj(P?.lanzamiento ?? P?.ventana);
+  const max = Math.max(0, Math.floor(num(L.mesMax ?? L.dias)));
+  const total = num(D?.CALENDARIO?.MESES) || 60;
+  return m?.reloj && D?.CALENDARIO ? Math.min(max, total - 1 - Math.max(0, entero(m.reloj.inicio) ?? 0)) : max;
+}
 
-// → null si la misión no tiene planificación; si no { P, dia, sitio, factor, optimo }.
+// → null si la misión no tiene planificación; si no
+//   { P, mes, dia (= mes, compatibilidad), sitio, factor, optimo: false, perdida, mesAbs, cond, cometa }.
+//   perdida: el mes de lanzamiento ya pasó (reloj.mes > ruta.mes): el plan no vale y la verificación falla.
 export function planDe(estado, D) {
   const m = misionDe(estado, D);
   const P = m ? obj(D?.PLANIFICACION)[m.id] : null;
   if (!P) return null;
   const r = obj(estado?.ruta);
-  const dia = Number.isInteger(r.ventana) && r.ventana >= 0 && r.ventana <= num(obj(P.ventana).dias) ? r.ventana : null;
+  const mes = Number.isInteger(r.mes) && r.mes >= 0 && r.mes <= mesMaxDe(P, m, D) ? r.mes : null;
   const sitio = arr(P.sitios).find((s) => s?.id === r.sitio) ?? null;
-  const factor = dia == null ? 1 : factorVentana(P.ventana, dia);
-  const optimo = dia != null && Math.abs(dia - num(obj(P.ventana).optimo)) / (num(obj(P.ventana).anchura) || 1) <= MARGEN_OPTIMO;
-  return { P, dia, sitio, factor, optimo };
+  const reloj = relojDe(estado, D);
+  const perdida = mes != null && reloj.mes > mes;
+  const cond = mes != null && m.reloj ? condicionesMes(m, D, reloj.inicio + mes, coheteDe(estado, D)?.id) : null;
+  const factor = cond?.factorDv ?? 1;
+  const cometa = reglaCometa(m, D, cond, rutaDe(estado, D));
+  return { P, mes, dia: mes, sitio, factor, optimo: false, perdida, mesAbs: cond?.mesAbs ?? null, cond, cometa };
 }
 
 // ---------- Barras ----------
@@ -172,7 +257,7 @@ function limiteDe(hayAporte, aporte, tope) {
 //   barra = { usado, limite, ratio, estado, partes: [{ rol, id, v }], aportes: [{ rol, id, v }] }
 export function resumen(estado, D) {
   const barras = Object.fromEntries(BARRAS.map((b) => [b, barraVacia()]));
-  const res = { barras, ciencia: { objetivos: [], total: 0 }, riesgos: [], fases: [], energiaWh: 0 };
+  const res = { barras, ciencia: { objetivos: [], total: 0 }, riesgos: [], fases: [], energiaWh: 0, plan: null, reloj: null };
   const m = misionDe(estado, D);
   if (!m) return res;
 
@@ -181,7 +266,11 @@ export function resumen(estado, D) {
   const aportar = (b, rol, id, v) => { if (!(v > 0)) return; aporte[b] += v; barras[b].aportes.push({ rol, id, v }); };
   const plan = planDe(estado, D);
   const efSitio = obj(plan?.sitio?.efectos);
-  const horasSombra = tiene(efSitio.horasSombra) ? num(efSitio.horasSombra) : num(m.horasSombra), horasEnlace = num(m.horasEnlace);
+  const horasSombra = tiene(efSitio.horasSombra) ? num(efSitio.horasSombra) : num(m.horasSombra);
+  // Conjunción solar en el mes de lanzamiento: el enlace va a la mitad esos días (promediado sobre la vida de la misión).
+  const conj = num(plan?.cond?.diasConj), efC = obj(D?.CALENDARIO?.EFECTOS);
+  const factorEnlace = conj > 0 ? 1 - num(efC.enlaceConj) * Math.min(1, conj / (num(m.diasPrevistos) || 1)) : 1;
+  const horasEnlace = num(m.horasEnlace) * factorEnlace;
 
   const ms = montadas(estado, D);
   for (const x of ms) {
@@ -209,11 +298,14 @@ export function resumen(estado, D) {
   if (ruta) {
     sumar('masa', 'vuelo', ruta.id, num(ruta.masa));
     sumar('presupuesto', 'vuelo', ruta.id, num(ruta.precio));
-    // Día de lanzamiento lejos del óptimo: más ΔV = más propelente.
+    // Mes de lanzamiento con mala geometría: más ΔV = más propelente (la parte se llama 'ventana' por compatibilidad).
     if (plan && plan.factor > 1 + EPS) sumar('masa', 'vuelo', 'ventana', num(ruta.masa) * (plan.factor - 1));
   }
-  res.plan = plan ? { dia: plan.dia, sitio: plan.sitio?.id ?? null, factor: plan.factor, optimo: plan.optimo,
-    extraKg: ruta ? num(ruta.masa) * (plan.factor - 1) : 0, horasSombra } : null;
+  const reloj = relojDe(estado, D);
+  res.reloj = reloj;
+  res.plan = plan ? { dia: plan.dia, mes: plan.mes, mesAbs: plan.mesAbs, sitio: plan.sitio?.id ?? null, factor: plan.factor, optimo: false,
+    perdida: plan.perdida, extraKg: ruta ? num(ruta.masa) * (plan.factor - 1) : 0, horasSombra, horasEnlace, factorEnlace,
+    dv: num(obj(plan.P.lanzamiento ?? plan.P.ventana).dvMin) * plan.factor, cond: plan.cond, cometa: plan.cometa } : null;
   const compradas = contingenciasCompradas(estado, D);
   for (const c of compradas) {
     sumar('masa', 'comms', c.id, num(c.masa));
@@ -224,20 +316,24 @@ export function resumen(estado, D) {
   barras.masa.limite = limiteDe(!!cohete, aporte.masa, tope.masa);
   for (const b of ['potencia', 'bateria', 'datos', 'volumen']) barras[b].limite = limiteDe(aporte[b] > 0, aporte[b], tope[b]);
 
+  // Presupuesto (contrato §3): misión · (1 + bono del plazo) · (1 − recorte por retraso); luego los eventos de diseño,
+  // primero las sumas y después los factores (así el orden en que salieron no importa).
   // Eventos de diseño: presupuesto ±X, factor sobre un límite, cambio de objetivo prioritario.
   const eventos = eventosDisenoSalidos(estado, D);
-  let presupuesto = num(m.presupuesto);
+  const base = num(m.presupuesto) * (1 + reloj.bono) * (1 - reloj.recorte);
+  let sumaEventos = 0, factorPres = 1;
   let prioridad = null;
   for (const ev of eventos) {
     const ef = obj(ev.efecto);
-    if (ef.presupuesto != null) presupuesto += num(ef.presupuesto);
+    if (ef.presupuesto != null) sumaEventos += num(ef.presupuesto);
     for (const l of Array.isArray(ef.limite) ? ef.limite : ef.limite ? [ef.limite] : []) {
       if (barras[l?.recurso] && l.recurso !== 'presupuesto') barras[l.recurso].limite *= Math.max(0, num(l.factor));
-      if (l?.recurso === 'presupuesto') presupuesto *= Math.max(0, num(l.factor));
+      if (l?.recurso === 'presupuesto') factorPres *= Math.max(0, num(l.factor));
     }
     if (ef.prioridad) prioridad = ef.prioridad;
   }
-  barras.presupuesto.limite = Math.max(0, presupuesto);
+  barras.presupuesto.limite = Math.max(0, (base + sumaEventos) * factorPres);
+  reloj.presupuesto = { mision: num(m.presupuesto), bono: reloj.bono, recorte: reloj.recorte, eventos: sumaEventos, factor: factorPres, limite: barras.presupuesto.limite };
 
   for (const b of BARRAS) {
     const x = barras[b];
@@ -245,8 +341,10 @@ export function resumen(estado, D) {
     x.estado = estadoDeRatio(x.ratio);
   }
 
-  res.ciencia = ciencia(m, ms, prioridad, estado?.mision?.objetivos, obj(efSitio.ciencia));
-  res.fases = fases(m, ms, ruta, compradas, plan);
+  // Cometa: llegar tarde al perihelio recorta la cobertura del objetivo prioritario.
+  const factorPrio = plan?.cometa && !plan.cometa.ok ? num(D?.CALENDARIO?.COMETA_67P?.factor) : 1;
+  res.ciencia = ciencia(m, ms, prioridad, estado?.mision?.objetivos, obj(efSitio.ciencia), factorPrio);
+  res.fases = fases(m, ms, ruta, compradas, plan, obj(D?.CALENDARIO?.EFECTOS));
   res.riesgos = riesgos(m, D, compradas);
   return res;
 }
@@ -254,7 +352,7 @@ export function resumen(estado, D) {
 // Indicador de ciencia (§6): cobertura = fracción de instrumentos montados × min(1, uso medio / uso objetivo).
 // `seleccion`: ids marcados en el expediente (estado.mision.objetivos). Si no es una lista, cuentan todos.
 // El prioritario cuenta siempre.
-function ciencia(m, ms, prioridadPedida, seleccion, factores = {}) {
+function ciencia(m, ms, prioridadPedida, seleccion, factores = {}, factorPrio = 1) {
   const uso = new Map(ms.map((x) => [x.id, x.uso]));
   const sel = Array.isArray(seleccion) ? new Set(seleccion) : null;
   const elegidos = arr(m.objetivos).filter((o) => o && o.id != null && (!sel || o.prioridad || sel.has(o.id)));
@@ -272,6 +370,7 @@ function ciencia(m, ms, prioridadPedida, seleccion, factores = {}) {
     // El sitio u órbita elegidos en la sala de control pueden limitar un objetivo (p. ej. sin ver la Tierra).
     if (tiene(factores[o.id])) cobertura = clamp01(cobertura * num(factores[o.id]));
     const prioridad = prioridadEvento ? o.id === prioridadEvento : !!o.prioridad;
+    if (prioridad && factorPrio !== 1) cobertura = clamp01(cobertura * factorPrio);
     return { id: o.id, prioridad, cobertura, valor: o.valor == null ? 1 : num(o.valor), nombre: o.nombre ?? null };
   });
   const suma = objetivos.reduce((s, o) => s + o.valor, 0);
@@ -279,18 +378,33 @@ function ciencia(m, ms, prioridadPedida, seleccion, factores = {}) {
   return { objetivos, total };
 }
 
-// Fases del vuelo (G-01) con su probabilidad visible: base + mejoras por piezas, contingencias y ruta.
-function fases(m, ms, ruta, compradas, plan = null) {
-  const hay = new Set([...ms.filter((x) => x.uso > 0 || !x.pieza.uso).map((x) => x.id), ...compradas.map((c) => c.id)]);
+// Fases del vuelo (G-01) con su probabilidad visible: base + mejoras por piezas, contingencias y ruta, sitio y condiciones del mes.
+// desglose: [{ fuente, ref, dp }] con fuente ∈ base | pieza | contingencia | ruta | sitio | mes | clima | espacio | conjuncion
+// ('base' y 'mes' no aparecen como entrada: la base es pBase y 'mes' queda reservada). Σ dp = pCruda − pBase (p es pCruda recortada a 0..1).
+//   clima: fase de lanzamiento (la primera), dp = −puntuacion · climaDp, ref = sitio de lanzamiento.
+//   espacio: fase `lanzamiento.faseEspacio` (o la segunda), dp = −pKp7 · espacioDp, ref = mesAbs.
+//   conjuncion: fase que sigue al lanzamiento, dp = −min(conjDpMax, conjDpDia · diasConj), ref = mesAbs.
+function fases(m, ms, ruta, compradas, plan = null, efectos = {}) {
+  const ctg = new Set(compradas.map((c) => c.id));
+  const hay = new Set([...ms.filter((x) => x.uso > 0 || !x.pieza.uso).map((x) => x.id), ...ctg]);
   if (ruta) hay.add(ruta.id);
-  const faseVentana = plan?.P?.ventana?.fase ?? ruta?.efecto?.fase;
-  return arr(m.fases).filter((f) => f && f.id != null).map((f) => {
+  const lista = arr(m.fases).filter((f) => f && f.id != null);
+  const cond = plan?.cond;
+  const faseEspacio = plan?.P?.lanzamiento?.faseEspacio ?? lista[1]?.id;
+  const fuenteDe = (id) => (ctg.has(id) ? 'contingencia' : ruta && id === ruta.id ? 'ruta' : 'pieza');
+  return lista.map((f, i) => {
     let p = num(f.pBase);
-    for (const mj of arr(f.mejoras)) if (hay.has(mj?.por)) p += num(mj.dp);
-    if (ruta?.efecto?.fase === f.id) p += num(ruta.efecto.dp);
-    if (plan?.optimo && faseVentana === f.id) p += BONO_OPTIMO;
-    for (const x of arr(plan?.sitio?.efectos?.fases)) if (x?.fase === f.id) p += num(x.dp);
-    return { id: f.id, nombre: f.nombre ?? null, critica: !!f.critica, pBase: clamp01(num(f.pBase)), p: clamp01(p) };
+    const desglose = [];
+    const poner = (fuente, ref, dp) => { if (!dp) return; p += dp; desglose.push({ fuente, ref: ref == null ? null : String(ref), dp }); };
+    for (const mj of arr(f.mejoras)) if (hay.has(mj?.por)) poner(fuenteDe(mj.por), mj.por, num(mj.dp));
+    if (ruta?.efecto?.fase === f.id) poner('ruta', ruta.id, num(ruta.efecto.dp));
+    for (const x of arr(plan?.sitio?.efectos?.fases)) if (x?.fase === f.id) poner('sitio', plan.sitio.id, num(x.dp));
+    if (cond) {
+      if (i === 0) poner('clima', cond.sitioLanz, -num(cond.puntuacion) * num(efectos.climaDp));
+      if (f.id === faseEspacio) poner('espacio', cond.mesAbs, -num(cond.pKp7) * num(efectos.espacioDp));
+      if (i === 1 && cond.diasConj > 0) poner('conjuncion', cond.mesAbs, -Math.min(num(efectos.conjDpMax), num(efectos.conjDpDia) * cond.diasConj));
+    }
+    return { id: f.id, nombre: f.nombre ?? null, critica: !!f.critica, pBase: clamp01(num(f.pBase)), p: clamp01(p), pCruda: p, desglose };
   });
 }
 
@@ -332,8 +446,16 @@ export function verificar(estado, D) {
   poner('ruta', !!rutaDe(estado, D), 'A route is chosen', 'Hay una ruta elegida');
   const plan = planDe(estado, D);
   if (plan) {
-    poner('plan', plan.dia != null && !!plan.sitio, 'Launch day and site/orbit planned in Mission Control',
-      'Día de lanzamiento y sitio/órbita planificados en la sala de control');
+    poner('plan', plan.mes != null && !!plan.sitio, 'Launch month and site/orbit planned in Mission Control',
+      'Mes de lanzamiento y sitio/órbita planificados en la sala de control');
+    if (plan.mes != null) {
+      poner('mesLanzamiento', !plan.perdida, plan.perdida ? 'Launch month already passed: choose another one' : 'The launch month is still ahead',
+        plan.perdida ? 'El mes de lanzamiento ya pasó: elige otro' : 'El mes de lanzamiento aún no ha pasado');
+    }
+  }
+  if (res.reloj?.activo) {
+    poner('inversores', !res.reloj.cancelada, res.reloj.cancelada ? 'Investors pulled out' : 'Investors still fund the mission',
+      res.reloj.cancelada ? 'Los inversores se retiraron' : 'Los inversores siguen financiando la misión');
   }
   const prio = res.ciencia.objetivos.find((o) => o.prioridad);
   poner('prioritario', !prio || prio.cobertura > 0, 'The priority objective has its instruments on board and switched on',

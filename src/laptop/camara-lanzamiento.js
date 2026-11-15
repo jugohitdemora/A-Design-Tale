@@ -7,7 +7,8 @@
 // c.ui.cohetes = { i, foco }   (i = índice del cohete mostrado en c.mision.cohetes)
 import * as THREE from 'three';
 import { textos, tx, idioma, depto } from '../i18n.js';
-import { h, valor, puedoPor, lista } from '../pantallas/ui.js';
+import { T as TU } from '../textos.js';
+import { h, dinero, puedoPor, lista } from '../pantallas/ui.js';
 
 const T = textos({
   es: {
@@ -20,8 +21,9 @@ const T = textos({
     margen: 'Margen de masa', masaNave: 'Masa de la nave', capacidad: 'Capacidad del cohete',
     libres: (n) => `Quedan ${n} kg libres.`, tolerancia: (n) => `Excede ${n} kg (tolerancia del 20 %). Habrá que recortar.`,
     exceso: (n) => `Excede ${n} kg. No pasa la revisión.`, sinCapacidad: 'Sin capacidad hacia este destino.',
-    presupuesto: 'Presupuesto', musd: 'M USD', sinCohete: 'sin cohete', conEste: 'con este cohete',
-    presOk: (n) => `Quedan ${n} M USD.`, presTol: (n) => `Excede ${n} M USD (tolerancia). Habrá que recortar.`, presExc: (n) => `Excede ${n} M USD. No pasa la revisión.`,
+    presupuesto: 'Presupuesto', sinCohete: 'sin cohete', conEste: 'con este cohete',
+    presOk: (n) => `Quedan ${n}.`, presTol: (n) => `Excede ${n} (tolerancia). Habrá que recortar.`, presExc: (n) => `Excede ${n}. No pasa la revisión.`,
+    config: 'Configuración', motoresF: 'Motores', materialesF: 'Materiales', registroF: 'Registro',
     teclas: 'Flechas ← → para cambiar de cohete', juego: '≈ valor de juego',
     cohetes: 'COHETES',
   },
@@ -35,8 +37,9 @@ const T = textos({
     margen: 'Mass margin', masaNave: 'Spacecraft mass', capacidad: 'Rocket capacity',
     libres: (n) => `${n} kg left.`, tolerancia: (n) => `Over by ${n} kg (20 % tolerance). Cut mass.`,
     exceso: (n) => `Over by ${n} kg. Review fails.`, sinCapacidad: 'No capacity to this destination.',
-    presupuesto: 'Budget', musd: 'M USD', sinCohete: 'no rocket', conEste: 'with this rocket',
-    presOk: (n) => `${n} M USD left.`, presTol: (n) => `Over by ${n} M USD (tolerance). Cut cost.`, presExc: (n) => `Over by ${n} M USD. Review fails.`,
+    presupuesto: 'Budget', sinCohete: 'no rocket', conEste: 'with this rocket',
+    presOk: (n) => `${n} left.`, presTol: (n) => `Over by ${n} (tolerance). Cut cost.`, presExc: (n) => `Over by ${n}. Review fails.`,
+    config: 'Configuration', motoresF: 'Engines', materialesF: 'Materials', registroF: 'Record',
     teclas: 'Arrow keys ← → switch rocket', juego: '≈ game value',
     cohetes: 'ROCKETS',
   },
@@ -481,6 +484,14 @@ function arrancar() {
 // Interfaz
 // ---------------------------------------------------------------------------------------------------------------------
 const fmt = (n, d = 0) => (Number.isFinite(n) ? n.toLocaleString(idioma() === 'es' ? 'es-ES' : 'en-US', { maximumFractionDigits: d }) : '-');
+// Valor {v, conf, ec}: sin código de fuente; "≈" en estimados con la explicación como ayuda; dinero con `dinero`.
+function val(c, x, unidad, dineroSi = false) {
+  if (x == null) return h('span', { class: 'val tenue' }, '-');
+  const n = numero(c, x);
+  const est = typeof x === 'object' && (x.conf === 'EST' || x.conf === 'JUEGO' || x.v == null);
+  return h('span', { class: 'val' + (est ? ' juego' : ''), title: est ? (tx(x.ec) || (TU.estimateValue ?? TU.gameValue)) : null },
+    (est ? '≈ ' : '') + (dineroSi ? dinero(n) : fmt(n, 1) + (unidad ? ' ' + unidad : '')));
+}
 const numero = (c, x) => (c.motor?.num ? c.motor.num(x) : typeof x === 'number' ? x : x?.v ?? x?.juego ?? 0);
 const estadoRatio = (c, r) => (c.motor?.estadoDeRatio ? c.motor.estadoDeRatio(r) : r <= 1 ? 'ok' : r <= 1.2 ? 'tolerancia' : 'exceso');
 
@@ -507,7 +518,7 @@ function panelMargen(c, k, cap) {
   const con = sin + pk, lim = pb?.limite ?? 0;
   const rp = lim > 0 ? con / lim : Infinity;
   const ep = estadoRatio(c, rp);
-  const mp = ep === 'ok' ? T.presOk(fmt(lim - con, 1)) : ep === 'tolerancia' ? T.presTol(fmt(con - lim, 1)) : T.presExc(fmt(con - lim, 1));
+  const mp = ep === 'ok' ? T.presOk(dinero(lim - con)) : ep === 'tolerancia' ? T.presTol(dinero(con - lim)) : T.presExc(dinero(con - lim));
 
   return h('div', { class: 'cam-panel' },
     h('div', { class: 'cam-bloque' },
@@ -518,7 +529,7 @@ function panelMargen(c, k, cap) {
     h('div', { class: 'cam-bloque' },
       h('h4', {}, T.presupuesto),
       medidor(rp, ep),
-      h('p', { class: 'cifras', title: `${T.sinCohete}: ${fmt(sin, 1)} · ${T.conEste}: ${fmt(con, 1)} ${T.musd}` }, `${fmt(con, 1)} / ${fmt(lim, 1)} ${T.musd}`, h('b', { class: ep }, Number.isFinite(rp) ? ` ${fmt(rp * 100)} %` : '')),
+      h('p', { class: 'cifras', title: `${T.sinCohete}: ${dinero(sin)} · ${T.conEste}: ${dinero(con)}` }, `${dinero(con)} / ${dinero(lim)}`, h('b', { class: ep }, Number.isFinite(rp) ? ` ${fmt(rp * 100)} %` : '')),
       h('p', { class: 'msg ' + ep }, mp)));
 }
 
@@ -569,9 +580,11 @@ export function appCohete(c) {
       esElegido ? h('span', { class: 'sello' }, T.elegido) : null,
       h('dl', {},
         h('dt', {}, T.operador), h('dd', {}, k.operador ?? '-'),
-        h('dt', {}, T.capacidadA(destino)), h('dd', {}, valor(c, k.capacidad?.[m.destino], 'kg')),
-        h('dt', {}, T.precio), h('dd', {}, valor(c, k.precio, T.musd)),
-        h('dt', {}, T.usoNasa), h('dd', {}, k.usoNasa ?? T.ninguno)),
+        h('dt', {}, T.capacidadA(destino)), h('dd', {}, val(c, k.capacidad?.[m.destino], 'kg')),
+        h('dt', {}, T.precio), h('dd', {}, val(c, k.precio, '', true)),
+        h('dt', {}, T.usoNasa), h('dd', {}, tx(k.usoNasaT) || k.usoNasa || T.ninguno),
+        [['configuracion', T.config], ['motores', T.motoresF], ['materiales', T.materialesF], ['registro', T.registroF]]
+          .filter(([f]) => tx(k[f])).map(([f, et]) => [h('dt', {}, et), h('dd', { class: 'dato' }, tx(k[f]))])),
       k.nota ? h('p', { class: 'nota' }, tx(k.nota)) : null),
     h('div', { class: 'acciones' },
       h('button', {

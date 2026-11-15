@@ -14,7 +14,7 @@ export function pantallaVerificacion(c) {
 
   const checks = h('section', { class: 'caja' }, h('h3', {}, T.verifTitle), h('p', { class: 'tenue pequeno' }, T.verifLead), h('h4', {}, T.checks));
   const ul = h('ul', { class: 'checks' });
-  for (const k of comps) ul.append(h('li', { class: k.ok ? 'ok' : 'mal' }, h('b', { class: 'etq ' + (k.ok ? 'ok' : 'mal') }, k.ok ? T.pass : T.fail), ' ', en(k.texto) || k.id));
+  for (const k of comps) ul.append(h('li', { class: k.ok ? 'ok' : 'mal' }, h('b', { class: 'etq ' + (k.ok ? 'ok' : 'mal') }, k.ok ? T.pass : T.fail), ' ', en(k.texto) || '—'));
   checks.append(comps.length ? ul : h('p', { class: 'tenue vacio' }, c.mision ? T.noData : T.noMission));
 
   const firmasEl = h('div', { class: 'firmas' });

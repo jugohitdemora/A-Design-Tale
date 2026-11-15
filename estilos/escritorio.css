@@ -76,3 +76,10 @@
 .expediente.en-laptop, .en-laptop .expediente { width: 100%; max-height: none; box-shadow: none; border-radius: 0; min-height: 100%; box-sizing: border-box; }
 .en-laptop .exp-cerrar { display: none; }
 
+
+/* Compromiso de plazo en el expediente */
+.exp-plazos { margin-top: 12px; }
+.exp-plazos-fila { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.exp-plazos-fila .boton { flex: 1 1 auto; font-size: var(--t-meta); }
+.laptop-so .cabecera-recursos { background: var(--lp-panel-2); border-color: var(--lp-borde); }
+.laptop-so .cab-etq { color: var(--lp-tenue); }

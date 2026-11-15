@@ -102,6 +102,18 @@ plantilla(/^Some checks fail: go back to design$/, /^Algunas comprobaciones fall
 fijo('Already advanced', 'Ya se avanzó');
 fijo('That contingency is not needed now', 'Esa contingencia no hace falta ahora');
 fijo('Unknown launch day', 'Día de lanzamiento desconocido');
+// Reloj de misión (contrato-reloj.md).
+fijo('Unknown launch month', 'Mes de lanzamiento desconocido');
+fijo('Launch month already passed', 'El mes de lanzamiento ya pasó');
+plantilla(/^Too soon: the design review takes (\d+) months$/, /^Demasiado pronto: la revisión de diseño lleva (\d+) meses$/,
+  (n) => `Too soon: the design review takes ${n} months`, (n) => `Demasiado pronto: la revisión de diseño lleva ${n} meses`);
+fijo('Investors will not wait that long', 'Los inversores no esperarán tanto');
+fijo('Investors pulled out', 'Los inversores se retiraron');
+fijo('Unknown commitment', 'Plazo de compromiso desconocido');
+fijo('This mission has no launch commitment', 'Esta misión no tiene plazo de compromiso');
+fijo('Nothing to plan', 'No hay nada que planificar');
+fijo('Only Flight & Mechanics or Science can choose the site', 'Solo Vuelo y Mecánica o Ciencia pueden elegir el sitio');
+fijo('In Constraints that change would raise a bar over its limit', 'En Restricciones ese cambio subiría una barra por encima de su límite');
 fijo('Unknown site', 'Sitio desconocido');
 fijo('Game data not loaded', 'Los datos del juego no se han cargado');
 fijo('Unknown change', 'Cambio desconocido');

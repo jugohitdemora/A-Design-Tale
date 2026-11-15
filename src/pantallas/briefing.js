@@ -7,22 +7,22 @@ function escenarios(c) {
   const ids = [];
   const raw = c.D?.ESCENARIOS;
   const arr = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.entries(raw).map(([k, v]) => ({ id: k, ...v })) : [];
-  for (const s of arr) if (s?.id) ids.push({ id: s.id, nombre: en(s.nombre) || T.scenarios[s.id] || s.id });
-  for (const m of lista(c.D?.MISIONES)) if (m?.escenario && !ids.some((x) => x.id === m.escenario)) ids.push({ id: m.escenario, nombre: T.scenarios[m.escenario] ?? m.escenario });
+  for (const s of arr) if (s?.id) ids.push({ id: s.id, nombre: T.scenarios[s.id] || en(s.nombre) || '—' });
+  for (const m of lista(c.D?.MISIONES)) if (m?.escenario && !ids.some((x) => x.id === m.escenario)) ids.push({ id: m.escenario, nombre: T.scenarios[m.escenario] ?? '—' });
   return ids;
 }
 
 function ficha(c, m) {
   const ref = m.referencia ?? {};
   return h('div', { class: 'ficha' },
-    h('h4', {}, T.missionSheet, ': ', en(m.nombre) || m.id),
+    h('h4', {}, T.missionSheet, ': ', en(m.nombre) || '—'),
     en(m.apertura) ? h('p', { class: 'apertura' }, en(m.apertura)) : null,
     h('dl', {},
       h('dt', {}, T.target), h('dd', {}, en(m.cuerpo) || '-'),
       h('dt', {}, T.budget), h('dd', {}, valor(c, m.presupuesto, 'M USD')),
       h('dt', {}, T.realMissionRef), h('dd', {}, [ref.mision, ref.agencia && `(${(idioma() === 'es' && ref.agenciaEs) || ref.agencia})`].filter(Boolean).join(' ') || '-')),
     h('h5', {}, T.goals),
-    h('ul', { class: 'objetivos' }, lista(m.objetivos).map((o) => h('li', { class: o.prioridad ? 'prio' : '' }, en(o.nombre) || o.id, o.prioridad ? h('b', { class: 'etq' }, T.priorityGoal) : null))),
+    h('ul', { class: 'objetivos' }, lista(m.objetivos).map((o) => h('li', { class: o.prioridad ? 'prio' : '' }, en(o.nombre) || '—', o.prioridad ? h('b', { class: 'etq' }, T.priorityGoal) : null))),
     en(m.brief) ? h('p', { class: 'tenue pequeno' }, en(m.brief)) : null);
 }
 
@@ -43,7 +43,7 @@ export function pantallaBriefing(c) {
     raiz.append(h('div', { class: 'carpetas' }, ms.map((m) => h('button', {
       class: 'carpeta-mision' + (sel.id === m.id ? ' elegida' : '') + (m.jugable ? '' : ' bloqueada'), type: 'button',
       disabled: !m.jugable, onclick: () => c.enviar('elegirMision', { id: m.id }),
-    }, h('b', {}, en(m.nombre) || m.id), h('small', {}, en(m.cuerpo)), h('span', { class: 'etq ' + (m.jugable ? 'ok' : '') }, m.jugable ? T.playable : T.comingNext)))));
+    }, h('b', {}, en(m.nombre) || '—'), h('small', {}, en(m.cuerpo)), h('span', { class: 'etq ' + (m.jugable ? 'ok' : '') }, m.jugable ? T.playable : T.comingNext)))));
   }
 
   raiz.append(h('h4', {}, T.pickDifficulty));

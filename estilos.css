@@ -302,3 +302,18 @@ sup.src { font-size: var(--t-meta); color: var(--tenue); margin-left: 2px; }
   .cohete-vista .carpeta { grid-column: 1 / -1; }
   .carpetas { grid-template-columns: 1fr; }
 }
+
+/* Cabecera de recursos: presupuesto y reloj siempre arriba del panel global */
+.cabecera-recursos { display: grid; gap: 6px; padding: 8px 10px; margin-bottom: 10px; border: 2px solid var(--borde); border-radius: 8px; background: rgba(242, 184, 68, 0.08); }
+.cabecera-recursos.aviso { border-color: var(--aviso); }
+.cabecera-recursos .cab-presupuesto, .cabecera-recursos .cab-reloj { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.cab-etq { text-transform: uppercase; letter-spacing: 0.5px; color: var(--tenue); font-size: var(--t-meta); }
+.cab-cifra { font-size: var(--t-cuerpo); }
+.cab-chip { font-size: var(--t-meta); padding: 1px 6px; border-radius: 10px; border: 1px solid var(--borde); }
+.cab-chip.ok { border-color: var(--ok); color: var(--ok); } .cab-chip.mal { border-color: var(--mal); color: var(--mal); }
+.cabecera-recursos .barra { margin: 0; }
+.cabecera-recursos .barra-cab { display: none; }
+.cabecera-recursos .barra-dinero .pista { height: 10px; border: 1px solid var(--acento); }
+.cabecera-recursos.compacta { padding: 4px 8px; }
+.pros-contras { display: grid; gap: 1px; } .pros-contras .pros { color: var(--ok); } .pros-contras .contras { color: var(--mal); }
+.uso-para { color: var(--acento); }

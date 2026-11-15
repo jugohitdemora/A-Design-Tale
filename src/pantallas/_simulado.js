@@ -37,7 +37,7 @@ const FASES = [
 const MISIONES = {
   'SIM-1': { id: 'SIM-1', escenario: 'orbita', cuerpo: N('Simulated Moon'), nombre: N('SIMULATED MISSION'), jugable: true, nivel: 'media', apertura: N('This is a fake mission to review the screens.'), brief: N('Offline stand-in data. None of it is real.'),
     referencia: { mision: 'Blue Ghost M1', agencia: 'Firefly / NASA CLPS', coheteReal: 'Falcon 9', src: 'SIM-03' },
-    destino: 'luna', presupuesto: J(300), horasSombra: 5, horasEnlace: 10, diasPrevistos: 14, limites: {},
+    destino: 'luna', reloj: { inicio: 0, plazos: [6, 10, 14] }, presupuesto: J(300), horasSombra: 5, horasEnlace: 10, diasPrevistos: 14, limites: {},
     objetivos: [
       { id: 'O1', prioridad: true, nombre: N('Map the surface composition'), valor: 60, requiere: ['CS-1'], usoObjetivo: 8, datoReal: N('Real instruments found water-bearing minerals.'), src: 'SIM-03' },
       { id: 'O2', prioridad: false, nombre: N('Take wide images'), valor: 40, requiere: ['CS-2'], usoObjetivo: 6, datoReal: N('Imagery showed boulder fields.'), src: 'SIM-03' }],
@@ -117,7 +117,11 @@ export function resumen(e, D = DATOS) {
   });
   const tomadas = e.porRol?.comms?.contingencias ?? [];
   const riesgos = (m?.eventosMision ?? []).map((id) => { const ev = D.EVENTOS_MISION[id]; return { id, fase: ev.fase, p: ev.p, mitigado: (ev.mitigadoPor ?? []).some((c) => tomadas.includes(c)) }; });
-  return { barras, ciencia: { objetivos, total: objetivos.reduce((a, o) => a + o.cobertura, 0) / (objetivos.length || 1) }, riesgos };
+  // Reloj (forma de motor.relojDe, sin recorte en el presupuesto falso).
+  const plazo = e?.mision?.plazo ?? null, mes = e?.reloj?.mes ?? 0;
+  const retraso = plazo == null ? 0 : Math.max(0, Math.max(mes, e?.ruta?.mes ?? mes) - plazo);
+  const reloj = { activo: plazo != null, mes, plazo, inicio: 0, retraso, recorte: Math.min(0.4, 0.04 * Math.max(0, retraso - 1)), bono: 0, cancelada: retraso > 12 };
+  return { barras, ciencia: { objetivos, total: objetivos.reduce((a, o) => a + o.cobertura, 0) / (objetivos.length || 1) }, riesgos, reloj, plan: null };
 }
 export function cumple(res) {
   const est = Object.entries(res.barras).filter(([, b]) => b.estado !== 'ok');
@@ -159,11 +163,12 @@ const DISENO_BASE = {
   comms: { piezas: { 'CM-1': { op: 'A', uso: 12 } }, contingencias: [] },
 };
 const clon = (x) => JSON.parse(JSON.stringify(x));
+const MESES_REVISION = 2, MESES_REDISENO = 6; // como reglas/motor.js
 
 function preparar(e) {
   const fase = e.fase;
   if (fase === 'briefing') return;
-  if (!e.mision?.id) e.mision = { escenario: 'orbita', id: 'SIM-1', dificultad: 'normal', objetivos: ['O1', 'O2'] };
+  if (!e.mision?.id) e.mision = { escenario: 'orbita', id: 'SIM-1', dificultad: 'normal', objetivos: ['O1', 'O2'], plazo: 10 };
   if (fase === 'restricciones' && e.porRol.vuelo.cohete === 'R-A') e.porRol.vuelo.cohete = 'R-C';
   if (fase === 'verificacion' && Object.keys(e.firmas).length === 0) e.firmas = { vuelo: false, ciencia: false, potencia: false, comms: false };
   if ((fase === 'mision' || fase === 'informe') && !e.resultado) e.resultado = simular(e);
@@ -178,6 +183,7 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
     fase: params.get('fase') || 'diseno', jugadores: { [jugadorId]: { nick, rol, orden: 1, conectado: true, desconectadoEn: 0, ultimaIntencion: 0 } }, siguienteOrden: 2, semilla: 12345,
     briefing: { objetivos: true, tareas: false, riesgos: false, reparto: null, repartos: 0, listos: {} }, registro: [],
     mision: null, porRol: clon(DISENO_BASE), diseno: { revisiones: 0, eventos: [] }, firmas: {}, resultado: null, vista: { paso: 0 },
+    ruta: { mes: null, sitio: null }, reloj: { mes: 0 },
   };
   const otros = ['ciencia', 'comms', 'potencia', 'vuelo'].filter((r) => r !== rol).slice(0, n - 1);
   otros.forEach((r, i) => { e.jugadores['bot' + i] = { nick: ['Ana', 'Luis', 'Mara'][i], rol: r, orden: i + 2, conectado: true, desconectadoEn: 0, ultimaIntencion: 0 }; });
@@ -198,11 +204,11 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
         }
         m.escenario = p.escenario; if (DATOS.MISIONES[m.id]?.escenario !== p.escenario) m.id = null;
       }
-      if (p.id) { m.id = p.id; m.escenario = DATOS.MISIONES[p.id].escenario; e.porRol = clon(DISENO_BASE); for (const r of Object.keys(e.porRol)) e.porRol[r].piezas = {}; e.porRol.vuelo.cohete = null; e.porRol.vuelo.ruta = null; m.objetivos = (DATOS.MISIONES[p.id].objetivos || []).map((x) => x.id); e.briefing.listos = {}; }
+      if (p.id) { m.id = p.id; m.escenario = DATOS.MISIONES[p.id].escenario; e.porRol = clon(DISENO_BASE); for (const r of Object.keys(e.porRol)) e.porRol[r].piezas = {}; e.porRol.vuelo.cohete = null; e.porRol.vuelo.ruta = null; m.objetivos = (DATOS.MISIONES[p.id].objetivos || []).map((x) => x.id); m.plazo = DATOS.MISIONES[p.id].reloj?.plazos?.[1] ?? null; e.reloj = { mes: 0 }; e.ruta = { mes: null, sitio: null }; e.briefing.listos = {}; }
       if (p.dificultad) m.dificultad = p.dificultad;
       e.mision = m;
     },
-    cambiarFase(p) { e.fase = p.fase; if (p.fase === 'lobby') { e.mision = null; e.resultado = null; } if (p.fase === 'diseno') { e.firmas = {}; } preparar(e); },
+    cambiarFase(p) { if (e.fase === 'informe' && p.fase === 'diseno') e.reloj.mes += MESES_REDISENO; e.fase = p.fase; if (p.fase === 'lobby') { e.mision = null; e.resultado = null; } if (p.fase === 'diseno') { e.firmas = {}; } preparar(e); },
     montar(p) { const r = p.rol ?? yo().rol; e.porRol[r].piezas[p.pieza] = { op: p.op, uso: p.uso }; e.firmas = {}; },
     quitar(p) { delete e.porRol[p.rol ?? yo().rol].piezas[p.pieza]; e.firmas = {}; },
     elegirCohete(p) { e.porRol.vuelo.cohete = p.id; e.firmas = {}; },
@@ -214,6 +220,7 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
     },
     pedirRevision() {
       e.diseno.revisiones++;
+      e.reloj.mes += MESES_REVISION; // el reloj de misión avanza con cada revisión (sin eventos con `meses` aquí)
       const libres = ['ED-1', 'ED-2', 'ED-3'].filter((id) => !e.diseno.eventos.some((x) => x.id === id));
       const maxEv = { facil: 1, normal: 2, dificil: 3 }[e.mision?.dificultad] ?? 2;
       if (libres.length && e.diseno.eventos.length < maxEv) { e.diseno.eventos.push({ id: libres[0] }); return null; }
@@ -263,14 +270,23 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
       const a = Array.isArray(e.vista.activadas) ? e.vista.activadas : [];
       e.vista = { ...e.vista, activadas: [...new Set([...a, p.id])] };
     },
-    // Planificación de ruta: día de lanzamiento y sitio.
+    // Planificación de ruta: mes de lanzamiento (meses desde el inicio; `ventana` es el nombre antiguo) y sitio.
     planificarRuta(p) {
-      if (p.ventana != null && !(Number.isInteger(p.ventana) && p.ventana >= 0 && p.ventana <= 1000)) return 'Unknown launch day';
+      const mes = p.mes !== undefined ? p.mes : p.ventana;
+      if (mes != null && !(Number.isInteger(mes) && mes >= 0 && mes <= 1000)) return 'Unknown launch month';
+      if (mes != null && mes < e.reloj.mes) return 'Launch month already passed';
       if (p.sitio != null && typeof p.sitio !== 'string') return 'Unknown site';
-      if (!e.ruta || typeof e.ruta !== 'object') e.ruta = { ventana: null, sitio: null };
-      if (p.ventana !== undefined) e.ruta.ventana = p.ventana;
+      if (!e.ruta || typeof e.ruta !== 'object') e.ruta = { mes: null, sitio: null };
+      if (mes !== undefined) e.ruta.mes = mes;
       if (p.sitio !== undefined) e.ruta.sitio = p.sitio;
       e.firmas = {};
+    },
+    // Compromiso de plazo en el expediente (meses desde el inicio hasta el lanzamiento prometido).
+    comprometerPlazo(p) {
+      const m = DATOS.MISIONES[e.mision?.id];
+      if (!m) return 'Choose a mission first';
+      if (!(m.reloj?.plazos ?? []).includes(p.plazo)) return 'Unknown commitment';
+      e.mision.plazo = p.plazo; e.briefing.listos = {};
     },
   };
 

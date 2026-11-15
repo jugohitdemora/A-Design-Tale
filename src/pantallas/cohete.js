@@ -1,6 +1,5 @@
 // Rocket tab: one rocket at a time, arrows to cycle, a "folder" with its data. Flight (or anyone if vacant) selects.
 import { T } from '../textos.js';
-import { idioma } from '../i18n.js';
 import { h, en, lista, valor, panelVacio, puedoPor, nombreRol } from './ui.js';
 
 function dibujo(i) {
@@ -29,12 +28,14 @@ export function pestanaCohete(c) {
     h('button', { class: 'flecha', type: 'button', 'aria-label': T.next, onclick: () => mover(1) }, '▶'),
     h('div', { class: 'carpeta' },
       h('div', { class: 'carpeta-pestana' }, `${i + 1}/${lst.length}`),
-      h('h4', {}, en(k.nombre) || k.id, esElegido ? h('span', { class: 'etq ok' }, T.selected) : null),
+      h('h4', {}, en(k.nombre) || '—', esElegido ? h('span', { class: 'etq ok' }, T.selected) : null),
       h('dl', {},
-        h('dt', {}, T.operator), h('dd', {}, k.operador ?? '-'),
+        h('dt', {}, T.operator), h('dd', {}, en(k.operador) || '—'),
         h('dt', {}, T.capacityTo(en(m.cuerpo) || m.destino || '?')), h('dd', {}, valor(c, cap, 'kg')),
         h('dt', {}, T.rocketPrice), h('dd', {}, valor(c, k.precio, 'M USD')),
-        h('dt', {}, T.nasaUse), h('dd', {}, (idioma() === 'es' && k.usoNasaEs) || k.usoNasa || T.none)),
+        h('dt', {}, T.nasaUse), h('dd', {}, en(k.usoNasaT) || T.none),
+        [['configuracion', T.config], ['motores', T.engines], ['materiales', T.materials], ['registro', T.record]]
+          .filter(([f]) => en(k[f])).map(([f, et]) => [h('dt', {}, et), h('dd', { class: 'pequeno' }, en(k[f]))])),
       h('div', { class: 'acciones izq' },
         h('button', {
           class: 'btn-plano primario', type: 'button', disabled: !puedo || esElegido,

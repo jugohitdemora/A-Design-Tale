@@ -5,8 +5,9 @@
 // DATOS DE PRUEBA: el fixture de abajo es inventado para probar las reglas. No son cifras reales de ninguna
 // misión ni de ninguna pieza, y no dependen de src/datos/ (se inyectan con usarDatos y ctx.datos).
 import { estadoInicial, reducir, usarDatos, tallerInicial, tallerVacio, FASES, VERSION_PROTOCOLO } from '../src/red/protocolo.js';
-import { num, resumen, cumple, verificar, puedeEnRestricciones, motivoRestriccion, estadoDeRatio } from '../src/reglas/motor.js';
+import { num, resumen, cumple, verificar, puedeEnRestricciones, motivoRestriccion, estadoDeRatio, relojDe, planDe } from '../src/reglas/motor.js';
 import { simular } from '../src/reglas/despliegue.js';
+import { explicarCausas } from '../src/reglas/explicar.js';
 import { prng, derivar, barajar } from '../src/reglas/azar.js';
 
 const afirmar = (c, msg) => { if (!c) throw new Error(msg); };
@@ -40,8 +41,26 @@ const CONTINGENCIAS = {
 const EVENTOS_DISENO = {
   'ED-mas': { id: 'ED-mas', signo: '+', nombre: { en: 'Extra funding' }, efecto: { presupuesto: 20 } },
   'ED-menos': { id: 'ED-menos', signo: '-', nombre: { en: 'Budget cut' }, efecto: { presupuesto: -10 } },
-  'ED-lim': { id: 'ED-lim', signo: '-', nombre: { en: 'Smaller fairing' }, efecto: { limite: { recurso: 'volumen', factor: 0.9 } } },
+  'ED-lim': { id: 'ED-lim', signo: '-', nombre: { en: 'Smaller fairing' }, efecto: { limite: { recurso: 'volumen', factor: 0.9 }, meses: 3 } },
   'ED-prio': { id: 'ED-prio', signo: '±', nombre: { en: 'New priority' }, efecto: { prioridad: 'O2' } },
+  'ED-fac': { id: 'ED-fac', signo: '-', nombre: { en: 'Half budget' }, efecto: { limite: { recurso: 'presupuesto', factor: 0.5 } } },
+};
+// Calendario y planificación de prueba (forma de src/datos/calendario.js y planificacion.js, números inventados).
+// Mes del año → puntuación de clima 0..1; el mes absoluto 6 tiene 10 días de conjunción y ΔV × 1,2.
+const PUNT = [0, 0.2, 0.4, 0.6, 0.8, 1, 1, 0.8, 0.6, 0.4, 0.2, 0];
+const cada60 = (f) => Array.from({ length: 60 }, (_, k) => f(k));
+const CALENDARIO = {
+  MESES: 60, ANIO0: 2027,
+  SITIOS_LANZAMIENTO: { cabo: { id: 'cabo', nombre: { en: 'Test Cape', es: 'Cabo de prueba' },
+    lluvia: PUNT.map((x) => 1 + 5 * x), viento50: PUNT.map((x) => 5 + 2 * x), nubes: PUNT.map((x) => 40 + 20 * x), pScrub: PUNT.map((x) => 0.1 + 0.2 * x), puntuacion: PUNT } },
+  SITIO_COHETE: { 'T-cl': 'cabo', 'T-cs': 'cabo' },
+  ESPACIO: { pKp7: cada60((k) => 0.3 - k * 0.004), pSep: cada60(() => 0.1) },
+  DESTINOS: { luna: { elongMin: cada60((k) => (k === 6 ? 1.5 : 30)), diasConj: cada60((k) => (k === 6 ? 10 : 0)), factorDv: cada60((k) => (k === 6 ? 1.2 : 1)) } },
+  EFECTOS: { climaDp: 0.04, espacioDp: 0.06, conjDpDia: 0.002, conjDpMax: 0.04, enlaceConj: 0.5, tormentaCiencia: 0.95 },
+};
+const PLANIFICACION = {
+  'T-CAL': { lanzamiento: { mesMax: 30, dvMin: 3, fase: 'F2', faseEspacio: 'F2' },
+    sitios: [{ id: 'S1', nombre: { en: 'Site one' }, efectos: { fases: [{ fase: 'F3', dp: -0.02 }], ciencia: {} } }, { id: 'S2', efectos: { fases: [] } }] },
 };
 const EVENTOS_MISION = {
   'EM-1': { id: 'EM-1', signo: '-', fase: 'F3', p: 0.3, nombre: { en: 'Thruster glitch' }, efecto: { ciencia: 0.8 }, mitigadoPor: ['T-c1'], leccion: { en: 'Carry spares.' } },
@@ -84,10 +103,12 @@ function crearFixture() {
     }),
     'T-POT': mision('T-POT', 'orbita', 'datos', { limites: { potencia: V(150) } }),
     'T-NOJ': mision('T-NOJ', 'orbita', 'datos', { jugable: false }),
+    'T-CAL': mision('T-CAL', 'orbita', 'datos', { reloj: { inicio: 0, plazos: [4, 8, 12] } }), // con reloj y calendario
   };
   return {
     PIEZAS, COHETES, CONTINGENCIAS, EVENTOS_DISENO, EVENTOS_MISION, MISIONES,
     ESCENARIOS: { orbita: { id: 'orbita' }, landing: { id: 'landing' }, exploracion: { id: 'exploracion' } }, FUENTES: {},
+    CALENDARIO: JSON.parse(JSON.stringify(CALENDARIO)), PLANIFICACION: JSON.parse(JSON.stringify(PLANIFICACION)),
   };
 }
 let D = crearFixture();
@@ -637,7 +658,7 @@ const pruebas = {
   },
 
   'Reglas · estado inicial y fusión de talleres (unirse)'() {
-    afirmar(VERSION_PROTOCOLO === 3, 'versión del protocolo');
+    afirmar(VERSION_PROTOCOLO === 4, 'versión del protocolo (4: reloj de misión, contrato-reloj.md)');
     afirmar(FASES.join() === 'lobby,briefing,diseno,restricciones,verificacion,mision,informe', 'FASES');
     const e = estadoInicial();
     afirmar(e.mision === null && e.resultado === null && e.vista.paso === 0 && e.diseno.eventos.length === 0, 'campos nuevos');
@@ -678,7 +699,209 @@ const pruebas = {
     afirmar(resumen(e3, D).ciencia.objetivos.find((o) => o.prioridad)?.id === 'O1', 'prioridad ajena aplicada');
     afirmar(motivoRestriccion(e3, { tipo: 'raro' }, D) === 'Unknown change', 'un cambio desconocido no se permite');
   },
+
+  // ---------- Reloj de misión (contrato-reloj.md §8) ----------
+  'Reglas · reloj: plazo por defecto y comprometerPlazo en el expediente'() {
+    const e = partida();
+    ok(e, 'jvuelo', 'elegirMision', { id: 'T-CAL' });
+    afirmar(e.mision.plazo === 8, `plazo por defecto (el del medio): ${e.mision.plazo}`);
+    ok(e, 'jciencia', 'comprometerPlazo', { plazo: 4 });
+    afirmar(e.mision.plazo === 4, 'no se comprometió');
+    rechaza(e, 'jciencia', 'comprometerPlazo', { plazo: 5 }, /Unknown commitment/);
+    rechaza(e, 'jciencia', 'comprometerPlazo', { plazo: '4' }, /Unknown commitment/);
+    ok(e, 'jvuelo', 'elegirMision', { dificultad: 'facil' });
+    afirmar(e.mision.plazo === 4, 'cambiar la dificultad no cambia el plazo');
+    ok(e, 'jvuelo', 'elegirMision', { id: 'T-ORB' });
+    afirmar(e.mision.plazo === null, 'una misión sin reloj no tiene plazo');
+    rechaza(e, 'jvuelo', 'comprometerPlazo', { plazo: 4 }, /no launch commitment/);
+    todosListos(e);
+    rechaza(e, 'jvuelo', 'comprometerPlazo', { plazo: 4 }); // fuera del briefing
+  },
+
+  'Reglas · reloj: la revisión avanza 2 meses, los eventos con meses suman y rediseñar 6'() {
+    const e = montarBueno(enDiseno('T-CAL', 'dificil'));
+    afirmar(e.reloj.mes === 0, 'empieza en el mes 0');
+    let esperado = 0;
+    while (e.fase === 'diseno') {
+      const antes = e.diseno.eventos.length;
+      ok(e, 'jvuelo', 'pedirRevision', {});
+      const salio = e.diseno.eventos.length > antes ? e.diseno.eventos[antes].id : null;
+      esperado += 2 + (salio ? num(D.EVENTOS_DISENO[salio].efecto.meses) : 0);
+      afirmar(e.reloj.mes === esperado, `tras ${salio ?? 'la revisión'}: ${e.reloj.mes} ≠ ${esperado}`);
+      if (!salio) break;
+    }
+    afirmar(e.diseno.eventos.some((x) => x.id === 'ED-lim') ? esperado >= 11 : esperado === 8, `total de meses: ${esperado}`);
+    // Rediseño: +6 meses, y nueva misión: vuelta a 0.
+    e.fase = 'informe';
+    const antes = e.reloj.mes;
+    ok(e, 'jvuelo', 'cambiarFase', { fase: 'diseno' });
+    afirmar(e.reloj.mes === antes + 6, `rediseño: ${e.reloj.mes}`);
+    e.fase = 'informe';
+    ok(e, 'jvuelo', 'cambiarFase', { fase: 'lobby' });
+    afirmar(e.reloj.mes === 0 && e.ruta.mes === null, 'la partida nueva no reinicia el reloj');
+  },
+
+  'Reglas · reloj: ventana perdida, mes demasiado pronto y replanificar en verificación'() {
+    const e = montarBueno(enDiseno('T-CAL', 'facil'));
+    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 1 }, /Too soon/);
+    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 31 }, /Unknown launch month/);
+    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 2.5 }, /Unknown launch month/);
+    ok(e, 'jvuelo', 'planificarRuta', { mes: 2, sitio: 'S1' });
+    afirmar(e.ruta.mes === 2 && planDe(e, D).perdida === false && verificar(e, D).comprobaciones.find((c) => c.id === 'mesLanzamiento').ok, 'plan inicial');
+    agotarEventos(e);
+    afirmar(e.fase === 'verificacion' && e.reloj.mes >= 4, `preparación: ${e.fase}, mes ${e.reloj.mes}`);
+    afirmar(planDe(e, D).perdida === true && resumen(e, D).plan.perdida === true, 'el mes 2 ya pasó: plan perdido');
+    const v = verificar(e, D);
+    afirmar(!v.pasa && v.comprobaciones.find((c) => c.id === 'mesLanzamiento').ok === false, 'la verificación no ve la ventana perdida');
+    afirmar(/already passed/.test(v.comprobaciones.find((c) => c.id === 'mesLanzamiento').texto.en), 'texto de la ventana perdida');
+    rechaza(e, 'jvuelo', 'firmar', { on: true }, /checks/);
+    rechaza(e, 'jvuelo', 'planificarRuta', { mes: e.reloj.mes - 1 }, /already passed/);
+    ok(e, 'jvuelo', 'planificarRuta', { mes: e.reloj.mes }); // en verificación ya no falta ninguna revisión
+    afirmar(verificar(e, D).pasa, `replanificado: ${JSON.stringify(verificar(e, D).comprobaciones.filter((c) => !c.ok))}`);
+    // `ventana` (nombre antiguo) vale como mes.
+    ok(e, 'jvuelo', 'planificarRuta', { ventana: e.reloj.mes + 1 });
+    afirmar(e.ruta.mes === e.reloj.mes + 1 && e.ruta.ventana === e.ruta.mes, 'alias ventana (y copia para la interfaz antigua)');
+  },
+
+  'Reglas · reloj: recorte de los inversores por umbrales, bono por plazo y orden de los eventos'() {
+    const e = montarBueno(enDiseno('T-CAL', 'facil')); // plazo 8, presupuesto 100
+    const caso = (mes, rutaMes = null) => { e.reloj = { mes }; e.ruta = { mes: rutaMes, sitio: null }; return relojDe(e, D); };
+    const tabla = [[8, 0, 0], [9, 1, 0], [10, 2, 0.04], [14, 6, 0.2], [19, 11, 0.4], [20, 12, 0.4]];
+    for (const [mes, retraso, recorte] of tabla) {
+      const r = caso(mes);
+      afirmar(r.activo && r.retraso === retraso && !r.cancelada, `mes ${mes}: retraso ${r.retraso}`);
+      casi(r.recorte, recorte, `recorte con ${retraso} meses de retraso`);
+      casi(resumen(e, D).barras.presupuesto.limite, 100 * (1 - recorte), `límite de presupuesto con retraso ${retraso}`);
+    }
+    afirmar(caso(21).cancelada && !caso(20).cancelada, 'cancelación con más de 12 meses');
+    afirmar(caso(3, 11).retraso === 3, 'un lanzamiento planificado tarde también cuenta como retraso');
+    caso(0);
+    e.mision.plazo = 4; casi(resumen(e, D).barras.presupuesto.limite, 110, 'plazo corto: +10 %');
+    e.mision.plazo = 12; casi(resumen(e, D).barras.presupuesto.limite, 90, 'plazo largo: −10 %');
+    e.mision.plazo = 8;
+    // Sumas primero, factores después: el orden en que salieron no importa.
+    e.diseno.eventos = [{ id: 'ED-fac' }, { id: 'ED-mas' }];
+    casi(resumen(e, D).barras.presupuesto.limite, 60, '(100 + 20) × 0,5');
+    e.diseno.eventos = [{ id: 'ED-mas' }, { id: 'ED-fac' }];
+    casi(resumen(e, D).barras.presupuesto.limite, 60, 'mismo resultado en el otro orden');
+    // Sin plazo (partida anterior) no hay regla de inversores.
+    e.mision.plazo = null; e.diseno.eventos = []; caso(30);
+    afirmar(!relojDe(e, D).activo && resumen(e, D).barras.presupuesto.limite === 100, 'sin plazo no hay recorte');
+    // Planificar más de 12 meses tras el plazo no se deja.
+    e.mision.plazo = 8; caso(0);
+    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 21 }, /will not wait/);
+  },
+
+  'Reglas · reloj: los inversores se retiran y la misión se cancela'() {
+    const e = montarBueno(enDiseno('T-CAL', 'facil'));
+    agotarEventos(e);
+    ok(e, 'jvuelo', 'cambiarFase', { fase: 'diseno' });
+    e.reloj.mes = 19; // plazo 8: retraso 11
+    ok(e, 'jvuelo', 'pedirRevision', {}); // +2 → retraso 13
+    afirmar(e.fase === 'informe' && e.resultado?.cancelada === true && e.resultado.veredicto === 'fallida', `no se canceló: ${e.fase}`);
+    afirmar(e.resultado.causas.some((c) => c.tipo === 'cancelada' && c.es && c.en), 'falta la causa de la cancelación');
+    const lineas = explicarCausas(e.resultado, D, 'en');
+    afirmar(lineas.some((l) => /Investors pulled out/.test(l)) && lineas.some((l) => /Clock/.test(l)), `explicación: ${lineas.join(' | ')}`);
+    // Rediseñar con un retraso que lo cancelaría se rechaza (se puede volver al lobby).
+    const e2 = montarBueno(enDiseno('T-CAL', 'facil'));
+    e2.fase = 'informe'; e2.reloj.mes = 15;
+    rechaza(e2, 'jvuelo', 'cambiarFase', { fase: 'diseno' }, /Investors/);
+    ok(e2, 'jvuelo', 'cambiarFase', { fase: 'lobby' });
+  },
+
+  'Reglas · reloj: el desglose de cada fase suma p − pBase'() {
+    const e = estadoVuelo('T-CAL', { contingencias: ['T-c1'] });
+    e.mision.plazo = 8; e.reloj = { mes: 0 }; e.ruta = { mes: 6, sitio: 'S1' }; // mes 6: julio, conjunción, ΔV × 1,2
+    const r = resumen(e, D);
+    afirmar(r.plan.cond && r.plan.cond.diasConj === 10 && r.plan.factor === 1.2, `condiciones: ${JSON.stringify(r.plan.cond)}`);
+    casi(r.plan.extraKg, 2, 'propelente extra por ΔV × 1,2 (ruta de 10 kg)');
+    casi(r.plan.horasEnlace, 12, 'enlace a la mitad los 10 días de conjunción (vida 10 días): 24 × 0,5');
+    for (const f of r.fases) {
+      const suma = f.desglose.reduce((s, x) => s + x.dp, 0);
+      casi(suma, f.pCruda - f.pBase, `${f.id}: Σ desglose`);
+      if (f.pCruda > 0 && f.pCruda < 1) casi(f.p, f.pCruda, `${f.id}: p sin recortar`);
+      afirmar(f.desglose.every((x) => ['base', 'pieza', 'contingencia', 'ruta', 'sitio', 'mes', 'clima', 'espacio', 'conjuncion'].includes(x.fuente)), 'fuente desconocida');
+    }
+    const fuentes = (id) => r.fases.find((f) => f.id === id).desglose.map((x) => x.fuente).join();
+    afirmar(fuentes('F1') === 'clima', `F1: ${fuentes('F1')}`);
+    afirmar(['ruta', 'espacio', 'conjuncion'].every((x) => fuentes('F2').includes(x)), `F2: ${fuentes('F2')}`);
+    afirmar(fuentes('F3').includes('contingencia') && fuentes('F3').includes('sitio'), `F3: ${fuentes('F3')}`);
+    casi(r.fases[0].desglose[0].dp, -0.04, 'julio en el sitio de prueba: puntuación 1 → −4 %');
+    casi(r.fases[1].desglose.find((x) => x.fuente === 'conjuncion').dp, -0.02, 'conjunción de 10 días: −2 %');
+    // Sin plan no hay condiciones del mes: las fases son las de siempre.
+    e.ruta = { mes: null, sitio: null };
+    afirmar(resumen(e, D).fases.every((f) => !f.desglose.some((x) => ['clima', 'espacio', 'conjuncion'].includes(x.fuente))), 'condiciones sin mes');
+  },
+
+  'Reglas · reloj: determinista entre clientes y sorteos por mes aparte'() {
+    const mk = (semilla) => { const e = estadoVuelo('T-CAL', { semilla }); e.mision.plazo = 8; e.ruta = { mes: 5, sitio: 'S1' }; return e; };
+    const e = mk(31);
+    const otro = JSON.parse(JSON.stringify(e));
+    afirmar(JSON.stringify(simular(e, D)) === JSON.stringify(simular(otro, D)), 'simular difiere entre clientes');
+    afirmar(JSON.stringify(resumen(e, D)) === JSON.stringify(resumen(otro, D)), 'resumen difiere entre clientes');
+    // Las tiradas de las fases son las del azar 'mision' de siempre (sin eventos: una por fase).
+    conMision('T-CAL', { fases: D.MISIONES['T-CAL'].fases.map((f) => ({ ...f, pBase: 0, mejoras: [] })), eventosMision: [] }, () => {
+      const r = simular(mk(77), D);
+      const azar = prng(derivar(77, 'mision', 'T-CAL'));
+      const fallidas = r.pasos.filter((p) => !p.omitida);
+      afirmar(fallidas.length >= 1, 'ninguna fase jugada');
+      for (const p of fallidas) casi(p.tirada, Math.round(azar() * 1000) / 1000, `tirada de ${p.fase}`);
+      afirmar(r.fallos.filter((f) => f.codigo === 'fase').length === fallidas.length, 'un fallo por fase fallida');
+    });
+    // Lluvia y tormentas: salen de los sorteos 'clima' y 'reloj' del mes, en todas las semillas con la misma frecuencia aproximada.
+    let scrubs = 0, tormentas = 0;
+    for (let s = 0; s < 300; s++) { const l = simular(mk(s), D).lanzamiento; scrubs += l.scrub > 0; tormentas += l.tormenta; }
+    const c = condicionesMesDe(mk(0));
+    afirmar(Math.abs(scrubs / 300 - c.pScrub) < 0.1 && Math.abs(tormentas / 300 - c.pKp7) < 0.1, `frecuencias: ${scrubs}, ${tormentas} vs ${c.pScrub}, ${c.pKp7}`);
+  },
+
+  'Reglas · reloj: explicarCausas da causa → decisión → qué lo evitaba'() {
+    const fases = D.MISIONES['T-CAL'].fases.map((f) => (f.id === 'F1' ? { ...f, pBase: 0.3 } : { ...f, pBase: 1 }));
+    conMision('T-CAL', { fases, eventosMision: ['EM-1'] }, () => {
+      // F1: pBase 0,30 − 0,04 de julio = 0,26. Con tirada en [0,26, 0,30) la culpa es del mes; con ≥ 0,30, mala suerte.
+      let r = null, rSuerte = null;
+      for (let s = 0; s < 2000 && !(r && rSuerte); s++) {
+        const e = estadoVuelo('T-CAL', { semilla: s }); e.mision.plazo = 8; e.reloj = { mes: 3 }; e.ruta = { mes: 6, sitio: 'S1' };
+        const x = simular(e, D);
+        if (x.pasos[0].ok) continue;
+        if (x.pasos[0].tirada < 0.3) r ??= x; else rSuerte ??= x;
+      }
+      afirmar(r && rSuerte, 'no salieron los dos casos de fallo del lanzamiento');
+      const f = r.fallos.find((x) => x.codigo === 'fase' && x.fase === 'F1');
+      afirmar(f && f.desglose[0][0] === 'clima' && f.evitar === 'mesSeco' && f.decision.mes === 6, `fallo: ${JSON.stringify(f)}`);
+      const fs = rSuerte.fallos.find((x) => x.codigo === 'fase' && x.fase === 'F1');
+      afirmar(fs.evitar === 'suerte' && fs.desglose[0][0] === 'clima', `la culpa no es del mes si la tirada fallaba igual: ${JSON.stringify(fs)}`);
+      const ls = explicarCausas(rSuerte, D, 'en')[0];
+      afirmar(/bad luck.*July 2027.*−4 %.*nothing/.test(ls), `mala suerte con sus factores: ${ls}`);
+      afirmar(JSON.stringify(r.fallos).length < 2000, 'los fallos no son compactos');
+      for (const l of ['en', 'es']) {
+        const lineas = explicarCausas(r, D, l);
+        afirmar(lineas.length >= 2 && lineas.length <= 6, `${l}: ${lineas.length} viñetas`);
+        afirmar(lineas[0].split('→').length === 3, `${l}: formato causa → decisión → evitar: ${lineas[0]}`);
+        afirmar(l === 'en' ? /Launch failed.*July 2027.*Test Cape.*rain 6 mm\/day.*−4 %.*less rain/.test(lineas[0])
+          : /julio 2027.*Cabo de prueba.*lluvia 6 mm\/día.*−4 %.*menos lluvia/.test(lineas[0]), `${l}: ${lineas[0]}`);
+        afirmar(/Clock|Reloj/.test(lineas[lineas.length - 1]), `${l}: falta el reloj`);
+      }
+    });
+    // Un fallo sin mala decisión detrás es mala suerte.
+    const suerte = explicarCausas({ mision: 'T-ORB', fallos: [{ codigo: 'fase', fase: 'F1', critica: true, p: 0.95, tirada: 0.97, desglose: [], decision: null, evitar: 'suerte' }] }, D, 'en');
+    afirmar(/bad luck: the phase had a 5 % chance/.test(suerte[0]), suerte[0]);
+    afirmar(explicarCausas(null, D, 'en').length === 1, 'resultado vacío');
+  },
+
+  'Reglas · reloj: un estado v3 se completa (ruta.ventana → ruta.mes, reloj)'() {
+    const e = partida();
+    e.ruta = { ventana: 12, sitio: 'S1' };
+    delete e.reloj;
+    e.mision = { escenario: 'orbita', id: 'T-CAL', dificultad: 'facil', objetivos: ['O1', 'O2'] };
+    ok(e, 'jvuelo', 'marcarPizarra', { id: 'tareas' });
+    afirmar(e.ruta.mes === null && !('ventana' in e.ruta) && e.ruta.sitio === 'S1', `ruta: ${JSON.stringify(e.ruta)}`);
+    afirmar(e.reloj.mes === 0 && e.mision.plazo === null, `reloj ${JSON.stringify(e.reloj)}, plazo ${e.mision.plazo}`);
+    afirmar(estadoInicial().reloj.mes === 0 && estadoInicial().ruta.mes === null, 'estado inicial v4');
+  },
 };
+
+function condicionesMesDe(e) { return resumen(e, D).plan.cond; }
 
 function agotarEventos2(e, quien) {
   while (e.fase === 'diseno') {

@@ -6,7 +6,7 @@
 /* Pestañas de departamento */
 .sop-tabs { display: flex; gap: var(--e-2); padding: var(--e-2) var(--e-3) var(--e-3) 40px; flex: 0 0 auto; overflow-x: auto; }
 .sop-tab { min-width: 72px; padding-left: 10px; padding-right: 10px; }
-.sop-tab-t { display: none; }
+.sop-tab-t { display: inline; }
 .sop-tab-yo { font-style: normal; margin-left: 5px; }
 
 /* Libro */
@@ -61,7 +61,16 @@
 /* Fórmulas */
 .sop-f { margin: 10px 0 10px 46px; padding: 8px 12px; background: var(--lp-panel-2); border: 2px dashed var(--lp-borde); max-width: 84ch; }
 .sop-f code { display: block; white-space: pre-wrap; font: 700 var(--t-meta)/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace; color: var(--lp-tinta); margin-bottom: 4px; overflow-wrap: anywhere; }
-.sop-f span { font-size: var(--t-meta); color: var(--lp-tenue); }
+.sop-f .sop-f-t { display: block; font-size: var(--t-meta); color: var(--lp-tenue); }
+.sop-tex.blq { display: block; margin: 2px 0 6px; overflow-x: auto; overflow-y: hidden; padding: 2px 0; font-size: 1.1em; color: var(--lp-tinta); }
+.sop-tex.blq .katex-display { margin: 0.2em 0; }
+.sop-tex .katex { font-size: 1.1em; }
+.sop-tex code { font: 700 var(--t-meta)/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sop-tex.on code { display: none; }
+.sop-leg { display: grid; grid-template-columns: minmax(70px, max-content) 1fr; gap: 2px 14px; margin: 8px 0 0; padding-top: 6px; border-top: 1px dotted var(--lp-tenue); font-size: var(--t-meta); align-items: baseline; }
+.sop-leg dt { margin: 0; color: var(--lp-tinta); text-align: right; }
+.sop-leg dd { margin: 0; color: var(--lp-tenue); }
+.sop-dato { font-weight: 400; color: var(--lp-tenue); font-size: var(--t-meta); margin-top: 2px; }
 
 /* Tablas */
 .sop-tabla-w { overflow-x: auto; margin: 8px 0 12px; border: 2px solid var(--lp-borde); background: var(--lp-panel); }
@@ -138,7 +147,6 @@
   .sop-ind { width: auto; border: 2px solid var(--lp-borde); }
   .sop-ind.activa { border-color: var(--rc); }
   .sop-pagina { flex: 1 1 auto; min-height: 0; padding: 14px 16px 22px; }
-  .sop-tab-t { display: none; }
   .sop-tabs { padding-left: 28px; }
   .sop-call, .sop-f { margin-left: 0; }
   .sop-dl { grid-template-columns: 1fr; }

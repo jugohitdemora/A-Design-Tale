@@ -10,17 +10,13 @@ export function pestanaRuta(c) {
   const puedo = puedoPor(c, 'vuelo');
   const tarjetas = h('div', { class: 'tarjetas' });
   for (const r of rutas) {
-    const fase = lista(c.mision.fases).find((f) => f.id === r.efecto?.fase);
-    const ef = r.efecto && typeof r.efecto.dp === 'number'
-      ? T.effectText(en(fase?.nombre) || r.efecto.fase || '?', r.efecto.dp) : T.noEffect;
     const es = r.id === elegida;
     tarjetas.append(h('div', { class: 'tarjeta' + (es ? ' elegida' : '') },
-      h('h4', {}, en(r.nombre) || r.id, es ? h('span', { class: 'etq ok' }, T.selected) : null),
+      h('h4', {}, en(r.nombre) || '—', es ? h('span', { class: 'etq ok' }, T.selected) : null),
       h('dl', {},
         h('dt', {}, T.days), h('dd', {}, valor(c, r.dias, T.days_unit)),
         h('dt', {}, T.propellant), h('dd', {}, valor(c, r.masa, 'kg')),
-        h('dt', {}, T.price), h('dd', {}, valor(c, r.precio, 'M USD')),
-        h('dt', {}, T.effect), h('dd', {}, ef)),
+        h('dt', {}, T.price), h('dd', {}, valor(c, r.precio, 'M USD'))),
       h('button', {
         class: 'btn-plano primario', type: 'button', disabled: !puedo || es,
         title: puedo ? undefined : T.onlyRole(nombreRol('vuelo')),

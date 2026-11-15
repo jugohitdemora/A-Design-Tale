@@ -7,9 +7,9 @@ import { textos, depto } from './i18n.js';
 
 const T = textos({
   es: { pizarra: 'BRIEFING DE MISIÓN', objetivos: 'Objetivos', tareas: 'Tareas', riesgos: 'Riesgos', puerta: 'CONTROL DE MISIÓN', jefe: 'Jefe de misión',
-    escenarios: { orbita: 'ÓRBITA', landing: 'ATERRIZAJE', exploracion: 'EXPLORACIÓN' }, elegir: 'Elige el escenario de la misión', manual: 'MANUAL SOP' },
+    escenarios: { orbita: 'ÓRBITA', landing: 'ATERRIZAJE', exploracion: 'EXPLORACIÓN' }, elegir: 'Elige el escenario de la misión', manual: 'MANUAL SOP', clasificado: 'CLASIFICADO' },
   en: { pizarra: 'MISSION BRIEFING', objetivos: 'Objectives', tareas: 'Tasks', riesgos: 'Risks', puerta: 'MISSION CONTROL', jefe: 'Mission chief',
-    escenarios: { orbita: 'ORBIT', landing: 'LANDING', exploracion: 'EXPLORATION' }, elegir: 'Choose the mission scenario', manual: 'SOP MANUAL' },
+    escenarios: { orbita: 'ORBIT', landing: 'LANDING', exploracion: 'EXPLORATION' }, elegir: 'Choose the mission scenario', manual: 'SOP MANUAL', clasificado: 'CLASSIFIED' },
 });
 
 export const ROLES = [
@@ -569,12 +569,16 @@ function vestirCarpeta(c, id, info, indice) {
     const g = c.lienzo.getContext('2d'), W = c.lienzo.width, H = c.lienzo.height;
     g.fillStyle = '#e8b84a'; g.fillRect(0, 0, W, H);
     g.fillStyle = 'rgba(120,80,20,0.12)'; for (let i = 0; i < 9; i++) g.fillRect(0, 30 + i * 38, W, 2);
-    // Código, destino y sello.
-    g.fillStyle = '#3a2a10'; g.font = 'bold 44px "Space Grotesk", sans-serif'; g.fillText(id, 26, 66);
+    // Nombre, destino y sello.
+    g.fillStyle = '#3a2a10';
+    const nom = info.nombre ?? '—'; let tam = 44;
+    g.font = `bold ${tam}px "Space Grotesk", sans-serif`;
+    while (tam > 20 && g.measureText(nom).width > W * 0.55) { tam -= 2; g.font = `bold ${tam}px "Space Grotesk", sans-serif`; }
+    g.fillText(nom, 26, 66);
     g.font = '22px "Space Grotesk", sans-serif'; g.fillText(info.cuerpoTexto ?? '', 28, 100);
     g.save(); g.translate(120, 270); g.rotate(-0.18);
     g.strokeStyle = '#b3261e'; g.lineWidth = 5; g.strokeRect(-100, -26, 200, 52);
-    g.fillStyle = '#b3261e'; g.font = 'bold 26px "Space Grotesk", sans-serif'; g.textAlign = 'center'; g.fillText(info.sello ?? 'CLASSIFIED', 0, 9);
+    g.fillStyle = '#b3261e'; g.font = 'bold 26px "Space Grotesk", sans-serif'; g.textAlign = 'center'; g.fillText(info.sello ?? T.clasificado, 0, 9);
     g.restore();
     // Foto tipo polaroid sujeta con un clip.
     g.save(); g.translate(368, 182); g.rotate([-0.08, 0.06, -0.03][indice % 3]);

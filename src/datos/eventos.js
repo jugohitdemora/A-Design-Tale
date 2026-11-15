@@ -4,6 +4,7 @@
 //  - signo '±' en un evento de misión: `efecto` es la parte negativa; si hay una contingencia comprada de `mitigadoPor`, se anula
 //    y queda el lado bueno. Positivo ('+'): `efecto.ciencia` o `efecto.dias` > 1. Negativo ('-'): factor < 1 o `falla: true`.
 //  - `efecto.dias` < 1 recorta la vida útil; > 1 la alarga.
+//  - `efecto.meses` (evento de diseño): meses de retraso que suma al reloj cuando sale (contrato-reloj.md §1).
 //  - Los ids de fase de `fase` son los de la misión que usa el evento (cada evento pertenece a una sola misión).
 //  - `mitiga` (contingencia) y `mitigadoPor` (evento) son simétricos: el script de comprobación lo verifica.
 
@@ -21,31 +22,31 @@ export const EVENTOS_DISENO = {
   // ---------------- MER-3 (presupuesto de ~1100 M USD) ----------------
   'ED-MER-IN': ed('ED-MER-IN', '+', 'An investor joins', 'A partner agency adds money to the mission.', { presupuesto: 100 },
     'Generic game event (F-06b). Real parallel: BepiColombo is a joint mission of ESA and JAXA, with two orbiters launched together.', 'BC-01'),
-  'ED-MER-OUT': ed('ED-MER-OUT', '-', 'An investor leaves', 'A partner pulls out and the budget shrinks.', { presupuesto: -100 },
+  'ED-MER-OUT': ed('ED-MER-OUT', '-', 'An investor leaves', 'A partner pulls out and the budget shrinks. Finding a new partner takes 1 month.', { presupuesto: -100, meses: 1 },
     'Generic game event (F-06b). Real parallel: NASA ended the VIPER rover project in July 2024 over cost and delays, then revived it in 2025.', 'EXP-03'),
   'ED-MER-OBJ': ed('ED-MER-OBJ', '±', 'Ice becomes the top goal', 'The science board now wants water ice in polar craters first.', { prioridad: 'MER-3-O3' },
     'ESA lists the ice in polar craters as science question 7 for BepiColombo; MESSENGER saw water ice under dark material there.', 'BC-04'),
-  'ED-MER-LIM': ed('ED-MER-LIM', '-', 'Hotter panels', 'The panels must stay cooler, so less power is allowed.', { limite: { recurso: 'potencia', factor: 0.9 } },
+  'ED-MER-LIM': ed('ED-MER-LIM', '-', 'Hotter panels', 'The panels must stay cooler, so less power is allowed. Requalifying them takes 2 months.', { limite: { recurso: 'potencia', factor: 0.9 }, meses: 2 },
     'The MPO panels are kept below 180 degrees C, with 30% GaAs cells and 70% mirrors.', 'BC-02'),
 
   // ---------------- LUN-3 (presupuesto de ~185 M USD) ----------------
   'ED-LUN-IN': ed('ED-LUN-IN', '+', 'An investor joins', 'A company adds money to the lunar mission.', { presupuesto: 20 },
     'Generic game event (F-06b). Real parallel: NASA paid about 44 M USD for the 10 Blue Ghost payloads on top of the delivery.', 'BG-03'),
-  'ED-LUN-OUT': ed('ED-LUN-OUT', '-', 'An investor leaves', 'A partner pulls out and the budget shrinks.', { presupuesto: -20 },
+  'ED-LUN-OUT': ed('ED-LUN-OUT', '-', 'An investor leaves', 'A partner pulls out and the budget shrinks. Finding a new partner takes 1 month.', { presupuesto: -20, meses: 1 },
     'Generic game event (F-06b). Real parallel: NASA ended the VIPER rover project in July 2024 over cost and delays, then revived it in 2025.', 'EXP-03'),
   'ED-LUN-OBJ': ed('ED-LUN-OBJ', '±', 'Exosphere first', 'Scientists now want the Moon\'s thin atmosphere measured first.', { prioridad: 'LUN-3-O3' },
     'LEXI measured density profiles of the lunar exosphere using the same X-ray glow it used for the magnetosphere.', 'BG-04'),
-  'ED-LUN-LIM': ed('ED-LUN-LIM', '-', 'Shared power deck', 'Another payload takes some of the lander power.', { limite: { recurso: 'potencia', factor: 0.9 } },
+  'ED-LUN-LIM': ed('ED-LUN-LIM', '-', 'Shared power deck', 'Another payload takes some of the lander power. Reworking the power plan takes 2 months.', { limite: { recurso: 'potencia', factor: 0.9 }, meses: 2 },
     'The Blue Ghost lander makes up to 400 W for itself and all ten NASA payloads.', 'BG-01'),
 
   // ---------------- COM-1 (presupuesto de ~960 M USD) ----------------
   'ED-COM-IN': ed('ED-COM-IN', '+', 'An investor joins', 'A partner adds money to the comet mission.', { presupuesto: 80 },
     'Generic game event (F-06b). Real parallel: Rosetta was an ESA mission with contributions from NASA.', 'CM-01'),
-  'ED-COM-OUT': ed('ED-COM-OUT', '-', 'An investor leaves', 'A partner pulls out and the budget shrinks.', { presupuesto: -80 },
+  'ED-COM-OUT': ed('ED-COM-OUT', '-', 'An investor leaves', 'A partner pulls out and the budget shrinks. Finding a new partner takes 1 month.', { presupuesto: -80, meses: 1 },
     'Generic game event (F-06b). Real parallel: NASA ended the VIPER rover project in July 2024 over cost and delays, then revived it in 2025.', 'EXP-03'),
   'ED-COM-OBJ': ed('ED-COM-OBJ', '±', 'Surprise gases first', 'Scientists now want unexpected gases hunted first.', { prioridad: 'COM-1-O3' },
     'Rosetta\'s ROSINA found molecular oxygen, a first at any comet, in more than 3,000 samples.', 'CM-06'),
-  'ED-COM-LIM': ed('ED-COM-LIM', '-', 'Farther from the Sun', 'The comet is farther out, so sunlight and power are lower.', { limite: { recurso: 'potencia', factor: 0.85 } },
+  'ED-COM-LIM': ed('ED-COM-LIM', '-', 'Farther from the Sun', 'The comet is farther out, so sunlight and power are lower. Resizing the panels takes 2 months.', { limite: { recurso: 'potencia', factor: 0.85 }, meses: 2 },
     'Rosetta\'s panels gave 850 W at 3.4 AU but only 395 W at 5.25 AU.', 'CM-08'),
 };
 
@@ -136,17 +137,17 @@ export const CONTINGENCIAS = {
 const VIPER = 'Evento genérico del juego (F-06b). Paralelo real: en julio de 2024 la NASA canceló el rover VIPER por costos y retrasos, y lo retomó en 2025.';
 const ES_ED = {
   'ED-MER-IN': ['Entra un inversionista', 'Una agencia socia aporta dinero a la misión.', 'Evento genérico del juego (F-06b). Paralelo real: BepiColombo es una misión conjunta de la ESA y la JAXA, con dos orbitadores lanzados juntos.'],
-  'ED-MER-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce.', VIPER],
+  'ED-MER-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce. Buscar otro socio lleva 1 mes.', VIPER],
   'ED-MER-OBJ': ['El hielo pasa a ser la meta principal', 'Ahora el comité científico quiere primero el hielo de agua en los cráteres polares.', 'La ESA incluye el hielo en los cráteres polares como la pregunta científica 7 de BepiColombo; MESSENGER vio hielo de agua bajo material oscuro allí.'],
-  'ED-MER-LIM': ['Paneles más calientes', 'Los paneles deben mantenerse más fríos, así que se permite menos potencia.', 'Los paneles del MPO se mantienen por debajo de 180 grados C, con 30 % de celdas de GaAs y 70 % de espejos.'],
+  'ED-MER-LIM': ['Paneles más calientes', 'Los paneles deben mantenerse más fríos, así que se permite menos potencia. Volver a calificarlos lleva 2 meses.', 'Los paneles del MPO se mantienen por debajo de 180 grados C, con 30 % de celdas de GaAs y 70 % de espejos.'],
   'ED-LUN-IN': ['Entra un inversionista', 'Una empresa aporta dinero a la misión lunar.', 'Evento genérico del juego (F-06b). Paralelo real: la NASA pagó cerca de 44 M USD por las 10 cargas de Blue Ghost, además del envío.'],
-  'ED-LUN-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce.', VIPER],
+  'ED-LUN-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce. Buscar otro socio lleva 1 mes.', VIPER],
   'ED-LUN-OBJ': ['Primero la exosfera', 'Ahora los científicos quieren medir primero la atmósfera tenue de la Luna.', 'LEXI midió perfiles de densidad de la exosfera lunar con el mismo resplandor de rayos X que usó para la magnetosfera.'],
-  'ED-LUN-LIM': ['Cubierta de energía compartida', 'Otra carga útil usa parte de la energía del módulo de aterrizaje.', 'El módulo Blue Ghost genera hasta 400 W para sí mismo y para las diez cargas de la NASA.'],
+  'ED-LUN-LIM': ['Cubierta de energía compartida', 'Otra carga útil usa parte de la energía del módulo de aterrizaje. Rehacer el plan de energía lleva 2 meses.', 'El módulo Blue Ghost genera hasta 400 W para sí mismo y para las diez cargas de la NASA.'],
   'ED-COM-IN': ['Entra un inversionista', 'Un socio aporta dinero a la misión al cometa.', 'Evento genérico del juego (F-06b). Paralelo real: Rosetta fue una misión de la ESA con aportes de la NASA.'],
-  'ED-COM-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce.', VIPER],
+  'ED-COM-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce. Buscar otro socio lleva 1 mes.', VIPER],
   'ED-COM-OBJ': ['Primero los gases sorpresa', 'Ahora los científicos quieren cazar primero los gases inesperados.', 'ROSINA de Rosetta encontró oxígeno molecular, algo inédito en un cometa, en más de 3.000 muestras.'],
-  'ED-COM-LIM': ['Más lejos del Sol', 'El cometa está más lejos, así que hay menos luz solar y menos energía.', 'Los paneles de Rosetta daban 850 W a 3,4 UA, pero solo 395 W a 5,25 UA.'],
+  'ED-COM-LIM': ['Más lejos del Sol', 'El cometa está más lejos, así que hay menos luz solar y menos energía. Redimensionar los paneles lleva 2 meses.', 'Los paneles de Rosetta daban 850 W a 3,4 UA, pero solo 395 W a 5,25 UA.'],
 };
 const ES_EM = {
   'EM-MER-1': ['Propulsores débiles', 'Los propulsores iónicos empujan menos de lo previsto y el viaje dura más.', 'En 2024 los propulsores de BepiColombo dieron menos potencia y obligaron a una trayectoria de menor empuje; la llegada pasó de diciembre de 2025 a noviembre de 2026.', 'Deja margen de empuje en un plan de bajo empuje.'],

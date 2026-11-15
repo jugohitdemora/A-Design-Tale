@@ -1,6 +1,7 @@
 // Todas las cadenas de la interfaz de las pantallas de juego, en español e inglés (misma lista de claves en las dos lenguas).
 // T lee siempre la lengua activa (src/i18n.js). Lobby e inicio: src/textos-inicio.js.
 import { textos, depto } from './i18n.js';
+import { dinero } from './pantallas/ui.js';
 
 export const T = textos({
   es: {
@@ -58,10 +59,9 @@ export const T = textos({
   contributes: 'Aporta',
   aporta: { potencia: 'W de potencia', bateria: 'Wh de batería', bajada: 'kbps de bajada', volumen: 'L de volumen' },
   alwaysOn: 'siempre encendida',
-  contribTo: 'Ciencia para',
   mass: 'Masa', power: 'Potencia', price: 'Precio', rate: 'Tasa de datos', volume: 'Volumen',
   gameValue: 'valor de juego (sin dato real)',
-  sourceLabel: 'fuente',
+  estimateValue: 'estimación de los diseñadores del juego',
   addDisabled: 'En Restricciones no puedes añadir piezas.',
   requestReview: 'Pedir revisión',
   reviewsDone: (n) => `Revisiones pedidas: ${n}`,
@@ -81,6 +81,11 @@ export const T = textos({
   units: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/día', presupuesto: 'M USD', volumen: 'L' },
   barState: { ok: 'OK', tolerancia: 'Sobre el límite (tolerancia)', exceso: 'Muy por encima' },
   marker100: '100%', marker120: '120%',
+  clock: 'Reloj', bonusTag: 'por el plazo', investorCut: 'recorte de inversores',
+  budgetHint: 'Dinero usado frente al límite. Los inversores pagan la rapidez y recortan por cada mes de retraso.',
+  monthLine: (mes, plazo) => `Mes ${mes} · lanzamiento comprometido: mes ${plazo}`,
+  plannedLaunch: (m) => `lanzamiento previsto: mes ${m}`, windowLost: 'ventana perdida: elige otro mes',
+  delay: (n) => `retraso: ${n} ${n === 1 ? 'mes' : 'meses'}`, cancelled: 'inversores retirados',
   science: 'Cobertura científica',
   crew: 'Tripulación',
   signed: 'firmado', notSigned: 'sin firmar',
@@ -91,7 +96,7 @@ export const T = textos({
   capacityTo: (dest) => `Capacidad a ${dest}`,
   rocketPrice: 'Precio',
   nasaUse: 'Uso de la NASA',
-  operator: 'Operador',
+  operator: 'Operador', config: 'Configuración', engines: 'Motores', materials: 'Materiales', record: 'Historial de vuelos',
   select: 'Elegir',
   selected: 'Elegido',
   onlyRole: (rol) => `Solo elige ${rol} (o cualquiera, si está vacante).`,
@@ -101,9 +106,6 @@ export const T = textos({
   routeTitle: 'Ruta',
   days: 'Duración', days_unit: 'días',
   propellant: 'Masa de propelente',
-  effect: 'Efecto',
-  noEffect: 'no cambia las probabilidades',
-  effectText: (fase, dp) => `${fase}: ${dp > 0 ? '+' : ''}${Math.round(dp * 100)} % de probabilidad`,
   noRoutes: 'No hay rutas listadas para esta misión.',
 
   // riesgos
@@ -111,11 +113,8 @@ export const T = textos({
   contingenciesTitle: 'Contingencias',
   contingenciesHint: (n, max) => `Cuestan recursos. Elegidas: ${n}/${max}.`,
   probability: 'Probabilidad',
-  mitigated: 'Mitigado',
-  notMitigated: 'Sin mitigar',
   realCase: 'Caso real',
   buy: 'Tomar', drop: 'Soltar', taken: 'Tomada',
-  mitigates: 'Mitiga',
   noRisks: 'Aún no hay riesgos.',
   noContingencies: 'No hay contingencias para esta misión.',
   phase: 'Fase',
@@ -125,7 +124,7 @@ export const T = textos({
   changed: 'Qué cambió',
   close: 'Cerrar',
   eff: {
-    presupuesto: (v) => `Presupuesto ${v > 0 ? '+' : ''}${v} M USD`,
+    presupuesto: (v) => `Presupuesto ${v > 0 ? '+' : ''}${dinero(v)}`,
     limite: (r, f) => `Límite de ${r} x${f}`,
     prioridad: (id) => `Ahora la meta prioritaria es ${id}`,
   },
@@ -134,6 +133,7 @@ export const T = textos({
   constraintsTitle: 'Restricciones: recorta el diseño',
   constraintsLead: 'Quita piezas, baja el uso o cambia de opción sin subir barras pasadas.',
   over: (nombre, usado, limite, pct, u) => `${nombre}: ${usado} de ${limite} ${u} (+${pct} %)`,
+  overMoney: (nombre, usado, limite, pct) => `${nombre}: ${usado} de ${limite} (+${pct} %)`,
   nothingOver: 'Ninguna barra pasa su límite.',
 
   // verificación
@@ -154,8 +154,6 @@ export const T = textos({
   stepPending: 'en espera',
   success: 'Éxito', failure: 'Fallo',
   eventFired: 'Evento',
-  mitigatedBy: 'mitigado por una contingencia',
-  notMitigatedShort: 'sin mitigar',
   dataReceived: 'Datos recibidos',
   generated: 'generados',
   downlinked: 'bajados',
@@ -185,6 +183,8 @@ export const T = textos({
   foundReally: 'Lo que realmente encontró',
   sources: 'Fuentes',
   noSources: 'No hay fuentes listadas.',
+  designersEstimate: 'Estimación de los diseñadores del juego (valores marcados con ≈).',
+  cancelledTitle: 'Misión cancelada', cancelledText: 'Los inversores se retiraron: no hubo vuelo.',
   redesign: 'Rediseñar y volar de nuevo',
   newMission: 'Nueva misión',
 
@@ -251,10 +251,9 @@ export const T = textos({
   contributes: 'Contributes',
   aporta: { potencia: 'W power', bateria: 'Wh battery', bajada: 'kbps downlink', volumen: 'L volume' },
   alwaysOn: 'always on',
-  contribTo: 'Science for',
   mass: 'Mass', power: 'Power', price: 'Price', rate: 'Data rate', volume: 'Volume',
   gameValue: 'game value (no real data)',
-  sourceLabel: 'source',
+  estimateValue: "game designers' estimate",
   addDisabled: 'You cannot add parts in Constraints.',
   requestReview: 'Request review',
   reviewsDone: (n) => `Reviews requested: ${n}`,
@@ -274,6 +273,11 @@ export const T = textos({
   units: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/day', presupuesto: 'M USD', volumen: 'L' },
   barState: { ok: 'OK', tolerancia: 'Over limit (tolerance)', exceso: 'Too far over' },
   marker100: '100%', marker120: '120%',
+  clock: 'Clock', bonusTag: 'for the deadline', investorCut: 'investor cut',
+  budgetHint: 'Money used against the limit. Investors pay for speed and cut funding for each month of delay.',
+  monthLine: (mes, plazo) => `Month ${mes} · committed launch: month ${plazo}`,
+  plannedLaunch: (m) => `launch planned: month ${m}`, windowLost: 'window lost: choose another month',
+  delay: (n) => `delay: ${n} ${n === 1 ? 'month' : 'months'}`, cancelled: 'investors pulled out',
   science: 'Science coverage',
   crew: 'Crew',
   signed: 'signed', notSigned: 'not signed',
@@ -284,7 +288,7 @@ export const T = textos({
   capacityTo: (dest) => `Capacity to ${dest}`,
   rocketPrice: 'Price',
   nasaUse: 'NASA use',
-  operator: 'Operator',
+  operator: 'Operator', config: 'Configuration', engines: 'Engines', materials: 'Materials', record: 'Flight record',
   select: 'Select',
   selected: 'Selected',
   onlyRole: (rol) => `Only ${rol} chooses (or anyone, if vacant).`,
@@ -294,9 +298,6 @@ export const T = textos({
   routeTitle: 'Route',
   days: 'Duration', days_unit: 'days',
   propellant: 'Propellant mass',
-  effect: 'Effect',
-  noEffect: 'no change in odds',
-  effectText: (fase, dp) => `${fase}: ${dp > 0 ? '+' : ''}${Math.round(dp * 100)}% chance`,
   noRoutes: 'No routes listed for this mission.',
 
   // risks
@@ -304,11 +305,8 @@ export const T = textos({
   contingenciesTitle: 'Contingencies',
   contingenciesHint: (n, max) => `Cost resources. Chosen: ${n}/${max}.`,
   probability: 'Probability',
-  mitigated: 'Mitigated',
-  notMitigated: 'Not mitigated',
   realCase: 'Real case',
   buy: 'Take', drop: 'Drop', taken: 'Taken',
-  mitigates: 'Mitigates',
   noRisks: 'No risks yet.',
   noContingencies: 'No contingencies for this mission.',
   phase: 'Phase',
@@ -318,7 +316,7 @@ export const T = textos({
   changed: 'What changed',
   close: 'Close',
   eff: {
-    presupuesto: (v) => `Budget ${v > 0 ? '+' : ''}${v} M USD`,
+    presupuesto: (v) => `Budget ${v > 0 ? '+' : ''}${dinero(v)}`,
     limite: (r, f) => `Limit of ${r} x${f}`,
     prioridad: (id) => `Priority goal is now ${id}`,
   },
@@ -327,6 +325,7 @@ export const T = textos({
   constraintsTitle: 'Constraints: trim the design',
   constraintsLead: 'Remove parts, lower usage, or change options without raising an over-limit bar.',
   over: (nombre, usado, limite, pct, u) => `${nombre}: ${usado} of ${limite} ${u} (+${pct}%)`,
+  overMoney: (nombre, usado, limite, pct) => `${nombre}: ${usado} of ${limite} (+${pct}%)`,
   nothingOver: 'No bar is over its limit.',
 
   // verification
@@ -347,8 +346,6 @@ export const T = textos({
   stepPending: 'waiting',
   success: 'Success', failure: 'Failure',
   eventFired: 'Event',
-  mitigatedBy: 'mitigated by a contingency',
-  notMitigatedShort: 'not mitigated',
   dataReceived: 'Data received',
   generated: 'generated',
   downlinked: 'downlinked',
@@ -378,6 +375,8 @@ export const T = textos({
   foundReally: 'What it really found',
   sources: 'Sources',
   noSources: 'No sources listed.',
+  designersEstimate: "Game designers' estimate (values marked with ≈).",
+  cancelledTitle: 'Mission cancelled', cancelledText: 'The investors pulled out: there was no flight.',
   redesign: 'Redesign and fly again',
   newMission: 'New mission',
 

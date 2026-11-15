@@ -1,6 +1,6 @@
 // Shared helpers for all screens. No state here.
 import { T } from '../textos.js';
-import { tx, depto } from '../i18n.js';
+import { tx, depto, idioma } from '../i18n.js';
 
 export const ROLES_IDS = ['vuelo', 'ciencia', 'potencia', 'comms'];
 export const ROL_COLOR = { vuelo: '#d9822b', ciencia: '#3fa66b', potencia: '#e0c040', comms: '#4a7fd0' };
@@ -41,16 +41,28 @@ export function redondear(n, d = 1) {
   return String(Math.round(n * f) / f);
 }
 
-// A data value {v, conf, src, juego}. Returns a <span> with the number, the "≈" mark for game values and the source id.
+// Dinero: importes del juego en millones de dólares. Un solo formato: "US$ 1,100 M" (en) · "US$ 1.100 M" (es).
+export function dinero(n) {
+  const x = typeof n === 'number' ? n : (n == null || n === '' ? NaN : Number(n));
+  if (!Number.isFinite(x)) return '—';
+  let t;
+  try { t = new Intl.NumberFormat(idioma() === 'es' ? 'es-ES' : 'en-US', { maximumFractionDigits: 1, useGrouping: 'always' }).format(x); } catch { t = String(Math.round(x * 10) / 10); }
+  return `US$ ${t} M`;
+}
+const esDinero = (u) => u === true || u === 'M USD' || u === 'money' || u === T.musd;
+
+// A data value {v, conf, src, juego}. Returns a <span> with the number and the "≈" mark for estimates (the tooltip says how).
+// Unit 'M USD' (or true) formats as money. Never shows the source code.
 export function valor(c, x, unidad = '') {
-  if (x == null) return h('span', { class: 'val tenue' }, '-');
-  if (typeof x === 'number') return h('span', { class: 'val' }, redondear(x, 2) + (unidad ? ' ' + unidad : ''));
+  const din = esDinero(unidad);
+  const fmt = (n) => (din ? dinero(n) : redondear(n, 2) + (unidad ? ' ' + unidad : ''));
+  if (x == null) return h('span', { class: 'val tenue' }, '—');
+  if (typeof x === 'number') return h('span', { class: 'val' }, fmt(x));
   const num = (c.motor?.num ?? ((q) => q?.v ?? q?.juego ?? 0))(x);
   const juego = x.conf === 'JUEGO' || x.v == null;
-  const el = h('span', { class: 'val' + (juego ? ' juego' : ''), title: juego ? T.gameValue : `${T.sourceLabel}: ${x.src ?? '?'}` },
-    (juego ? '≈ ' : '') + redondear(num, 2) + (unidad ? ' ' + unidad : ''));
-  if (!juego && x.src && x.src !== 'JUEGO') el.append(h('sup', { class: 'src' }, x.src));
-  return el;
+  const est = x.conf === 'EST';
+  const titulo = est ? (tx(x.ec) || T.estimateValue) : juego ? T.gameValue : (c.D?.FUENTES?.[x.src]?.titulo ? tx(c.D.FUENTES[x.src].titulo) : null);
+  return h('span', { class: 'val' + (juego || est ? ' juego' : ''), title: titulo }, (juego || est ? '≈ ' : '') + fmt(num));
 }
 
 export const nombreRol = (r) => depto(r);

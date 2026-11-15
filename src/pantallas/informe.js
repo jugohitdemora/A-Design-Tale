@@ -1,7 +1,8 @@
 // Report: verdict, causes, science, hidden findings, final bars, real mission, sources, replay buttons.
 import { T } from '../textos.js';
 import { idioma, tx } from '../i18n.js';
-import { h, en, lista, redondear, resumenSeguro, fuenteLink } from './ui.js';
+import { h, en, lista, redondear, resumenSeguro } from './ui.js';
+import { explicarCausas } from '../reglas/explicar.js';
 import { panelGlobal } from './panel-global.js';
 
 function recogerFuentes(c, set) {
@@ -31,11 +32,13 @@ export function pantallaInforme(c) {
   if (!r) raiz.append(h('p', { class: 'tenue vacio' }, T.noResult));
   else {
     const vd = r.veredicto;
-    raiz.append(h('div', { class: 'veredicto v-' + vd }, h('b', {}, T.verdicts[vd] ?? String(vd ?? '-')), h('span', {}, T.verdictText[vd] ?? ''),
+    raiz.append(h('div', { class: 'veredicto v-' + vd }, h('b', {}, r.cancelada ? T.cancelledTitle : (T.verdicts[vd] ?? '—')), h('span', {}, r.cancelada ? T.cancelledText : (T.verdictText[vd] ?? '')),
       r.puntos != null ? h('small', {}, `${T.points}: ${redondear(Number(r.puntos), 0)}`) : null));
     raiz.append(h('h4', {}, T.causes));
-    const causas = lista(r.causas);
-    raiz.append(causas.length ? h('ol', { class: 'causas' }, causas.map((x) => h('li', {}, tx(x)))) : h('p', { class: 'tenue' }, T.none));
+    let causas = [];
+    try { causas = explicarCausas(r, c.D, idioma()); } catch (err) { console.error('explicarCausas', err); }
+    if (!causas.length) causas = lista(r.causas).map((x) => tx(x)).filter(Boolean);
+    raiz.append(causas.length ? h('ol', { class: 'causas' }, causas.map((x) => h('li', {}, x))) : h('p', { class: 'tenue' }, T.none));
 
     raiz.append(h('h4', {}, T.scienceAchieved));
     const cs = h('ul', { class: 'objetivos' });
@@ -43,7 +46,7 @@ export function pantallaInforme(c) {
       const o = lista(m?.objetivos).find((q) => q.id === x.id);
       const c0 = x.conseguido;
       const txt = typeof c0 === 'boolean' ? (c0 ? T.achieved : T.notAchieved) : typeof c0 === 'number' ? (c0 <= 1 ? `${redondear(c0 * 100, 0)}%` : redondear(c0, 1)) : '-';
-      cs.append(h('li', { class: (x.prioridad ?? o?.prioridad) ? 'prio' : '' }, `${en(o?.nombre) || x.id}: `, h('b', {}, txt), (x.prioridad ?? o?.prioridad) ? h('b', { class: 'etq' }, T.priorityGoal) : null));
+      cs.append(h('li', { class: (x.prioridad ?? o?.prioridad) ? 'prio' : '' }, `${en(o?.nombre) || '—'}: `, h('b', {}, txt), (x.prioridad ?? o?.prioridad) ? h('b', { class: 'etq' }, T.priorityGoal) : null));
     }
     raiz.append(cs);
 
@@ -54,7 +57,7 @@ export function pantallaInforme(c) {
         const o = lista(m?.oculto).find((q) => q.id === id) ?? {};
         // El motor dice de cada hallazgo si estaba (presente) y si lo captó un instrumento a bordo (capturado).
         const marca = typeof x === 'object' && x ? (x.capturado ? T.sep + T.found : x.presente ? T.sep + T.missed : T.sep + T.notThere) : '';
-        return h('li', {}, h('b', {}, en(o.nombre) || en(x?.nombre) || id), marca, en(o.casoReal) ? h('div', { class: 'tenue pequeno' }, en(o.casoReal)) : null);
+        return h('li', {}, h('b', {}, en(o.nombre) || en(x?.nombre) || '—'), marca, en(o.casoReal) ? h('div', { class: 'tenue pequeno' }, en(o.casoReal)) : null);
       })));
     }
   }
@@ -63,9 +66,9 @@ export function pantallaInforme(c) {
   const ref = m?.referencia;
   if (ref) {
     real.append(h('dl', {},
-      h('dt', {}, T.realMissionRef), h('dd', {}, ref.mision ?? '-'),
-      h('dt', {}, T.agency), h('dd', {}, (idioma() === 'es' && ref.agenciaEs) || ref.agencia || '-'),
-      h('dt', {}, T.realRocket), h('dd', {}, ref.coheteReal ?? '-')));
+      h('dt', {}, T.realMissionRef), h('dd', {}, en(ref.mision) || '—'),
+      h('dt', {}, T.agency), h('dd', {}, (idioma() === 'es' && ref.agenciaEs) || en(ref.agencia) || '—'),
+      h('dt', {}, T.realRocket), h('dd', {}, en(ref.coheteReal) || '—')));
     const datos = lista(m.objetivos).filter((o) => en(o.datoReal));
     if (datos.length) real.append(h('h4', {}, T.foundReally), h('ul', { class: 'objetivos' }, datos.map((o) => h('li', {}, en(o.datoReal)))));
   } else real.append(h('p', { class: 'tenue vacio' }, T.noMission));
@@ -73,11 +76,19 @@ export function pantallaInforme(c) {
   const set = new Set();
   try { recogerFuentes(c, set); } catch (err) { console.error('fuentes', err); }
   const fu = h('section', { class: 'caja' }, h('h3', {}, T.sources));
-  if (set.size) {
-    fu.append(h('ul', { class: 'fuentes' }, [...set].map((id) => {
-      const f = fuenteLink(c, id);
-      return h('li', {}, h('code', {}, f.id), ' ', f.url ? h('a', { href: f.url, target: '_blank', rel: 'noopener noreferrer' }, f.titulo) : f.titulo, f.agencia ? h('small', { class: 'tenue' }, ` (${f.agencia})`) : null);
-    })));
+  // Solo se muestran las fuentes con título propio. Las internas (huecos GAP-, JUEGO, PRECIO...) se resumen en una línea.
+  const interna = (id) => /^GAP-/.test(id) || ['JUEGO', 'PRECIO', 'CG', 'F-06b'].includes(id);
+  const publicas = [...set].filter((id) => !interna(id) && c.D?.FUENTES?.[id]);
+  const hayInternas = [...set].some(interna);
+  if (publicas.length || hayInternas) {
+    fu.append(h('ul', { class: 'fuentes' },
+      publicas.map((id) => {
+        const f = c.D.FUENTES[id];
+        const url = typeof f.url === 'string' && /^https?:\/\//.test(f.url) ? f.url : null;
+        const ag = en(f.agencia);
+        return h('li', {}, url ? h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, en(f.titulo) || '—') : (en(f.titulo) || '—'), ag ? h('small', { class: 'tenue' }, ` (${ag})`) : null);
+      }),
+      hayInternas ? h('li', { class: 'tenue' }, T.designersEstimate) : null));
   } else fu.append(h('p', { class: 'tenue vacio' }, T.noSources));
 
   const botones = h('div', { class: 'acciones' },

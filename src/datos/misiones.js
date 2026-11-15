@@ -5,6 +5,8 @@
 // son números simples (así los muestra el contrato §10). `ruta.dias`, `ruta.masa`, `ruta.precio` son valores {v, conf, src[, juego]}.
 // Campos extra respecto a §10 (nunca renombran nada): `referencia.cifras` (cifras reales para el informe), `reserva`/`nota` en filas sin cablear,
 // `pieza`/`objetivo`/`min` en `verificacion`, `desc`/`regla`/`misiones` en ESCENARIOS.
+// `reloj` (contrato-reloj.md §1): `inicio` = mes del calendario (0 = enero de 2027) en que empieza el diseño; `plazos` = meses de
+// compromiso que se ofrecen en el expediente (corto, medio, largo). Los inversores pagan +10 % por el corto y −10 % por el largo.
 
 const N = (es, en = es) => ({ es, en });
 const E = (en) => ({ en });
@@ -50,7 +52,7 @@ const MER_3 = {
       C('A 1.5 m2 radiator sheds 200 W of heat.', 'BC-02'),
     ],
   },
-  destino: 'mercurio', presupuesto: I(1100), horasSombra: 1.5, horasEnlace: 8, diasPrevistos: 365, limites: {},
+  destino: 'mercurio', reloj: { inicio: 0, plazos: [12, 18, 24] }, presupuesto: I(1100), horasSombra: 1.5, horasEnlace: 8, diasPrevistos: 365, limites: {},
   objetivos: [
     { id: 'MER-3-O1', prioridad: true, nombre: E('Learn what the surface is made of'), valor: 40, requiere: ['ME-14', 'ME-15', 'ME-16'], usoObjetivo: 10,
       datoReal: E('MESSENGER found more potassium and sulfur than expected, which does not fit the big-impact idea.'), src: 'BC-09' },
@@ -96,7 +98,7 @@ const LUN_3 = {
       C('NASA paid about 101 M USD for the delivery and 44 M USD for the ten payloads (press report).', 'BG-03'),
     ],
   },
-  destino: 'luna', presupuesto: I(185), horasSombra: 5, horasEnlace: 8, diasPrevistos: 14, limites: {},
+  destino: 'luna', reloj: { inicio: 0, plazos: [6, 10, 14] }, presupuesto: I(185), horasSombra: 5, horasEnlace: 8, diasPrevistos: 14, limites: {},
   objetivos: [
     { id: 'LUN-3-O1', prioridad: true, nombre: E('Take X-ray pictures of the magnetic shield of Earth'), valor: 40, requiere: ['LE-10'], usoObjetivo: 16,
       datoReal: E('LEXI took X-ray images of where the solar wind hits the magnetic field of Earth.'), src: 'BG-04' },
@@ -144,7 +146,7 @@ const COM_1 = {
       C('The whole mission returned 220 GB and more than 100,000 images.', 'CM-02'),
     ],
   },
-  destino: 'cometa', presupuesto: I(960), horasSombra: 2, horasEnlace: 8, diasPrevistos: 730, limites: {},
+  destino: 'cometa', reloj: { inicio: 0, plazos: [10, 18, 30] }, presupuesto: I(960), horasSombra: 2, horasEnlace: 8, diasPrevistos: 730, limites: {},
   objetivos: [
     { id: 'COM-1-O1', prioridad: true, nombre: E('Find which gases leave the comet and how much'), valor: 40, requiere: ['CE-08', 'CE-09'], usoObjetivo: 10,
       datoReal: E('ALICE measured how fast the comet makes water, carbon monoxide and carbon dioxide.'), src: 'CM-03' },

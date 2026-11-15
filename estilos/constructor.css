@@ -282,3 +282,22 @@
 
 /* Ajustes tras revisión: botón de revisión con texto que parte línea */
 .kb-der-pie .boton { white-space: normal; line-height: 1.4; }
+
+/* ---- batch 2: usoPara, pros/contras, presupuesto y reloj ---- */
+.kb-deptos .boton { font-size: var(--t-meta); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; }
+.kb-uso-para { margin: 0; font-size: var(--t-cuerpo); line-height: 1.35; }
+.kb-pc { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e-2); font-size: var(--t-meta); }
+.kb-pc small { display: block; font-weight: 700; color: var(--lp-tenue); }
+.kb-pc ul { margin: 0; padding-left: 14px; }
+.kb-pro small { color: var(--lp-ok); }
+.kb-contra small { color: var(--lp-mal); }
+.kb-reloj { margin-left: auto; font-size: var(--t-meta); }
+.kb-reloj b { font-weight: 700; }
+.kb-reloj.retraso { color: var(--lp-aviso); }
+.kb-reloj.cancelada { color: var(--lp-mal); font-weight: 700; }
+.kb-barra.presu { padding: var(--e-2); background: var(--lp-panel-2); border-color: var(--lp-borde); }
+.kb-barra.presu.alerta { border-color: var(--lp-mal); }
+.kb-barra.presu .kb-barra-nom, .kb-barra.presu .kb-barra-num { font-size: var(--t-cuerpo); }
+.kb-barra.presu .kb-barra-num { color: var(--lp-tinta); }
+.kb-presu-det { display: flex; flex-wrap: wrap; gap: 0 var(--e-3); margin-top: 2px; font-size: var(--t-meta); color: var(--lp-tenue); }
+.kb-presu-det b { color: var(--lp-tinta); }
