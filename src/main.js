@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import mqtt from 'mqtt';
 import { JUEGO, RED } from './config.js';
-import { ponerIdioma } from './i18n.js';
+import { ponerIdioma, idioma, tx } from './i18n.js';
 import { TI } from './textos-inicio.js';
-import { crearEscena, ROLES, ASIENTOS } from './escena.js';
+import { crearEscena, ROLES, ASIENTOS, nombreEscenario } from './escena.js';
 import { crearCentroDeControl } from './inicio.js';
 import { crearSesion } from './red/sesion.js';
 import { crearTransporteMqtt } from './red/transporte-mqtt.js';
@@ -70,6 +70,9 @@ let lugar = 'briefing';    // 'briefing' | 'control': qué sala 3D se ve
 let vista = 'sala';        // 'sala' (mirar) | 'laptop' (sentado al portátil) | 'control' (pared de la sala de control)
 let pantallaLista = false; // la pantalla DOM solo aparece cuando la cámara terminó de encuadrar
 let faseVista = null;      // última fase para la que se decidió la vista automática
+let focoAntes = false;     // ¿la cámara estaba fija en el proyector?
+let proyectorVisto = null; // último estado del proyector pintado (null: aún nada, sin animación)
+let vestidoClave = '';     // reparto + idioma con el que se dibujaron las carpetas
 const nickDePestana = () => { try { return sessionStorage.getItem('nick'); } catch { return null; } };
 let nick = nickDePestana() ?? leer('nick', '');
 const mirada = { yaw: 0, pitch: -0.25 };
@@ -89,6 +92,9 @@ const indiceRol = (id) => ROLES.findIndex((r) => r.id === id);
 const estado = () => sesion?.estado ?? null;
 const miRol = () => sesion?.yo()?.rol ?? null;
 const enJuego = () => pantalla === 'sala' && !!estado() && estado().fase !== 'lobby';
+// Briefing sin escenario confirmado: el proyector está en la mesa y la cámara queda fija en él.
+const proyectorEnMesa = (e = estado()) => !!e && e.fase === 'briefing' && !e.mision?.escenario;
+const modoProyector = () => enJuego() && lugar === 'briefing' && !!miRol() && proyectorEnMesa();
 
 function codigoAleatorio() {
   return Array.from({ length: 5 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
@@ -154,8 +160,8 @@ function entrarEnSala(cod) {
   sesion.on('estado', () => { pintarMesa(); actualizarTodo(); });
   sesion.on('aviso', (motivo) => { avisar(motivo); actualizarTodo(); });
   sesion.on('version', () => { versionAjena = true; actualizarTodo(); });
-  sesion.on('nuevoPar', () => sesion?.presencia({ ...mirada }));
-  sesion.on('presencia', (id, datos) => { if (datos) poses.set(id, datos); else poses.delete(id); actualizarAvatares(); });
+  sesion.on('nuevoPar', () => sesion?.presencia(presencia()));
+  sesion.on('presencia', (id, datos) => { if (datos) poses.set(id, datos); else poses.delete(id); actualizarAvatares(); pintarVotos(); });
   pantalla = 'lobby';
   faseVista = null;
   avisar('');
@@ -170,11 +176,14 @@ function salirDeSala() {
   actualizarTodo();
 }
 
+// Presencia = mirada + voto de escenario (el voto es solo una pista visual: no pasa por las reglas).
+let miVoto = null;
+const presencia = () => ({ ...mirada, voto: miVoto });
 let ultimoEnvio = 0, envioPendiente = null;
 function difundirMirada() {
   const ahora = performance.now();
   clearTimeout(envioPendiente);
-  if (ahora - ultimoEnvio > 66) { ultimoEnvio = ahora; sesion?.presencia({ ...mirada }); }
+  if (ahora - ultimoEnvio > 66) { ultimoEnvio = ahora; sesion?.presencia(presencia()); }
   else envioPendiente = setTimeout(difundirMirada, 70);
 }
 
@@ -234,6 +243,7 @@ let fundido = null;
 function irA(v, inmediato = false) {
   if (!enJuego()) return;
   if (v === 'laptop' && !miRol()) return;
+  if (v !== 'sala' && proyectorEnMesa()) return; // hasta elegir escenario no se sale del proyector
   const nuevoLugar = v === 'control' ? 'control' : 'briefing';
   if (nuevoLugar !== lugar) {
     const cambiar = () => { lugar = nuevoLugar; vista = v; empezarTransicion(true); actualizarTodo(); };
@@ -268,6 +278,15 @@ function actualizarTodo() {
   document.body.classList.toggle('en-sala', enSala && vista === 'sala');
   document.body.classList.toggle('en-juego', pantalla === 'sala');
   renderEtiquetas.domElement.style.display = enSala && vista === 'sala' ? '' : 'none';
+  const foco = modoProyector();
+  document.body.classList.toggle('en-proyector', foco);
+  if (foco !== focoAntes) {
+    focoAntes = foco;
+    if (!foco) { miVoto = null; sala.seleccionar(null); sesion?.presencia(presencia()); }
+    if (vista === 'sala') empezarTransicion(false); // breve zoom hacia el proyector (o de vuelta al asiento)
+  }
+  pintarProyectorUI();
+  vestirCarpetas();
   ui.pintar({
     estado: e, rol, jugadorId, nick, activo: pantalla === 'sala', vista: pantalla === 'sala' ? vista : 'sala', pantallaLista,
     enLinea: e ? T.online(conectados(e).length, MAX_JUGADORES) : '',
@@ -359,14 +378,68 @@ function pintarMesa() {
   const b = e?.briefing;
   if (!b) return;
   for (const [id, c] of Object.entries(sala.casillas)) c.material.color.set(b[id] ? 0x2f8f4f : 0xffffff);
-  sala.elegirEscenario(e.mision?.escenario ?? null);
+  // El jefe pone el proyector al empezar el briefing y lo retira al confirmarse el escenario.
+  const enMesa = proyectorEnMesa(e);
+  if (enMesa !== proyectorVisto) {
+    sala.proyector(enMesa, proyectorVisto !== null && pantalla === 'sala');
+    proyectorVisto = enMesa;
+  }
   if (b.repartos !== repartoVisto) {
     const animar = repartoVisto !== null && pantalla === 'sala' && e.fase === 'briefing';
     sala.repartir(b.reparto, animar);
     repartoVisto = b.repartos;
+    vestidoClave = '';
     if (animar && vista !== 'sala') irA('sala');
   }
   sala.marcarCarpeta(e.mision?.id ?? null);
+}
+
+// Foto, código y pista de cada carpeta repartida. Los datos cargan aparte: se reintenta hasta tenerlos.
+function vestirCarpetas() {
+  const D = ui.contexto.D, reparto = estado()?.briefing?.reparto;
+  if (!D || !reparto?.length) return;
+  const clave = `${estado().briefing.repartos}|${idioma()}|${reparto.join(',')}`;
+  if (clave === vestidoClave) return;
+  vestidoClave = clave;
+  sala.vestirCarpetas((id) => {
+    const m = D.MISIONES?.[id];
+    if (!m) return null;
+    return { cuerpo: m.cuerpo, cuerpoTexto: tx(m.cuerpo), nombre: tx(m.nombre), pista: tx(m.brief ?? m.apertura ?? ''), sello: TI.clasificado };
+  });
+}
+
+// Votos de la tripulación sobre cada holograma (avatares pequeños sobre la tarjeta).
+function pintarVotos() {
+  const e = estado();
+  const votos = {};
+  if (e && modoProyector()) {
+    for (const [id, j] of Object.entries(e.jugadores)) {
+      if (!j.conectado || !j.rol) continue;
+      const v = id === jugadorId ? miVoto : poses.get(id)?.voto;
+      if (!v) continue;
+      const r = ROLES[indiceRol(j.rol)];
+      (votos[v] ??= []).push({ color: colorCss(r.color), letra: (j.nick || '?').slice(0, 1).toUpperCase(), nick: `${j.nick} · ${r.nombre}` });
+    }
+  }
+  sala.mostrarVotos(votos);
+}
+
+// Barra inferior del proyector: indicación y botón "Elegir X".
+const proyectorUI = $('proyector-ui');
+const btnConfirmar = $('confirmar-escenario');
+btnConfirmar.addEventListener('click', () => {
+  if (!miVoto || !modoProyector()) return;
+  avisar('');
+  sesion?.intentar('elegirMision', { escenario: miVoto });
+});
+function pintarProyectorUI() {
+  const foco = modoProyector();
+  proyectorUI.classList.toggle('oculto', !foco);
+  if (!foco) return;
+  $('proyector-txt').textContent = miVoto ? TI.proyectorConfirma : TI.proyectorElige;
+  btnConfirmar.disabled = !miVoto;
+  btnConfirmar.textContent = miVoto ? TI.elegirEscenario(nombreEscenario(miVoto)) : TI.elegirEscenario('…');
+  pintarVotos();
 }
 actualizarTodo();
 let enLineaAntes = true;
@@ -374,6 +447,7 @@ setInterval(() => {
   const ok = !sesion || !transporte || transporte.enLinea().listos > 0;
   if (ok !== enLineaAntes && pantalla === 'lobby') actualizarTodo();
   enLineaAntes = ok;
+  vestirCarpetas(); // los datos de misión pueden llegar después del reparto
 }, 2000);
 window.__depurar = { sesion: () => sesion, transporte: () => transporte, mirada, camara: camaraSala, clicables: sala.clicables, THREE, irA: (v) => irA(v), estadoVista: () => ({ lugar, vista, pantallaLista }) };
 
@@ -399,11 +473,12 @@ const raycaster = new THREE.Raycaster();
 const puedeMirar = () => enJuego() && lugar === 'briefing' && vista === 'sala' && !ui.overlay;
 contenedor.addEventListener('pointerdown', (e) => {
   if (!puedeMirar()) return;
+  if (modoProyector()) { arrastre = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, fijo: true }; return; } // cámara fija: solo clic
   arrastre = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY };
   contenedor.setPointerCapture(e.pointerId);
 });
 contenedor.addEventListener('pointermove', (e) => {
-  if (!arrastre) { if (puedeMirar()) resaltar(e); return; }
+  if (!arrastre || arrastre.fijo) { if (puedeMirar()) resaltar(e); return; }
   const s = ajustes.sensibilidad;
   mirada.yaw = THREE.MathUtils.clamp(mirada.yaw - (e.clientX - arrastre.x) * s, -1.9, 1.9);
   mirada.pitch = THREE.MathUtils.clamp(mirada.pitch - (e.clientY - arrastre.y) * s, -1.1, 1.0);
@@ -419,11 +494,16 @@ contenedor.addEventListener('pointerup', (e) => {
 function tocado(e) {
   const p = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(p, camaraSala);
-  return raycaster.intersectObjects(sala.clicables).filter((x) => x.object.userData.activo !== false)[0] ?? null;
+  let hits = raycaster.intersectObjects(sala.clicables).filter((x) => x.object.userData.activo !== false);
+  // Con el proyector en la mesa solo cuentan los hologramas.
+  if (modoProyector()) hits = hits.filter((x) => x.object.userData.tipo === 'escenario');
+  // Una carpeta se ve a través de lo que la tape (contorno), así que también gana el clic.
+  return hits.find((x) => x.object.userData.tipo === 'carpeta') ?? hits[0] ?? null;
 }
 function resaltar(e) {
   const hit = tocado(e);
   contenedor.style.cursor = hit ? 'pointer' : '';
+  sala.resaltar(hit?.object ?? null);
 }
 
 function clic(e) {
@@ -432,7 +512,13 @@ function clic(e) {
   const d = hit.object.userData;
   const fase = estado()?.fase;
   if (d.tipo === 'casilla') sesion?.intentar('marcarPizarra', { id: d.id });
-  if (d.tipo === 'escenario' && fase === 'briefing') sesion?.intentar('elegirMision', { escenario: d.id });
+  if (d.tipo === 'escenario' && modoProyector()) {
+    // Primer clic: seleccionar (voto visible para todos). La confirmación va en el botón "Elegir X".
+    miVoto = d.id;
+    sala.seleccionar(d.id);
+    sesion?.presencia(presencia());
+    pintarProyectorUI();
+  }
   if (d.tipo === 'carpeta' && d.id) ui.abrir({ tipo: 'expediente', id: d.id });
   if (d.tipo === 'laptop') irA('laptop');
   if (d.tipo === 'manual') ui.abrir({ tipo: 'manual', rol: d.rol });
@@ -473,6 +559,18 @@ function poseObjetivo(out) {
     out.quat.setFromRotationMatrix(mLook);
     return;
   }
+  if (modoProyector()) {
+    // Cámara fija sobre la mesa, del lado del propio asiento, mirando los hologramas.
+    // Distancia según el ancho de pantalla: los tres hologramas (≈1,8 m con sus tarjetas) siempre caben.
+    const lado = ASIENTOS[i].z < 0 ? -1 : 1;
+    const tanH = Math.tan(THREE.MathUtils.degToRad(camaraSala.fov / 2)) * camaraSala.aspect;
+    const d = THREE.MathUtils.clamp(0.95 / tanH, 1.0, 2.2);
+    out.pos.set(0, 1.25 + d * 0.22, lado * d);
+    puntoMirar.copy(sala.focoProyector); puntoMirar.y += 0.3;
+    mLook.lookAt(out.pos, puntoMirar, camaraSala.up);
+    out.quat.setFromRotationMatrix(mLook);
+    return;
+  }
   euler.set(mirada.pitch, ASIENTOS[i].ry + Math.PI + mirada.yaw, 0);
   out.quat.setFromEuler(euler);
 }
@@ -501,11 +599,20 @@ function colocarPantalla() {
 
 // ---------- Bucle (solo dibuja: la lógica de red no depende de él) ----------
 const reloj = new THREE.Clock();
-let tFondo = 0, tControl = 0;
+let tFondo = 0, tControl = 0, enCineAntes = false;
 function bucle() {
   const dt = Math.min(0.1, reloj.getDelta());
   sala.actualizar(dt);
   if (pantalla === 'sala' && miRol()) {
+    // Al acabar el reparto la mirada se queda donde apuntaba la cinemática (las carpetas), no vuelve al frente.
+    if (enCineAntes && !sala.enCinematica && lugar === 'briefing' && vista === 'sala') {
+      euler.setFromQuaternion(camaraSala.quaternion, 'YXZ');
+      const ry = ASIENTOS[Math.max(0, indiceRol(miRol()))].ry + Math.PI;
+      mirada.yaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(euler.y - ry), Math.cos(euler.y - ry)), -1.9, 1.9);
+      mirada.pitch = THREE.MathUtils.clamp(euler.x, -1.1, 1.0);
+      difundirMirada();
+    }
+    enCineAntes = sala.enCinematica;
     poseObjetivo(objetivo);
     if (transicion && transicion.t < 1) {
       transicion.t = Math.min(1, transicion.t + dt / 0.75);
@@ -527,7 +634,7 @@ function bucle() {
       render.render(control.escena, camaraSala);
     } else {
       render.render(sala.escena, camaraSala);
-      if (vista === 'sala') renderEtiquetas.render(sala.escena, camaraSala);
+      if (vista === 'sala') { sala.escalonarPistas(camaraSala.position); renderEtiquetas.render(sala.escena, camaraSala); }
     }
     colocarPantalla();
   } else {

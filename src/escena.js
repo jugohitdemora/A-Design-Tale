@@ -7,9 +7,9 @@ import { textos, depto } from './i18n.js';
 
 const T = textos({
   es: { pizarra: 'BRIEFING DE MISIÓN', objetivos: 'Objetivos', tareas: 'Tareas', riesgos: 'Riesgos', puerta: 'CONTROL DE MISIÓN', jefe: 'Jefe de misión',
-    escenarios: { orbita: 'ÓRBITA', landing: 'ATERRIZAJE', exploracion: 'EXPLORACIÓN' }, elegir: 'clic para elegir escenario', manual: 'MANUAL SOP' },
+    escenarios: { orbita: 'ÓRBITA', landing: 'ATERRIZAJE', exploracion: 'EXPLORACIÓN' }, elegir: 'Elige el escenario de la misión', manual: 'MANUAL SOP' },
   en: { pizarra: 'MISSION BRIEFING', objetivos: 'Objectives', tareas: 'Tasks', riesgos: 'Risks', puerta: 'MISSION CONTROL', jefe: 'Mission chief',
-    escenarios: { orbita: 'ORBIT', landing: 'LANDING', exploracion: 'EXPLORATION' }, elegir: 'click to choose a scenario', manual: 'SOP MANUAL' },
+    escenarios: { orbita: 'ORBIT', landing: 'LANDING', exploracion: 'EXPLORATION' }, elegir: 'Choose the mission scenario', manual: 'SOP MANUAL' },
 });
 
 export const ROLES = [
@@ -28,10 +28,13 @@ export const ASIENTOS = [
 ];
 export const ALTURA_OJOS = 1.18;
 export const ESCENARIOS_IDS = ['orbita', 'landing', 'exploracion'];
+export const nombreEscenario = (id) => T.escenarios[id] ?? id;
 
 const Y_MESA = 0.8;
-const POS_CARPETAS = [-1.2, -0.25, 0.7];      // x sobre el eje largo de la mesa (z = 0)
-const POS_PROYECTOR = new THREE.Vector3(1.72, Y_MESA, 0);
+const POS_CARPETAS = [-0.5, 0, 0.5];          // juntas en el centro de la mesa (x sobre el eje largo, z ≈ 0)
+const GIRO_CARPETAS = [0.07, -0.04, 0.05];     // un poco torcidas, como lanzadas a mano
+const POS_PROYECTOR = new THREE.Vector3(0, Y_MESA, 0);
+const SEP_HOLOS = 0.62, ALTO_HOLOS = 0.52;
 const JEFE_REPOSO = { x: -3.2, z: -1.2, ry: Math.PI / 3 };
 const JEFE_MESA = { x: -2.6, z: 0.0, ry: Math.PI / 2 };
 const PANTALLA_W = 0.5, PANTALLA_H = 0.3125; // 16:10
@@ -147,33 +150,45 @@ export function crearEscena() {
     escena.add(avatares[i].grupo);
   });
 
-  // Proyector de escenarios: tres hologramas que se pueden elegir.
+  // Proyector de escenarios en el centro de la mesa. El jefe lo pone al empezar el briefing y lo retira
+  // cuando la tripulación confirma un escenario. Los tres hologramas se reparten a lo largo de la mesa (eje x).
+  const grupoProy = new THREE.Group();
+  grupoProy.position.copy(POS_PROYECTOR);
+  escena.add(grupoProy);
   const proyector = new THREE.Group();
-  proyector.position.copy(POS_PROYECTOR);
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.07, 10), mat(0x3a3f46));
   base.position.y = 0.035; proyector.add(base);
   const lente = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.012, 10), new THREE.MeshBasicMaterial({ color: 0x7fe3ff }));
   lente.position.y = 0.076; proyector.add(lente);
-  const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.15, 0.36, 12, 1, true),
+  const haz = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.15, 0.4, 16, 1, true),
     new THREE.MeshBasicMaterial({ color: 0x7fe3ff, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false }));
-  haz.position.y = 0.26; proyector.add(haz);
-  escena.add(proyector);
+  haz.position.y = 0.28; proyector.add(haz);
+  grupoProy.add(proyector);
   const holos = {};
   ESCENARIOS_IDS.forEach((id, k) => {
     const g = crearHolograma(id);
-    g.position.set(POS_PROYECTOR.x, Y_MESA + 0.5, (k - 1) * 0.42);
-    const z = zona(0.3, 0.32, 0.3, { tipo: 'escenario', id }); g.add(z); clicables.push(z);
-    const et = etiqueta(() => T.escenarios[id], 'etiqueta holo-etq'); et.position.y = -0.2; g.add(et);
-    escena.add(g);
-    holos[id] = { grupo: g, zona: z, etiqueta: et, fase: k * 2.1 };
+    g.position.set((k - 1) * SEP_HOLOS, ALTO_HOLOS, 0);
+    // La zona de clic cubre el holograma y su tarjeta (debajo), para que la tarjeta también se pueda pulsar.
+    const z = zona(0.42, 0.62, 0.42, { tipo: 'escenario', id }); z.position.y = -0.08; g.add(z); clicables.push(z);
+    const div = document.createElement('div');
+    div.className = 'holo-tarjeta';
+    const votos = document.createElement('div'); votos.className = 'holo-votos';
+    const nombre = document.createElement('div'); nombre.className = 'holo-nombre';
+    etiquetas.push({ div: nombre, f: () => T.escenarios[id] }); nombre.textContent = T.escenarios[id];
+    div.append(votos, nombre);
+    const et = new CSS2DObject(div); et.position.y = -0.27; g.add(et);
+    grupoProy.add(g);
+    holos[id] = { grupo: g, zona: z, etiqueta: et, votos, fase: k * 2.1, escala: 1 };
   });
   const pista = etiqueta(() => T.elegir, 'etiqueta holo-pista');
-  pista.position.set(POS_PROYECTOR.x, Y_MESA + 0.86, 0); escena.add(pista);
+  pista.position.set(0, ALTO_HOLOS + 0.36, 0); grupoProy.add(pista);
 
-  // Carpetas de misión: ocultas hasta que el jefe las reparte.
+  // Carpetas de misión: ocultas hasta que el jefe las reparte. Juntas en el centro, donde estaba el proyector,
+  // para que ningún portátil las tape. Cada una lleva foto, código y una pista en HTML.
   const carpetas = POS_CARPETAS.map((x, k) => {
     const c = crearCarpeta();
-    c.destino = new THREE.Vector3(x, Y_MESA + 0.012, 0);
+    c.destino = new THREE.Vector3(x, Y_MESA + 0.012, GIRO_CARPETAS[k] * 0.4);
+    c.giro = GIRO_CARPETAS[k];
     c.grupo.position.copy(c.destino);
     c.grupo.visible = false;
     c.zona.userData = { tipo: 'carpeta', indice: k, activo: false };
@@ -190,17 +205,26 @@ export function crearEscena() {
 
   // ---------- Animación ----------
   let t = 0;
-  let cine = null; // { t0, ids, n }
-  let escenarioElegido = null, carpetaElegida = null;
+  let cine = null; // { t0 }: reparto de carpetas en curso
+  let carpetaElegida = null;
+  let voto = null;           // escenario que este jugador ha seleccionado (aún sin confirmar)
+  let encima = null;         // objeto clicable bajo el puntero
+  const proy = { activo: false, u: 0 }; // u: 0 guardado … 1 desplegado
+  const jefePose = { ...JEFE_REPOSO };
   const mano = new THREE.Vector3(-2.3, 1.05, 0);
-  const DUR = { ir: 1.2, carpeta: 0.55, paso: 0.42, volver: 1.1 };
-  const finCine = () => DUR.ir + DUR.paso * 2 + DUR.carpeta + 0.3 + DUR.volver;
+  const DUR = { ir: 1.0, carpeta: 0.55, paso: 0.32 };
+  const finCine = () => DUR.ir + DUR.paso * 2 + DUR.carpeta + 0.3;
 
-  function ponerJefe(p, andar) {
-    jefe.grupo.position.set(p.x, Math.abs(Math.sin(andar * 9)) * 0.03, p.z);
-    jefe.grupo.rotation.y = p.ry;
+  // El jefe camina hacia su objetivo: la mesa mientras hay proyector o reparto, si no, la pizarra.
+  function moverJefe(dt) {
+    const meta = proy.activo || cine ? JEFE_MESA : JEFE_REPOSO;
+    const dx = meta.x - jefePose.x, dz = meta.z - jefePose.z, d = Math.hypot(dx, dz);
+    const paso = Math.min(d, dt * 1.6);
+    if (d > 1e-3) { jefePose.x += (dx / d) * paso; jefePose.z += (dz / d) * paso; }
+    jefePose.ry += (meta.ry - jefePose.ry) * Math.min(1, dt * 5);
+    jefe.grupo.position.set(jefePose.x, d > 0.01 ? Math.abs(Math.sin(t * 9)) * 0.03 : 0, jefePose.z);
+    jefe.grupo.rotation.y = jefePose.ry;
   }
-  const lerpPose = (a, b, u) => ({ x: a.x + (b.x - a.x) * u, z: a.z + (b.z - a.z) * u, ry: a.ry + (b.ry - a.ry) * u });
 
   function colocarCarpetas(ids, enMesa) {
     carpetas.forEach((c, k) => {
@@ -210,7 +234,7 @@ export function crearEscena() {
       c.zona.userData.activo = !!id && enMesa;
       c.zona.userData.id = id;
       c.grupo.position.copy(c.destino);
-      c.grupo.rotation.set(0, 0, 0);
+      c.grupo.rotation.set(0, c.giro, 0);
     });
     marcarCarpeta(carpetaElegida);
   }
@@ -220,32 +244,51 @@ export function crearEscena() {
     carpetas.forEach((c) => {
       const si = !!id && c.id === id;
       c.tapa.rotation.z = si ? -2.6 : 0;           // abierta
-      c.tapa.material.color.set(si ? 0xf6dc8a : 0xe8b84a);
       c.brillo.visible = si;
     });
   }
 
   function actualizar(dt) {
     t += dt;
-    // Hologramas: giran y flotan. El elegido brilla; los otros se apagan.
+    // Proyector: sube o se guarda (escala y altura), con los hologramas girando encima.
+    const metaU = proy.activo ? 1 : 0;
+    proy.u = proy.u + Math.sign(metaU - proy.u) * Math.min(Math.abs(metaU - proy.u), dt / 0.6);
+    const uS = suave(proy.u);
+    grupoProy.visible = proy.u > 0.001;
+    proyector.scale.setScalar(Math.max(0.001, Math.min(1, uS * 1.6)));
     for (const [id, h] of Object.entries(holos)) {
-      const elegido = escenarioElegido === id;
+      const mio = voto === id, sobre = encima === h.zona;
       h.grupo.rotation.y = t * 0.6 + h.fase;
-      h.grupo.position.y = Y_MESA + 0.5 + Math.sin(t * 1.4 + h.fase) * 0.025;
-      const s = elegido ? 1.25 : escenarioElegido ? 0.85 : 1;
-      h.grupo.scale.setScalar(h.grupo.scale.x + (s - h.grupo.scale.x) * Math.min(1, dt * 6));
-      h.grupo.traverse((o) => { if (o.material?.userData?.holo) o.material.opacity = elegido || !escenarioElegido ? 0.92 : 0.35; });
-      h.etiqueta.element.classList.toggle('elegido', elegido);
+      h.grupo.position.y = 0.08 + (ALTO_HOLOS - 0.08) * uS + Math.sin(t * 1.4 + h.fase) * 0.025;
+      const s = (mio ? 1.7 : sobre ? 1.55 : voto ? 1.2 : 1.4) * uS;
+      h.escala += (s - h.escala) * Math.min(1, dt * 8);
+      h.grupo.scale.setScalar(Math.max(0.001, h.escala));
+      h.grupo.traverse((o) => { if (o.material?.userData?.holo) o.material.opacity = mio || sobre || !voto ? 0.92 : 0.45; });
+      h.etiqueta.visible = proy.u > 0.7;
+      h.etiqueta.element.classList.toggle('elegido', mio);
+      h.etiqueta.element.classList.toggle('encima', sobre && !mio);
     }
-    pista.visible = !escenarioElegido;
-    haz.material.opacity = 0.07 + Math.sin(t * 3) * 0.02;
+    pista.visible = proy.u > 0.7;
+    haz.material.opacity = (0.07 + Math.sin(t * 3) * 0.02) * uS;
+    moverJefe(dt);
 
-    // Cinemática del reparto.
-    if (!cine) { ponerJefe(JEFE_REPOSO, 0); return; }
+    // Carpetas: contorno que se ve a través de todo (más intenso con el puntero encima).
+    const pulso = 0.55 + Math.sin(t * 3.2) * 0.25;
+    for (const c of carpetas) {
+      const activa = c.grupo.visible && c.zona.userData.activo;
+      c.contorno.visible = activa;
+      c.pista.visible = activa;
+      if (activa) {
+        const sobre = encima === c.zona;
+        c.contorno.material.opacity = sobre ? 1 : pulso;
+        c.relleno.material.opacity = sobre ? 0.28 : 0.1;
+        c.pista.element.classList.toggle('encima', sobre);
+      }
+    }
+
+    // Cinemática del reparto: el jefe retira el proyector (si lo había) y lanza las carpetas una a una.
+    if (!cine) return;
     const u = t - cine.t0;
-    if (u < DUR.ir) ponerJefe(lerpPose(JEFE_REPOSO, JEFE_MESA, suave(u / DUR.ir)), u);
-    else if (u < finCine() - DUR.volver) ponerJefe(JEFE_MESA, 0);
-    else ponerJefe(lerpPose(JEFE_MESA, JEFE_REPOSO, suave((u - (finCine() - DUR.volver)) / DUR.volver)), u);
     carpetas.forEach((c, k) => {
       if (!c.id) return;
       const v = (u - DUR.ir - k * DUR.paso) / DUR.carpeta;
@@ -254,9 +297,8 @@ export function crearEscena() {
       const w = suave(Math.min(1, v));
       c.grupo.position.lerpVectors(mano, c.destino, w);
       c.grupo.position.y += Math.sin(w * Math.PI) * 0.35;
-      c.grupo.rotation.z = (1 - w) * 0.6;
-      c.grupo.rotation.y = (1 - w) * 1.2;
-      if (v >= 1) { c.zona.userData.activo = true; c.grupo.rotation.set(0, 0, 0); }
+      c.grupo.rotation.set(0, c.giro + (1 - w) * 1.2, (1 - w) * 0.6);
+      if (v >= 1) { c.zona.userData.activo = true; c.grupo.rotation.set(0, c.giro, 0); }
     });
     if (u > finCine()) { cine = null; colocarCarpetas(carpetas.map((c) => c.id), true); }
   }
@@ -265,9 +307,9 @@ export function crearEscena() {
   function puntoCinematica(destino) {
     if (!cine) return null;
     const u = t - cine.t0;
-    if (u < DUR.ir + 0.2) return destino.set(jefe.grupo.position.x, 1.5, jefe.grupo.position.z);
-    const k = Math.min(carpetas.length - 1, Math.max(0, Math.floor((u - DUR.ir) / DUR.paso)));
-    return destino.lerpVectors(carpetas[k].grupo.position, carpetas[1].destino, 0.5);
+    if (u < DUR.ir * 0.6) return destino.set(POS_PROYECTOR.x, Y_MESA + 0.2, POS_PROYECTOR.z);
+    if (u < DUR.ir + 0.15) return destino.set(jefe.grupo.position.x, 1.3, jefe.grupo.position.z);
+    return destino.set(0, Y_MESA, 0);
   }
 
   return {
@@ -275,13 +317,45 @@ export function crearEscena() {
     actualizar,
     puntoCinematica,
     get enCinematica() { return !!cine; },
+    // Centro del proyector, para encuadrar la cámara en el modo de elección.
+    focoProyector: POS_PROYECTOR,
+    // activo: el proyector está sobre la mesa; animar: false lo pone o quita de golpe (quien llega tarde).
+    proyector(activo, animar) {
+      proy.activo = !!activo;
+      if (!animar) proy.u = proy.activo ? 1 : 0;
+      if (!proy.activo) voto = null;
+    },
     // ids: lista de misiones repartidas; animar: false para quien llega tarde (se ven ya en la mesa).
     repartir(ids, animar) {
       colocarCarpetas(ids, !animar);
       if (animar && ids?.length) { cine = { t0: t }; carpetas.forEach((c) => { c.zona.userData.activo = false; }); }
       else cine = null;
     },
-    elegirEscenario(id) { escenarioElegido = id ?? null; },
+    // info(id) → { cuerpo, pista, codigo }: foto, código y pista de cada carpeta repartida.
+    vestirCarpetas(info) {
+      carpetas.forEach((c, k) => { if (c.id) vestirCarpeta(c, c.id, info(c.id) ?? {}, k); });
+    },
+    seleccionar(id) { voto = id ?? null; },
+    // votos: { escenario: [{ color, letra, nick }] } de toda la tripulación.
+    mostrarVotos(votos) {
+      for (const [id, h] of Object.entries(holos)) {
+        h.votos.replaceChildren(...(votos[id] ?? []).map((v) => {
+          const b = document.createElement('span');
+          b.className = 'holo-voto';
+          b.style.background = v.color;
+          b.textContent = v.letra;
+          b.title = v.nick;
+          return b;
+        }));
+      }
+    },
+    resaltar(obj) { encima = obj ?? null; },
+    // Escalona las pistas según la cámara: la carpeta más cercana lleva la pista más baja, la más lejana la más alta,
+    // así no se pisan aunque se miren de lado.
+    escalonarPistas(posCamara) {
+      const orden = carpetas.map((c) => ({ c, d: c.grupo.position.distanceToSquared(posCamara) })).sort((a, b) => a.d - b.d);
+      orden.forEach(({ c }, k) => { c.pista.position.y = 0.12 + k * 0.15; });
+    },
     marcarCarpeta,
     // Pantalla del portátil de un asiento: esquinas en el mundo, centro, normal (hacia el jugador) y "arriba".
     pantallaLaptop(i) {
@@ -335,7 +409,7 @@ function crearManual(rol) {
   return { grupo, zona: zonaClic };
 }
 
-// Carpeta de expediente: tapa (gira para abrirse), hojas y pestaña.
+// Carpeta de expediente: tapa (gira para abrirse) con portada dibujada, hojas, pestaña, contorno y pista.
 function crearCarpeta() {
   const grupo = new THREE.Group();
   const trasera = caja(0.42, 0.012, 0.3, 0xd9a83a); grupo.add(trasera);
@@ -344,11 +418,135 @@ function crearCarpeta() {
   const bisagra = new THREE.Group(); bisagra.position.set(-0.21, 0.018, 0); grupo.add(bisagra);
   const tapa = caja(0.42, 0.012, 0.3, 0xe8b84a); tapa.position.set(0.21, 0, 0); bisagra.add(tapa);
   const pestana = caja(0.12, 0.012, 0.05, 0xe8b84a); pestana.position.set(0.32, 0, -0.17); bisagra.add(pestana);
+  // Portada: lienzo con código, sello y la foto del destino (ver vestirCarpeta).
+  const lienzo = document.createElement('canvas'); lienzo.width = 512; lienzo.height = 360;
+  const textura = new THREE.CanvasTexture(lienzo); textura.colorSpace = THREE.SRGBColorSpace; textura.anisotropy = 4;
+  const portada = new THREE.Mesh(new THREE.PlaneGeometry(0.41, 0.29), new THREE.MeshStandardMaterial({ map: textura, roughness: 0.95 }));
+  portada.rotation.x = -Math.PI / 2; portada.position.set(0.21, 0.0068, 0); bisagra.add(portada);
   const brillo = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.34, 20), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
   brillo.rotation.x = -Math.PI / 2; brillo.position.y = -0.004; brillo.visible = false; grupo.add(brillo);
+  // Contorno y velo que se dibujan por encima de todo: la carpeta se ve aunque algo la tape.
+  const caj = new THREE.BoxGeometry(0.47, 0.05, 0.35);
+  const contorno = new THREE.LineSegments(new THREE.EdgesGeometry(caj),
+    new THREE.LineBasicMaterial({ color: 0xffd76a, transparent: true, opacity: 0.8, depthTest: false, depthWrite: false }));
+  contorno.position.y = 0.02; contorno.renderOrder = 20; contorno.visible = false;
+  const relleno = new THREE.Mesh(caj, new THREE.MeshBasicMaterial({ color: 0xffd76a, transparent: true, opacity: 0.1, depthTest: false, depthWrite: false }));
+  relleno.renderOrder = 19; contorno.add(relleno);
+  grupo.add(contorno);
+  // Pista en HTML sobre la carpeta.
+  const div = document.createElement('div'); div.className = 'carpeta-pista';
+  const pista = new CSS2DObject(div); pista.position.y = 0.2; pista.visible = false; grupo.add(pista);
   const zonaClic = zona(0.46, 0.08, 0.34, {}); zonaClic.position.y = 0.03; grupo.add(zonaClic);
   // La tapa gira sobre su bisagra: el resto del código la abre con tapa.rotation.z (ver marcarCarpeta).
-  return { grupo, tapa: Object.assign(bisagra, { material: tapa.material }), brillo, zona: zonaClic, id: null };
+  return { grupo, tapa: Object.assign(bisagra, { material: tapa.material }), brillo, contorno, relleno, pista, lienzo, textura, zona: zonaClic, id: null };
+}
+
+// ---------- Portada de las carpetas ----------
+// Fotos del destino: mapas reales donde los hay (assets/mapas) y dibujo procedural para Tierra y Marte.
+const FOTOS = { mercurio: 'assets/mapas/mercurio-color.jpg', luna: 'assets/mapas/luna-color.jpg', cometa: 'assets/mapas/cometa-67p.jpg' };
+const imagenes = {};
+function imagen(clave, alCargar) {
+  let r = imagenes[clave];
+  if (!r) {
+    r = imagenes[clave] = { img: new Image(), listo: false, esperan: [] };
+    r.img.onload = () => { r.listo = true; r.esperan.splice(0).forEach((f) => f()); };
+    r.img.src = FOTOS[clave];
+  }
+  if (r.listo) return r.img;
+  r.esperan.push(alCargar);
+  return null;
+}
+// Mapa procedural (equirectangular) para cuerpos sin foto.
+function mapaProcedural(clave) {
+  if (imagenes['proc-' + clave]) return imagenes['proc-' + clave];
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+  const g = c.getContext('2d');
+  let s = clave.length * 977;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const [fondo, manchas, polo] = clave === 'tierra' ? ['#2f6fb5', ['#3f8f4a', '#8a7a4a', '#4a9a52'], '#f4f7fb'] : ['#b5562f', ['#8a3e22', '#d07a48', '#6e3220'], '#efe6dc'];
+  g.fillStyle = fondo; g.fillRect(0, 0, 512, 256);
+  for (let i = 0; i < 70; i++) {
+    g.fillStyle = manchas[i % manchas.length];
+    g.beginPath(); g.ellipse(rnd() * 512, 40 + rnd() * 176, 10 + rnd() * 50, 6 + rnd() * 28, rnd() * 3, 0, Math.PI * 2); g.fill();
+  }
+  g.fillStyle = polo; g.fillRect(0, 0, 512, 16); g.fillRect(0, 240, 512, 16); // casquetes polares
+  if (clave === 'tierra') {
+    g.globalAlpha = 0.5; g.fillStyle = '#fff';
+    for (let i = 0; i < 40; i++) { g.beginPath(); g.ellipse(rnd() * 512, rnd() * 256, 20 + rnd() * 40, 3 + rnd() * 6, 0, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 1;
+  }
+  return (imagenes['proc-' + clave] = c);
+}
+function claveCuerpo(cuerpo) {
+  const t = (typeof cuerpo === 'string' ? cuerpo : `${cuerpo?.en ?? ''} ${cuerpo?.es ?? ''}`).toLowerCase();
+  if (t.includes('mercur')) return 'mercurio';
+  if (t.includes('moon') || t.includes('luna')) return 'luna';
+  if (t.includes('comet')) return 'cometa';
+  if (t.includes('mars') || t.includes('marte')) return 'marte';
+  return 'tierra';
+}
+const hash = (txt) => [...String(txt)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+
+// Foto dentro del rectángulo (x, y, w, h). variante: 0 disco entero, 1 primer plano de la superficie, 2 horizonte.
+function dibujarFoto(g, x, y, w, h, fuente, figura, variante, desfase) {
+  g.save();
+  g.beginPath(); g.rect(x, y, w, h); g.clip();
+  g.fillStyle = '#05070c'; g.fillRect(x, y, w, h);
+  for (let i = 0; i < 24; i++) { g.fillStyle = `rgba(255,255,255,${0.3 + (i % 3) * 0.2})`; g.fillRect(x + ((i * 53 + desfase) % w), y + ((i * 37) % h), 1.5, 1.5); }
+  if (fuente) {
+    const fw = fuente.width, fh = fuente.height;
+    if (figura) {
+      // Foto de un objeto (el cometa): encuadres distintos de la misma imagen.
+      const z = [1, 1.8, 1.35][variante], sw = fw / z, sh = fh / z;
+      g.drawImage(fuente, (fw - sw) * [0.5, 0.35, 0.7][variante], (fh - sh) * [0.5, 0.45, 0.3][variante], sw, sh, x, y, w, h);
+    } else if (variante === 1) {
+      const sw = fw / 7, sh = sw * h / w;
+      g.drawImage(fuente, (desfase * 7) % (fw - sw), fh * 0.3, sw, sh, x, y, w, h);
+    } else {
+      const r = variante === 0 ? Math.min(w, h) * 0.42 : w * 0.9;
+      const cx = x + w / 2, cy = variante === 0 ? y + h / 2 : y + h + r * 0.62;
+      g.save(); g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip();
+      g.drawImage(fuente, (desfase * 5) % (fw / 2), 0, fw / 2, fh, cx - r, cy - r, 2 * r, 2 * r);
+      const sombra = g.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
+      sombra.addColorStop(0, 'rgba(255,255,255,0.12)'); sombra.addColorStop(0.7, 'rgba(0,0,0,0)'); sombra.addColorStop(1, 'rgba(0,0,0,0.75)');
+      g.fillStyle = sombra; g.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+      g.restore();
+    }
+  }
+  g.restore();
+}
+
+// info: { cuerpo (dato bilingüe), cuerpoTexto, pista, sello }.
+function vestirCarpeta(c, id, info, indice) {
+  const clave = claveCuerpo(info.cuerpo);
+  const variante = hash(id) % 3, desfase = hash(id + 'x') % 997;
+  const pintar = () => {
+    const g = c.lienzo.getContext('2d'), W = c.lienzo.width, H = c.lienzo.height;
+    g.fillStyle = '#e8b84a'; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(120,80,20,0.12)'; for (let i = 0; i < 9; i++) g.fillRect(0, 30 + i * 38, W, 2);
+    // Código, destino y sello.
+    g.fillStyle = '#3a2a10'; g.font = 'bold 44px "Space Grotesk", sans-serif'; g.fillText(id, 26, 66);
+    g.font = '22px "Space Grotesk", sans-serif'; g.fillText(info.cuerpoTexto ?? '', 28, 100);
+    g.save(); g.translate(120, 270); g.rotate(-0.18);
+    g.strokeStyle = '#b3261e'; g.lineWidth = 5; g.strokeRect(-100, -26, 200, 52);
+    g.fillStyle = '#b3261e'; g.font = 'bold 26px "Space Grotesk", sans-serif'; g.textAlign = 'center'; g.fillText(info.sello ?? 'CLASSIFIED', 0, 9);
+    g.restore();
+    // Foto tipo polaroid sujeta con un clip.
+    g.save(); g.translate(368, 182); g.rotate([-0.08, 0.06, -0.03][indice % 3]);
+    g.fillStyle = '#f7f3ea'; g.fillRect(-112, -132, 224, 250);
+    const fuente = FOTOS[clave] ? imagen(clave, pintar) : mapaProcedural(clave);
+    dibujarFoto(g, -100, -120, 200, 190, fuente, clave === 'cometa', variante, desfase);
+    g.fillStyle = '#555'; g.font = '18px "Space Grotesk", sans-serif'; g.textAlign = 'center'; g.fillText(info.cuerpoTexto ?? '', 0, 100);
+    g.strokeStyle = '#9aa0a8'; g.lineWidth = 5; g.beginPath(); g.roundRect(-30, -146, 22, 54, 10); g.stroke();
+    g.restore();
+    c.textura.needsUpdate = true;
+  };
+  pintar();
+  // Siempre: nombre de la misión y destino. Al pasar el puntero: la pista completa.
+  const b = document.createElement('b'); b.textContent = info.nombre ?? id;
+  const d = document.createElement('small'); d.textContent = info.cuerpoTexto ?? '';
+  const p = document.createElement('span'); p.textContent = info.pista ?? '';
+  c.pista.element.replaceChildren(b, d, p);
 }
 
 // Hologramas de los tres escenarios. Material semitransparente marcado como holo.

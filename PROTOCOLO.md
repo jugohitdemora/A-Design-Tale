@@ -7,7 +7,7 @@ Este es el protocolo que usan todas las fases del juego: lobby, briefing, diseñ
 - **Un anfitrión con autoridad.** Uno de los jugadores es el anfitrión. Los demás le mandan **intenciones** ("quiero el rol de ciencia"). El anfitrión las valida, las aplica al estado y manda a todos el **estado completo**.
 - **Nadie más cambia el estado.** Así no hay conflictos: si dos piden el mismo rol a la vez, el anfitrión decide y al otro le llega un aviso.
 - **Lo aleatorio lo decide el anfitrión.** Sortea los eventos y escribe el resultado en el estado. Todos ven lo mismo sin tener que sincronizar generadores aleatorios.
-- **Lo efímero va aparte.** Hacia dónde mira cada cabeza (y, más adelante, cursores o la pieza que se arrastra) es **presencia**: cada jugador la difunde a los demás sin pasar por el anfitrión, y no se reintenta ni se guarda.
+- **Lo efímero va aparte.** Hacia dónde mira cada cabeza, el escenario que cada uno vota en el proyector (`voto`) y, más adelante, cursores o la pieza que se arrastra, es **presencia**: cada jugador la difunde a los demás sin pasar por el anfitrión, y no se reintenta ni se guarda.
 
 El estado pesa pocos KB y cambia a la velocidad de los clics, así que mandarlo entero cada vez es más sencillo y más robusto que mandar diferencias.
 
