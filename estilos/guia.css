@@ -57,10 +57,11 @@ body.en-proyector .f-hud .g-linea { display: none; } /* la barra del proyector y
 .lp-icono.lp-ir-control { margin-top: auto; }
 
 /* Cabecera de la sala de control */
-.mc-cab .g-pasos { color: var(--mc-tenue, #7f98b3); }
-.mc-cab .g-linea.mc-guia { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mc-tinta, #d8e6f4); font-size: var(--t-cuerpo); }
+.mc-cab .g-pasos { color: var(--mc-tinta-2); }
+.mc-cab .g-pasos li.actual { background: var(--mc-cian); border-color: var(--mc-cian); box-shadow: var(--mc-brillo); }
+.mc-cab .g-linea.mc-guia { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mc-tinta); font-size: var(--t-cuerpo); }
 .mc-cab .mc-yo { display: none; } /* el rol ya se ve en cada consola y en la tarjeta de la sala */
-.mc-cab { gap: var(--e-4); }
+.mc-cab { gap: var(--e-3); }
 .mc-cab > .mc-logo, .mc-cab > .mc-modo, .mc-cab > .mc-yo, .mc-cab > .mc-reloj { white-space: nowrap; flex: none; }
 .mc-cab .g-fase { display: none; } /* el modo (PLANIFICACIÓN, GO / NO-GO…) ya nombra la fase */
 .mc-nav { display: flex; gap: var(--e-2); flex: none; }
@@ -95,7 +96,10 @@ body.en-proyector .f-hud .g-linea { display: none; } /* la barra del proyector y
 .f-hud .rm-barra { height: 12px; }
 .f-hud .rm-linea { flex-direction: column; gap: 2px; }
 .f-hud .rm-linea > span { white-space: normal; }
-.mc-cab .rm { color: var(--mc-tinta, #d8e6f4); }
+.mc-cab .rm { color: var(--mc-tinta); --rm-c: var(--mc-ok); }
+.mc-cab .rm.aviso { --rm-c: var(--mc-aviso); } .mc-cab .rm.mal { --rm-c: var(--mc-mal); }
+.mc-cab .rm-mes { color: var(--mc-blanco); } .mc-cab .rm-vel { color: var(--mc-tinta-2); } .mc-cab .rm-pausa, .mc-cab .rm-lanz.falta { color: var(--mc-ambar); } .mc-cab .rm.mal .rm-lanz.falta { color: var(--mc-mal); }
+.mc-cab .rm-barra { background: var(--mc-hundido); border-radius: 0; }
 .lp-barra .rm, .mc-cab .rm { flex: none; }
 
 /* Pulso al pasar un mes */

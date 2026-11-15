@@ -1,10 +1,10 @@
 /* Pantallas finales de la sala de control: consulta GO / NO-GO (.gng-) y debriefing (.dbf-). Paleta de control.css (.mc).
    Texto con los tokens de sistema.css; los botones son .boton (piel .mc). */
-.gng, .dbf { --f-fondo: #071223; --f-panel: #0d1d33; --f-borde: #2c4a6e; --f-tinta: #d8e6f4; --f-tenue: #7f98b3; --f-verde: #5fe08a;
-  --f-ambar: #f2b844; --f-rojo: #ef5b4a; --f-cian: #62c6ff;
+.gng, .dbf { --f-fondo: var(--mc-fondo); --f-panel: var(--mc-panel); --f-borde: var(--mc-borde-luz); --f-tinta: var(--mc-tinta); --f-tenue: var(--mc-tenue); --f-verde: var(--mc-ok);
+  --f-ambar: var(--mc-ambar); --f-rojo: var(--mc-mal); --f-cian: var(--mc-cian);
   height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: var(--e-3); padding: 0; color: var(--f-tinta); font: var(--t-cuerpo)/1.4 var(--lp-ui); min-height: 0; }
 .gng h3, .dbf h3, .dbf h4 { margin: 0; font-family: var(--lp-pixel); font-weight: normal; }
-.gng-grupo, .dbf-grupo { background: var(--f-panel); border: 2px solid var(--f-borde); border-radius: 3px; padding: var(--e-4); min-height: 0; display: flex; flex-direction: column; gap: var(--e-3); }
+.gng-grupo, .dbf-grupo { background: var(--f-panel); border: 2px solid var(--f-borde); border-radius: 3px; box-shadow: var(--mc-sombra); padding: var(--e-4); min-height: 0; display: flex; flex-direction: column; gap: var(--e-3); }
 .gng-grupo h3, .dbf-grupo h3 { font-size: var(--tp-etq); line-height: 1.4; letter-spacing: 0.5px; text-transform: uppercase; color: var(--f-cian); }
 .gng-nota, .dbf-nota, .dbf-vacio { margin: 0; font-size: var(--t-meta); color: var(--f-tenue); }
 
@@ -13,14 +13,14 @@
 .gng-lista { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: var(--e-3); }
 .gng-lista li { display: grid; grid-template-columns: 16px 76px 1fr; gap: var(--e-3); align-items: center; font-size: var(--t-cuerpo); line-height: 1.35; }
 .gng-lista b { font: var(--tp-etq) var(--lp-pixel); }
-.gng-luz { width: 14px; height: 14px; border-radius: 50%; background: var(--f-rojo); box-shadow: 0 0 6px var(--f-rojo); }
+.gng-luz { width: 14px; height: 14px; border-radius: 50%; background: var(--f-rojo); box-shadow: 0 0 6px var(--f-rojo), 0 0 0 2px var(--mc-hundido); }
 .gng-lista li.ok .gng-luz { background: var(--f-verde); box-shadow: 0 0 6px var(--f-verde); }
 .gng-lista li.ok b { color: var(--f-verde); }
 .gng-lista li.mal b { color: var(--f-rojo); }
 .gng-deptos { justify-content: flex-start; }
 .gng-consolas { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: var(--e-3); }
-.gng-consola { --rol: var(--f-borde); display: flex; flex-direction: column; gap: var(--e-1); padding: var(--e-3); background: #0a1a2e; border: 2px solid var(--f-borde); border-top: 4px solid var(--rol); border-radius: 3px; min-height: 0; min-width: 0; }
-.gng-consola.on { border-color: var(--f-verde); border-top-color: var(--rol); background: #0c2a1c; }
+.gng-consola { --rol: var(--mc-borde); display: flex; flex-direction: column; gap: var(--e-1); padding: var(--e-3); background: var(--mc-panel-2); border: 2px solid var(--mc-borde); border-top: 4px solid var(--rol); border-radius: 3px; min-height: 0; min-width: 0; }
+.gng-consola.on { border-color: var(--f-verde); border-top-color: var(--rol); background: var(--mc-ok-fondo); }
 .gng-depto { font-size: var(--t-enfasis); }
 .gng-consola small { color: var(--f-tenue); font-size: var(--t-meta); }
 .gng-toggle { flex: 1; margin-top: var(--e-2); }
@@ -31,7 +31,7 @@
 .gng-volver { align-self: center; }
 
 /* ---------- Debriefing ---------- */
-.dbf-veredicto { flex: none; display: grid; grid-template-columns: auto 1fr auto; gap: var(--e-5); align-items: center; padding: var(--e-3) var(--e-5); background: #0a1a2e; border: 2px solid var(--f-borde); border-left: 8px solid var(--f-tenue); border-radius: 3px; }
+.dbf-veredicto { flex: none; display: grid; grid-template-columns: auto 1fr auto; gap: var(--e-5); align-items: center; padding: var(--e-3) var(--e-5); background: var(--mc-panel-2); border: 2px solid var(--f-borde); border-left: 8px solid var(--f-tenue); border-radius: 3px; }
 .dbf-veredicto.v-total { border-left-color: var(--f-verde); }
 .dbf-veredicto.v-parcial { border-left-color: var(--f-ambar); }
 .dbf-veredicto.v-fallida { border-left-color: var(--f-rojo); }
@@ -75,7 +75,7 @@
    Sin colores de bueno/malo: la suerte va en cian (dato) y la decisión en ámbar (algo que cambiar). */
 .dbf-porque { overflow: auto; }
 .dbf-puntos { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e-2); font-size: var(--t-cuerpo); }
-.dbf-punto { display: grid; grid-template-columns: 146px 1fr; column-gap: var(--e-3); padding: var(--e-2) var(--e-3); background: #0a1a2e; border-left: 4px solid var(--f-tenue); border-radius: 3px; line-height: 1.35; }
+.dbf-punto { display: grid; grid-template-columns: 146px 1fr; column-gap: var(--e-3); padding: var(--e-2) var(--e-3); background: var(--mc-panel-2); border-left: 4px solid var(--f-tenue); border-radius: 3px; line-height: 1.35; }
 .dbf-punto.suerte { border-left-color: var(--f-cian); } .dbf-punto.decision { border-left-color: var(--f-ambar); }
 .dbf-punto.info { grid-template-columns: 1fr; color: var(--f-tenue); font-size: var(--t-meta); }
 .dbf-etq { font: var(--tp-etq)/1.5 var(--lp-pixel); text-transform: uppercase; align-self: start; padding-top: 3px; }

@@ -2,6 +2,7 @@
 import { T } from '../textos.js';
 import { idioma } from '../i18n.js';
 import { h, en, lista, valor, DIFICULTADES } from './ui.js';
+import { notaDesistida } from './desistir.js';
 
 function escenarios(c) {
   const ids = [];
@@ -28,7 +29,7 @@ function ficha(c, m) {
 
 export function pantallaBriefing(c) {
   const sel = c.e?.mision ?? {};
-  const raiz = h('section', { class: 'caja panel-briefing', 'data-scroll': 'briefing' }, h('h3', {}, T.briefingTitle));
+  const raiz = h('section', { class: 'caja panel-briefing', 'data-scroll': 'briefing' }, h('h3', {}, T.briefingTitle), notaDesistida(c, en(c.D?.MISIONES?.[c.e?.desistida?.id]?.nombre)));
   const escs = escenarios(c);
   raiz.append(h('h4', {}, T.pickScenario));
   if (!escs.length) raiz.append(h('p', { class: 'tenue' }, T.noScenarios));

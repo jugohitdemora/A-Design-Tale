@@ -81,6 +81,8 @@ ruta             { mes, sitio }                                planificación en
                  en el lote 2). v3 guardaba ahí un día: sin `mes`, se vacía al completar el estado
 reloj            { mes, msPorMes, inicioMes, corriendo }       meses transcurridos desde m.reloj.inicio (contrato-reloj.md). v5: corre en tiempo real. inicioMes = Date.now() del anfitrión al empezar el mes; corriendo solo en diseño, restricciones y verificación; msPorMes = 60/75/90/105 s para 4/3/2/1 jugadores con rol (motor.msPorMes)
 registro         eventos ya resueltos por el anfitrión (fases futuras)
+desistir         { votos: { jugadorId: true }, fase, firma }                   votación para abandonar la misión (v6). `fase` y `firma` (ids de los conectados con rol) sirven para borrar los votos si cambia la fase o el grupo; en la interfaz solo cuentan los conectados con rol
+desistida        null | { id, escenario, mes }                                 última misión abandonada; el briefing lo muestra hasta que se elige otra (también se anota en `registro` como { tipo: 'desistir', mision, mes, fase })
 ```
 
 - **Los valores derivados no se guardan.** Las barras, la ciencia, los riesgos y los efectos de los eventos de diseño se calculan en cada cliente con `resumen(estado, DATOS)` (`src/reglas/motor.js`). En el estado solo hay ids, opción y uso. La excepción es `resultado`: lo calcula el anfitrión una vez, al lanzar, y es igual para todos.
@@ -111,6 +113,7 @@ registro         eventos ya resueltos por el anfitrión (fases futuras)
 | `lanzar` | verificación | Comprobaciones y 4 firmas. El anfitrión calcula `resultado = simular()` y pasa a misión |
 | `avanzar` `{paso?}` | misión | `vista.paso + 1`; con todos los pasos a la vista pasa a informe. `paso` (opcional) evita dobles clics |
 | `planificarRuta` `{mes?, sitio?}` | diseño, restricciones, verificación | `mes` lo fija vuelo (o vacante), `sitio` vuelo o ciencia. `ventana` se acepta como nombre antiguo de `mes`. Mes entero en 0..mesMax; no anterior a `reloj.mes` ("Launch month already passed"); en diseño y restricciones, al menos `reloj.mes + 1`; como mucho 12 meses tras el plazo. En restricciones y verificación no puede subir una barra que acabe fuera de su límite, salvo para rehacer un plan perdido. Borra las firmas |
+| `votarDesistir` `{on: bool}` | diseño, restricciones, verificación, misión | Voto para abandonar la misión (requiere rol; `on` booleano). Los votos se borran al cambiar de fase, al entrar o salir un jugador con rol (o desconectarse) y al retirar el voto (`on: false`). Cuando votan sí todos los conectados con rol: vuelve al **briefing** sin misión (se conserva el escenario y las notas libres), vacía el diseño, firmas, resultado, ruta y reloj como al cambiar de misión, y anota `desistida` y `registro` |
 | `cambiarFase` | todas | Solo las transiciones de `TRANSICIONES`, salvo las que tienen acción propia (`SOLO_POR_ACCION`: revisión, lanzamiento, avance). briefing → diseño exige misión `jugable`. informe → diseño (rediseñar) conserva diseño, semilla y eventos de diseño; borra firmas y resultado; el reloj avanza 6 meses (se rechaza con "Investors pulled out" si eso cancelaría la misión). → lobby vacía la partida |
 
 Los motivos de rechazo de estas acciones van en inglés: la interfaz los muestra tal cual.
@@ -119,7 +122,7 @@ Los motivos de rechazo de estas acciones van en inglés: la interfaz los muestra
 
 ## 8. Versiones
 
-Si llega un `hola` con otra `v`, se avisa ("recargad la página") y se ignoran sus mensajes. Un par conectado que en 8 s no ha saludado se trata igual: es una versión anterior a este protocolo. **Cuando un cambio rompa la compatibilidad, hay que subir `VERSION_PROTOCOLO`.** Versión actual: 5 (reloj en tiempo real: `reloj = { mes, msPorMes, inicioMes, corriendo }`, acción `tic`; antes, v4: `reloj`, `mision.plazo`, `ruta.mes`, `comprometerPlazo`). Un `reloj` antiguo con solo `{ mes }` se completa sin perder el mes. `completarEstado` completa un estado v3: `ruta.ventana` → `ruta.mes = null`, `reloj = { mes: 0 }`, `mision.plazo = null` (sin regla de inversores).
+Si llega un `hola` con otra `v`, se avisa ("recargad la página") y se ignoran sus mensajes. Un par conectado que en 8 s no ha saludado se trata igual: es una versión anterior a este protocolo. **Cuando un cambio rompa la compatibilidad, hay que subir `VERSION_PROTOCOLO`.** Versión actual: 6 (votación para desistir: `desistir`, `desistida`, acción `votarDesistir`; antes, v5: reloj en tiempo real: `reloj = { mes, msPorMes, inicioMes, corriendo }`, acción `tic`; antes, v4: `reloj`, `mision.plazo`, `ruta.mes`, `comprometerPlazo`). Un `reloj` antiguo con solo `{ mes }` se completa sin perder el mes. `completarEstado` completa un estado v3: `ruta.ventana` → `ruta.mes = null`, `reloj = { mes: 0 }`, `mision.plazo = null` (sin regla de inversores).
 
 El anfitrión descarta las intenciones malformadas (sin `id` numérico, sin `tipo` o con un `payload` que no es un objeto).
 

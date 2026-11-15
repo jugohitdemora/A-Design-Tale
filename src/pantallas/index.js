@@ -11,6 +11,7 @@ import { h, en, lista, nombreRol, resumenSeguro, ROLES_IDS, relojMision, datosRe
 import { pantallaLaptop, alCargarApps } from './laptop.js';
 import { expedienteCompleto, expedienteMini } from './expediente.js';
 import { pantallaControl } from '../control/index.js';
+import { botonDesistir, capaDesistir } from './desistir.js';
 
 export const FASES_JUEGO = ['briefing', 'diseno', 'restricciones', 'verificacion', 'mision', 'informe'];
 // Tamaño lógico de cada pantalla (px CSS antes de escalar sobre el 3D).
@@ -116,7 +117,9 @@ export function pasosFase(guia) {
     h('span', { class: 'g-fase' }, `${guia.i + 1}/${guia.total} · ${guia.nombre}`));
   let reloj = null;
   try { reloj = cReloj ? relojMision(cReloj) : null; } catch (err) { console.warn('reloj', err); }
-  return reloj ? h('div', { class: 'g-bloque' }, pasos, reloj) : pasos; // .g-bloque es display: contents
+  let desistir = null;
+  try { desistir = cReloj ? botonDesistir(cReloj) : null; } catch (err) { console.warn('desistir', err); }
+  return reloj || desistir ? h('div', { class: 'g-bloque' }, pasos, reloj, desistir) : pasos; // .g-bloque es display: contents
 }
 let cReloj = null; // contexto de la pantalla que se está pintando (lo fija dibujar)
 // Línea "Siguiente: …" que va dentro de cada pantalla.
@@ -244,6 +247,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     const nodos = [];
     // La ficha del expediente solo se ve mirando la sala: en el portátil ya es una app y en la pared no hace falta.
     if (c.D && c.mision && c.vista === 'sala') nodos.push(expedienteMini(c, (id) => abrir({ tipo: 'expediente', id })));
+    try { nodos.push(...capaDesistir(c, cerrarOverlay)); } catch (err) { console.warn('desistir', err); }
     const o = c.ui.overlay;
     if (o?.tipo === 'expediente' && c.D) {
       const el = expedienteCompleto(c, o.id, { cerrar: cerrarOverlay });

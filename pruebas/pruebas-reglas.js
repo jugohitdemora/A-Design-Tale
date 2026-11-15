@@ -4,6 +4,7 @@
 //
 // DATOS DE PRUEBA: el fixture de abajo es inventado para probar las reglas. No son cifras reales de ninguna
 // misión ni de ninguna pieza, y no dependen de src/datos/ (se inyectan con usarDatos y ctx.datos).
+import { marcarDesconectado } from '../src/red/protocolo.js';
 import { estadoInicial, reducir, usarDatos, tallerInicial, tallerVacio, FASES, VERSION_PROTOCOLO } from '../src/red/protocolo.js';
 import { num, resumen, cumple, verificar, puedeEnRestricciones, motivoRestriccion, estadoDeRatio, relojDe, planDe, siguienteEventoDiseno, msPorMes, riesgoTolerancia } from '../src/reglas/motor.js';
 import { simular } from '../src/reglas/despliegue.js';
@@ -674,8 +675,49 @@ const pruebas = {
     afirmar(cumple(null).nivel === 'dentro', 'cumple(null)');
   },
 
+  'Reglas · desistir: hace falta la unanimidad de los conectados con rol'() {
+    const e = enDiseno('T-ORB', 'facil', { roles: ['vuelo', 'ciencia', 'potencia'] });
+    ok(e, 'jvuelo', 'votarDesistir', { on: true });
+    afirmar(e.fase === 'diseno' && e.mision.id === 'T-ORB', 'un voto no basta');
+    ok(e, 'jciencia', 'votarDesistir', { on: true });
+    afirmar(e.fase === 'diseno', 'dos de tres no bastan');
+    // Al entrar alguien nuevo con rol, los votos se borran y hay que volver a votar.
+    e.jugadores.jcomms = { nick: 'comms', rol: 'comms', orden: 9, conectado: true, desconectadoEn: 0, ultimaIntencion: 0 };
+    ok(e, 'jvuelo', 'editarPropio', { clave: 'nota', valor: 'x' });
+    afirmar(Object.keys(e.desistir.votos).length === 0, 'entrar alguien borra los votos');
+    for (const id of ['jvuelo', 'jciencia', 'jpotencia']) ok(e, id, 'votarDesistir', { on: true });
+    afirmar(e.fase === 'diseno', 'faltaba uno conectado');
+    ok(e, 'jcomms', 'votarDesistir', { on: true });
+    afirmar(e.fase === 'briefing' && e.mision.id === null && e.mision.escenario === 'orbita', 'unánime: vuelve al briefing con el escenario');
+    afirmar(e.desistida?.id === 'T-ORB' && e.registro.some((x) => x.tipo === 'desistir'), 'queda anotado');
+    afirmar(Object.keys(e.desistir.votos).length === 0 && !Object.keys(e.porRol.vuelo.piezas ?? {}).length && e.resultado === null, 'diseño y votos vacíos');
+    rechaza(e, 'jvuelo', 'votarDesistir', { on: true }, /fase/i);
+    ok(e, 'jvuelo', 'elegirMision', { id: 'T-ORB' });
+    afirmar(e.desistida === null, 'elegir otra misión limpia la nota');
+  },
+
+  'Reglas · desistir: retirar el voto, desconexiones y roles'() {
+    const e = enDiseno('T-ORB', 'facil', { roles: ['vuelo', 'ciencia'] });
+    ok(e, 'jvuelo', 'votarDesistir', { on: true });
+    ok(e, 'jvuelo', 'votarDesistir', { on: false });
+    afirmar(Object.keys(e.desistir.votos).length === 0, 'retirar el voto lo quita');
+    ok(e, 'jciencia', 'votarDesistir', { on: true });
+    afirmar(e.fase === 'diseno', 'uno de dos no basta aunque el otro retirara');
+    rechaza(e, 'jvuelo', 'votarDesistir', { on: 'si' }, /yes or no/i);
+    // Si el que falta se desconecta, los votos se borran: no se abandona por sorpresa.
+    marcarDesconectado(e, 'jvuelo', 1);
+    afirmar(Object.keys(e.desistir.votos).length === 0, 'desconectar borra los votos');
+    ok(e, 'jciencia', 'votarDesistir', { on: true });
+    afirmar(e.fase === 'briefing', 'queda un solo votante conectado: su voto es unánime');
+    const f = partida();
+    rechaza(f, 'jvuelo', 'votarDesistir', { on: true }, /fase/i);
+    const g = enDiseno();
+    g.jugadores.jvuelo.rol = null;
+    rechaza(g, 'jvuelo', 'votarDesistir', { on: true }, /role/i);
+  },
+
   'Reglas · estado inicial y fusión de talleres (unirse)'() {
-    afirmar(VERSION_PROTOCOLO === 5, 'versión del protocolo (5: reloj en tiempo real)');
+    afirmar(VERSION_PROTOCOLO === 6, 'versión del protocolo (6: votación para desistir)');
     afirmar(FASES.join() === 'lobby,briefing,diseno,restricciones,verificacion,mision,informe', 'FASES');
     const e = estadoInicial();
     afirmar(e.mision === null && e.resultado === null && e.vista.paso === 0 && e.diseno.eventos.length === 0, 'campos nuevos');

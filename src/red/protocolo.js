@@ -12,7 +12,8 @@ import { prng, derivar, barajar } from '../reglas/azar.js';
 // 4: reloj de misión (estado.reloj, mision.plazo, ruta.mes)
 // 5: reloj en tiempo real: reloj = { mes, msPorMes, inicioMes, corriendo }, acción `tic` del anfitrión, eventos de diseño por tic,
 //    la revisión ya no suma meses y la tolerancia (≤ +20 %) pasa a verificación.
-export const VERSION_PROTOCOLO = 5;
+// 6: votación para desistir de la misión: estado.desistir = { votos, fase, firma }, estado.desistida, acción `votarDesistir`.
+export const VERSION_PROTOCOLO = 6;
 export const MAX_JUGADORES = 4;
 export const ROLES_IDS = ['vuelo', 'ciencia', 'potencia', 'comms'];
 // Si su dueño se desconecta, un rol queda reservado este tiempo (así una recarga no lo pierde).
@@ -130,7 +131,33 @@ export function estadoInicial() {
     ruta: rutaInicial(),    // planificación en la sala de control: { mes: meses desde el inicio de la misión, sitio }
     reloj: relojInicial(),  // { mes, msPorMes, inicioMes, corriendo }: meses transcurridos desde el inicio de la misión; corre en tiempo real (contrato-reloj.md)
     registro: [],           // eventos que el anfitrión ya resolvió (fases futuras)
+    desistir: desistirInicial(), // votación unánime para abandonar la misión: { votos: { jugadorId: true }, fase, firma }
+    desistida: null,        // la última misión abandonada { id, escenario, mes }: el briefing lo muestra hasta elegir otra
   };
+}
+
+// ---------- Desistir de la misión (voto unánime) ----------
+export const FASES_DESISTIR = ['diseno', 'restricciones', 'verificacion', 'mision'];
+const desistirInicial = () => ({ votos: {}, fase: null, firma: '' });
+// Quién vota: los conectados con rol.
+const votantes = (e) => conectados(e).filter(([, j]) => j.rol);
+// Resumen para la interfaz: { activo, abierto, total, si: [nick], faltan: [nick], yo }.
+export function resumenDesistir(e, jugadorId) {
+  const v = votantes(e), votos = e?.desistir?.votos ?? {};
+  const si = v.filter(([id]) => votos[id]), faltan = v.filter(([id]) => !votos[id]);
+  return {
+    activo: FASES_DESISTIR.includes(e?.fase), abierto: si.length > 0, total: v.length,
+    si: si.map(([, j]) => j.nick), faltan: faltan.map(([, j]) => j.nick), yo: !!(jugadorId && votos[jugadorId]),
+  };
+}
+// Los votos valen solo para esta fase y este grupo de votantes: si cambia cualquiera de los dos, se borran.
+function sanearVotos(e) {
+  if (!e.desistir || typeof e.desistir !== 'object') e.desistir = desistirInicial();
+  const d = e.desistir, firma = votantes(e).map(([id]) => id).sort().join('|');
+  if (!d.votos || typeof d.votos !== 'object' || Array.isArray(d.votos)) d.votos = {};
+  if (d.fase !== e.fase || d.firma !== firma) d.votos = {};
+  d.votos = Object.fromEntries(Object.entries(d.votos).filter(([id, v]) => v === true && e.jugadores?.[id]));
+  d.fase = e.fase; d.firma = firma;
 }
 
 // ---------- Utilidades de lectura (también las usa la interfaz) ----------
@@ -434,6 +461,7 @@ export const ACCIONES = {
       const cambia = (e.mision?.id ?? null) !== m.id;
       const otroEscenario = m.escenario != null && m.escenario !== (e.mision?.escenario ?? null);
       e.mision = m;
+      if (m.id != null) e.desistida = null;
       if (cambia) reiniciarDiseno(e);
       if (otroEscenario) repartir(e, m.escenario, D);
       e.briefing.listos = {};
@@ -715,6 +743,32 @@ export const ACCIONES = {
     },
   },
 
+  // Desistir de la misión: todos los conectados con rol tienen que votar que sí. { on }. Cambiar de fase, entrar o salir
+  // alguien, o retirar el voto, borra los votos. Con la unanimidad se vuelve al briefing sin misión (el escenario se conserva),
+  // se vacía el diseño como al cambiar de misión y se anota en `desistida` y en `registro`.
+  votarDesistir: {
+    fases: FASES_DESISTIR,
+    validar(e, id, p) {
+      if (!e.jugadores[id]?.rol) return 'You need a role';
+      if (typeof p.on !== 'boolean') return 'Say yes or no';
+      return null;
+    },
+    aplicar(e, id, p) {
+      if (!p.on) { delete e.desistir.votos[id]; return; }
+      e.desistir.votos[id] = true;
+      if (votantes(e).some(([vid]) => !e.desistir.votos[vid])) return;
+      const m = e.mision ?? {};
+      e.desistida = { id: m.id ?? null, escenario: m.escenario ?? null, mes: e.reloj?.mes ?? 0 };
+      e.registro.push({ tipo: 'desistir', mision: m.id ?? null, mes: e.reloj?.mes ?? 0, fase: e.fase });
+      e.registro = e.registro.slice(-50);
+      e.mision = { escenario: m.escenario ?? null, id: null, dificultad: 'normal', objetivos: [], plazo: null };
+      reiniciarDiseno(e);
+      e.briefing.listos = {};
+      e.fase = 'briefing';
+      e.desistir = desistirInicial();
+    },
+  },
+
   // Cambio de fase genérico, limitado a TRANSICIONES y sin saltarse revisión, lanzamiento ni avance.
   cambiarFase: {
     fases: null,
@@ -755,6 +809,7 @@ export const ACCIONES = {
       }
       if (p.fase === 'lobby') {
         e.mision = null;
+        e.desistida = null;
         reiniciarDiseno(e);
         e.briefing = briefingInicial();
       }
@@ -781,6 +836,7 @@ export function reducir(e, jugadorId, intencion, ctx) {
     }
   }
   completarEstado(e);
+  sanearVotos(e);
   const accion = ACCIONES[intencion?.tipo];
   const j = e.jugadores[jugadorId];
   if (j && intencion.id <= j.ultimaIntencion) return null; // repetida: ya se aplicó (idempotencia)
@@ -790,6 +846,7 @@ export function reducir(e, jugadorId, intencion, ctx) {
   else if (intencion.tipo !== 'unirse' && !j) motivo = 'No estás en la sala';
   else motivo = accion.validar(e, jugadorId, intencion.payload || {}, ctx);
   if (!motivo) accion.aplicar(e, jugadorId, intencion.payload || {}, ctx);
+  sanearVotos(e); // la fase o los votantes pueden haber cambiado
   sincronizarReloj(e, ctx?.ahora); // la fase o los jugadores pueden haber cambiado: el reloj corre, se para o cambia de velocidad
   if (e.jugadores[jugadorId]) e.jugadores[jugadorId].ultimaIntencion = Math.max(e.jugadores[jugadorId].ultimaIntencion, intencion.id);
   return motivo;
@@ -824,6 +881,10 @@ function completarEstado(e) {
   if (!(e.reloj.msPorMes > 0)) e.reloj.msPorMes = msPorMes(4);
   if (!Number.isFinite(e.reloj.inicioMes)) e.reloj.inicioMes = 0;
   e.reloj.corriendo = !!e.reloj.corriendo;
+  // v6: votación para desistir. Un estado anterior no la trae.
+  if (!Array.isArray(e.registro)) e.registro = [];
+  if (e.desistida === undefined || typeof e.desistida !== 'object') e.desistida = null;
+  if (!e.desistir || typeof e.desistir !== 'object') e.desistir = desistirInicial();
   // Partida anterior sin plazo: queda sin compromiso (la regla de inversores no se aplica) hasta comprometerPlazo.
   if (e.mision && typeof e.mision === 'object' && e.mision.plazo === undefined) e.mision.plazo = null;
 }
@@ -841,6 +902,7 @@ export function marcarDesconectado(e, jugadorId, ahora) {
   if (!j || !j.conectado) return false;
   j.conectado = false;
   j.desconectadoEn = ahora;
+  if (e.desistir && typeof e.desistir === 'object') e.desistir.votos = {}; // cambia el grupo de votantes
   return true;
 }
 

@@ -78,6 +78,7 @@ fijo('You need a role', 'Necesitas un rol');
 fijo('Unknown role', 'Rol desconocido');
 fijo('Choose a mission first', 'Primero elige una misión');
 fijo('Choose a difficulty', 'Elige una dificultad');
+fijo('Say yes or no', 'Di sí o no');
 fijo('Unknown goal for this mission', 'Objetivo desconocido para esta misión');
 fijo('The priority goal cannot be dropped', 'La meta prioritaria no se puede quitar');
 fijo('That mission is not playable yet', 'Esa misión todavía no se puede jugar');

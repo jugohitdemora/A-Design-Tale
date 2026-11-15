@@ -6,6 +6,7 @@ import { h, lista, redondear, puedoPor, resumenSeguro } from '../pantallas/ui.js
 import { textos, tx, depto, idioma } from '../i18n.js';
 import { unaVez } from '../pantallas/panel-global.js';
 import { trayectoria } from './propagador.js';
+import { paleta, conAlfa } from './paleta.js';
 import { lanzamiento, lanzamientoFallido } from '../laptop/camara-lanzamiento.js';
 
 const T = textos({
@@ -50,7 +51,7 @@ function bucle(t) {
 }
 // Colocador de etiquetas sin solapes: cada etiqueta prueba varias anclas y desplazamientos alrededor; la primera posición libre gana
 // (con línea guía si queda lejos del ancla). Si no cabe en ningún sitio, la de menor prioridad se omite.
-function colocador(g, w, hh) {
+function colocador(g, w, hh, pal) {
   const ocupados = [], pend = [];
   const choca = (a) => ocupados.some((b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y);
   return {
@@ -70,7 +71,7 @@ function colocador(g, w, hh) {
               g.strokeStyle = e.color; g.globalAlpha = 0.5; g.lineWidth = 1; g.beginPath(); g.moveTo(ax, ay);
               g.lineTo(Math.max(r.x, Math.min(ax, r.x + r.w)), Math.max(r.y, Math.min(ay, r.y + r.h))); g.stroke(); g.globalAlpha = 1;
             }
-            g.fillStyle = 'rgba(4,7,13,0.75)'; g.fillRect(r.x, r.y, r.w, r.h);
+            g.fillStyle = conAlfa(pal.hundido, 0.8); g.fillRect(r.x, r.y, r.w, r.h);
             g.fillStyle = e.color; g.fillText(e.txt, r.x + 2, r.y + th - 4);
             ocupados.push(r); hecho = true;
           }
@@ -85,8 +86,9 @@ function dibujarOrbita() {
   const w = canvas.clientWidth, hh = canvas.clientHeight;
   if (!w || !hh) return;
   if (canvas.width !== w || canvas.height !== hh) { canvas.width = w; canvas.height = hh; }
-  g.fillStyle = '#04070d'; g.fillRect(0, 0, w, hh);
-  g.strokeStyle = 'rgba(80,140,200,0.12)'; g.lineWidth = 1;
+  const P0 = paleta(canvas);
+  g.fillStyle = P0.hundido; g.fillRect(0, 0, w, hh);
+  g.strokeStyle = conAlfa(P0.borde, 0.35); g.lineWidth = 1;
   for (let x = 0; x < w; x += 40) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, hh); g.stroke(); }
   for (let y = 0; y < hh; y += 40) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
   if (!tray) return;
@@ -97,10 +99,10 @@ function dibujarOrbita() {
     g.beginPath(); pts.forEach((p, i) => { const [x, y] = P(p); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); g.setLineDash([]);
   };
   // Cuerpo central
-  g.fillStyle = tray.central === 'sol' ? '#ffd35a' : '#3f7fd8';
+  g.fillStyle = tray.central === 'sol' ? P0['ambar-claro'] : P0.cian;
   g.beginPath(); g.arc(cx, cy, tray.central === 'sol' ? 7 : 9, 0, Math.PI * 2); g.fill();
-  g.font = '13px monospace';
-  const etq = colocador(g, w, hh);
+  g.font = '14px monospace';
+  const etq = colocador(g, w, hh, P0);
   // Zonas que ninguna etiqueta debe tapar: ejes (esquinas) y el cuerpo central
   const ejeX = `${tray.unidad === 'UA' ? 'X (UA)' : 'X (km)'} →`;
   const wEje = g.measureText(ejeX).width;
@@ -109,7 +111,7 @@ function dibujarOrbita() {
   const iDestino = tray.central === 'sol' ? 1 : 0;
   tray.orbitas.forEach((o) => linea(o.puntos, o.color, 1, true));
   // Etiquetas por prioridad (se colocan de mayor a menor): cuerpo central, destino, y las demás órbitas probando varios puntos de su trazo
-  etq.poner(tray.central === 'sol' ? T.sol : T.tierra, [[cx, cy]], '#9fb3c8', 11);
+  etq.poner(tray.central === 'sol' ? T.sol : T.tierra, [[cx, cy]], P0['tinta-2'], 11);
   const [dx, dy] = P(tray.llegada);
   etq.poner(tx(tray.orbitas[iDestino].nombre), [[dx, dy]], tray.orbitas[iDestino].color, 8);
   tray.orbitas.forEach((o, i) => {
@@ -119,23 +121,23 @@ function dibujarOrbita() {
   // Transferencia: recorrida (brillante) y por recorrer (tenue)
   const n = tray.transferencia.length;
   const hecho = Math.max(1, Math.floor(Math.min(1, V.frac) * (n - 1)));
-  linea(tray.transferencia, 'rgba(95,224,138,0.25)', 1);
-  linea(tray.transferencia.slice(0, hecho + 1), '#5fe08a', 2);
+  linea(tray.transferencia, conAlfa(P0.ok, 0.3), 1);
+  linea(tray.transferencia.slice(0, hecho + 1), P0.ok, 2);
   // Destino en su punto de llegada
-  g.fillStyle = '#d8d0c0'; g.beginPath(); g.arc(dx, dy, 5, 0, Math.PI * 2); g.fill();
+  g.fillStyle = P0.tinta; g.beginPath(); g.arc(dx, dy, 5, 0, Math.PI * 2); g.fill();
   // Nave
   let pos = tray.transferencia[hecho];
   if (V.orbitando) {
     const a = V.t * 1.6, r = 14 / k;
     pos = [tray.llegada[0] + Math.cos(a) * r, tray.llegada[1] + Math.sin(a) * r * 0.6];
-    g.strokeStyle = 'rgba(242,184,68,0.6)'; g.beginPath(); g.ellipse(dx, dy, 14, 8.4, 0, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = conAlfa(P0.ambar, 0.6); g.beginPath(); g.ellipse(dx, dy, 14, 8.4, 0, 0, Math.PI * 2); g.stroke();
   }
   const [sx, sy] = P(pos);
-  g.fillStyle = '#f2b844'; g.fillRect(sx - 3, sy - 3, 6, 6);
-  g.strokeStyle = '#f2b844'; g.beginPath(); g.moveTo(sx - 9, sy); g.lineTo(sx + 9, sy); g.stroke();
+  g.fillStyle = P0.ambar; g.fillRect(sx - 3, sy - 3, 6, 6);
+  g.strokeStyle = P0.ambar; g.beginPath(); g.moveTo(sx - 9, sy); g.lineTo(sx + 9, sy); g.stroke();
   // Ejes
   etq.dibujar();
-  g.fillStyle = '#5d7a96'; g.fillText(ejeX, w - wEje - 6, hh - 8);
+  g.fillStyle = P0.tenue; g.fillText(ejeX, w - wEje - 6, hh - 8);
   g.fillText(`↑ Y`, 6, 14);
 }
 

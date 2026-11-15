@@ -1,0 +1,25 @@
+/* Desistir de la misión: botón en la guía, aviso para todos y diálogo de confirmación. */
+.desistir-btn { white-space: nowrap; }
+.desistir-btn.votado { outline: 2px dashed currentColor; outline-offset: 2px; }
+.desistir-aviso {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10; width: min(520px, calc(100vw - 32px));
+  display: grid; gap: var(--e-2); justify-items: start; padding: var(--e-3) var(--e-4);
+  background: #3d0c07; color: #fff; border: 3px solid #ef5b4a; border-radius: 6px; box-shadow: 0 6px 0 #1d0503;
+  font: var(--t-cuerpo)/1.35 var(--ui, 'Space Grotesk', sans-serif);
+}
+.desistir-aviso p, .desistir-dialogo p { margin: 0; }
+.desistir-pide { font-size: var(--t-enfasis); font-weight: 600; }
+.desistir-estado { font-size: var(--t-meta); opacity: 0.9; }
+.desistir-dialogo {
+  max-width: 460px; display: grid; gap: var(--e-3); padding: var(--e-5); background: #1c242e; color: #eef4f8;
+  border: 3px solid #ef5b4a; border-radius: 6px; font: var(--t-cuerpo)/1.4 var(--ui, 'Space Grotesk', sans-serif);
+}
+.desistir-dialogo h3 { margin: 0; font-size: var(--t-titulo); }
+.desistir-dialogo .acciones { display: flex; gap: var(--e-3); flex-wrap: wrap; }
+.desistir-nota { margin: 0 0 var(--e-3); padding: var(--e-2) var(--e-3); border-left: 4px solid #ef5b4a; background: rgba(239, 91, 74, 0.12); }
+
+/* En la cabecera de la pared falta sitio: solo icono y recuento (el texto va en el title), para que quepa "Siguiente ›". */
+.mc-cab .desistir-btn .desistir-txt { display: none; }
+.desistir-btn .desistir-cuenta { display: none; }
+.mc-cab .desistir-btn .desistir-cuenta { display: inline; }
+.mc-cab .desistir-btn { padding-inline: 10px; }

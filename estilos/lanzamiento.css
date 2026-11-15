@@ -1,37 +1,37 @@
 /* Secuencia de despegue (src/laptop/camara-lanzamiento.js → lanzamiento()), anti-solapes de la consola y avisos de "sin vuelo". */
 .lz-host { position: relative; width: 100%; height: 100%; min-height: 0; }
 .lz-host-viejo { min-height: 420px; }
-.lz { position: absolute; inset: 0; overflow: hidden; background: #0a0f14; border: 3px solid var(--mc-borde, #2c4a6e); font-family: var(--lp-pixel, monospace); }
+.lz { position: absolute; inset: 0; overflow: hidden; background: var(--mc-hundido); border: 3px solid var(--mc-borde-luz); box-shadow: var(--mc-sombra); font-family: var(--lp-pixel, monospace); }
 .lz-feed { position: absolute; inset: 0; }
 .lz-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; filter: saturate(0.75) contrast(1.1) brightness(0.95); }
 .lz .cam-lineas, .lz .cam-vineta { position: absolute; inset: 0; pointer-events: none; }
-.lz-sinwebgl { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: #9fb3c8; font-size: var(--t-cuerpo, 16px); }
-.lz-destello { position: absolute; inset: 0; pointer-events: none; background: #fff; opacity: 0; }
+.lz-sinwebgl { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--mc-tinta-2); font-size: var(--t-cuerpo, 16px); }
+.lz-destello { position: absolute; inset: 0; pointer-events: none; background: var(--mc-blanco); opacity: 0; }
 .lz.boom .lz-destello { animation: lz-destello 0.9s ease-out 1; }
 @keyframes lz-destello { 0% { opacity: 0.95; } 100% { opacity: 0; } }
 
 /* Cabecera y pie en filas flex: nada se pisa (los textos largos se recortan con puntos suspensivos) */
-.lz-cab, .lz-pie { position: absolute; left: 0; right: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: var(--e-3, 12px); padding: var(--e-2, 8px) var(--e-3, 12px); color: #d8e6f4; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85); pointer-events: none; }
-.lz-cab { top: 0; font-size: var(--tp-etq, 12px); }
-.lz-pie { bottom: 0; background: linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0)); font-size: var(--tp-etq, 12px); }
+.lz-cab, .lz-pie { position: absolute; left: 0; right: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: var(--e-3, 12px); padding: var(--e-2, 8px) var(--e-3, 12px); color: var(--mc-tinta); text-shadow: 1px 1px 0 var(--mc-hundido); pointer-events: none; }
+.lz-cab { top: 0; font-size: var(--tp-etq, 12px); background: linear-gradient(to bottom, color-mix(in srgb, var(--mc-barra-b) 90%, transparent), transparent); }
+.lz-pie { bottom: 0; background: linear-gradient(to top, color-mix(in srgb, var(--mc-hundido) 80%, transparent), transparent); font-size: var(--tp-etq, 12px); }
 .lz-cam { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lz-rec { flex: none; display: flex; align-items: center; gap: var(--e-2, 8px); }
 .lz-reloj, .lz-tele b { font-variant-numeric: tabular-nums; font-family: monospace; font-size: 15px; display: inline-block; white-space: pre; }
 .lz-tele { flex: none; display: flex; gap: var(--e-4, 16px); white-space: nowrap; }
-.lz-estado { flex: 1; min-width: 0; text-align: center; color: #f2b844; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lz.boom .lz-estado { color: #ef5b4a; }
+.lz-estado { flex: 1; min-width: 0; text-align: center; color: var(--mc-ambar); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lz.boom .lz-estado { color: var(--mc-mal); }
 .lz-saltar { flex: none; pointer-events: auto; }
 .lz.con-carta .lz-saltar { visibility: hidden; }
 
 /* Tarjeta de fallo */
 .lz-carta { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.92); width: min(560px, 88%); box-sizing: border-box; padding: var(--e-4, 16px) var(--e-5, 24px);
-  background: rgba(30, 8, 6, 0.94); border: 3px solid var(--mc-rojo, #ef5b4a); border-radius: 4px; color: #f4e3df; text-align: center;
+  background: color-mix(in srgb, var(--mc-mal-fondo) 94%, transparent); border: 3px solid var(--mc-mal); border-radius: 4px; box-shadow: var(--mc-sombra); color: var(--mc-tinta); text-align: center;
   opacity: 0; visibility: hidden; transition: opacity 0.35s, transform 0.35s; font-family: var(--lp-ui, sans-serif); }
 .lz.con-carta .lz-carta { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
-.lz-carta h2 { margin: 0 0 var(--e-3, 12px); font: var(--tp-grande, 24px)/1.3 var(--lp-pixel, monospace); color: #ff7a6a; }
+.lz-carta h2 { margin: 0 0 var(--e-3, 12px); font: var(--tp-grande, 24px)/1.3 var(--lp-pixel, monospace); color: var(--mc-mal); }
 .lz-carta p { margin: var(--e-1, 4px) 0; font-size: var(--t-enfasis, 18px); }
-.lz-carta .tenue { color: #c9aaa4; font-size: var(--t-cuerpo, 16px); }
-.lz-carta .lz-fase { font-size: var(--t-meta, 14px); color: #c9aaa4; }
+.lz-carta .tenue { color: var(--mc-tinta-2); font-size: var(--t-cuerpo, 16px); }
+.lz-carta .lz-fase { font-size: var(--t-meta, 14px); color: var(--mc-tinta-2); }
 .lz-carta .boton { margin-top: var(--e-3, 12px); }
 
 /* Consola de operaciones: cifras de ancho fijo y nombres que se recortan en vez de pisar al porcentaje */
@@ -50,4 +50,4 @@
 .cam-carpeta dd { overflow-wrap: anywhere; min-width: 0; }
 
 /* Informe: el lanzamiento falló y no se voló nada más */
-.dbf-sin-vuelo, .sin-vuelo { grid-column: 1 / -1; margin: var(--e-2, 8px) 0 0; padding: var(--e-2, 8px) var(--e-3, 12px); border: 2px solid #ef5b4a; background: rgba(60, 12, 8, 0.6); color: #ffb4a8; font-weight: 600; border-radius: 3px; }
+.dbf-sin-vuelo, .sin-vuelo { grid-column: 1 / -1; margin: var(--e-2, 8px) 0 0; padding: var(--e-2, 8px) var(--e-3, 12px); border: 2px solid var(--mc-mal, #ef5b4a); background: var(--mc-mal-fondo, rgba(60, 12, 8, 0.6)); color: var(--mc-tinta, #ffb4a8); font-weight: 600; border-radius: 3px; }
