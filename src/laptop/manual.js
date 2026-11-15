@@ -4,7 +4,7 @@
 // Estado local: c.ui.manual = { rol, seccion, base }   (rol = departamento que se lee; base = rol con el que se abrió).
 // Los números y fórmulas salen de reglas/motor.js y reglas/despliegue.js; el anexo de misión sale de c.mision / c.D.
 import { textos, tx, idioma, depto } from '../i18n.js';
-import { h, valor, lista, redondear, resumenSeguro, ROL_COLOR } from '../pantallas/ui.js';
+import { h, valor, lista, resumenSeguro, ROL_COLOR } from '../pantallas/ui.js';
 
 const ROLES = ['vuelo', 'ciencia', 'potencia', 'comms'];
 
@@ -24,14 +24,14 @@ const T = textos({
     estado: 'ESTADO ACTUAL DEL DISEÑO', parametros: 'PARÁMETROS DE LA MISIÓN', piezas: 'PIEZAS DE TU TALLER EN ESTA MISIÓN', fasesVuelo: 'FASES DEL VUELO',
     sombra: 'Horas de sombra por día/ciclo', enlace: 'Horas de enlace con la Tierra por día', dias: 'Días de misión previstos', presupuesto: 'Presupuesto', puntuacion: 'Regla de puntuación',
     limites: 'Topes de la misión', ninguno: 'ninguno', destino: 'Destino',
-    cabPieza: ['ID', 'Pieza', 'Opción nº', 'Masa', 'Potencia', 'Volumen', 'Tasa', 'Precio', 'Aporta', 'Uso h/día'],
+    cabPieza: ['Pieza', 'Opción nº', 'Masa', 'Potencia', 'Volumen', 'Tasa', 'Precio', 'Aporta', 'Uso h/día'],
     fija: '24 h (siempre encendida)', eclipse: 'Se mantiene encendida en la sombra: cuenta para la batería', sinPiezas: 'No hay piezas de este departamento en esta misión.',
     cohetes: 'COHETES DISPONIBLES', rutas: 'RUTAS DISPONIBLES', objetivos: 'OBJETIVOS DE LA MISIÓN', capacidad: 'Capacidad al destino', operador: 'Operador',
     cabRuta: ['Ruta', 'Días', 'Masa (propelente/módulo)', 'Precio', 'Efecto en la probabilidad'], cabCohete: ['Cohete', 'Operador', 'Capacidad al destino', 'Precio'],
-    cabObj: ['Objetivo', 'Prioritario', 'Valor', 'Requiere', 'Uso objetivo'], si: 'sí', no: 'no',
+    cabObj: ['Objetivo', 'Prioritario', 'Valor', 'Instrumentos', 'Uso objetivo'], si: 'sí', no: 'no',
     cabFase: ['Fase', 'Crítica', 'p base', 'Mejoras (marcadas: de tu departamento)'],
     ocultos: (n) => `Esta misión esconde ${n} hallazgo(s) sin revelar. Solo se descubren con un instrumento detector encendido (uso > 0).`,
-    unidadBarra: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/día', presupuesto: 'M USD', volumen: 'vol.' },
+    unidadBarra: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/día', volumen: 'vol.' },
     nombreBarra: { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Enlace de datos', presupuesto: 'Presupuesto', volumen: 'Volumen' },
     cienciaTotal: 'Ciencia cubierta', ok: 'dentro', tolerancia: 'tolerancia (+20 %)', exceso: 'fuera de límite',
     ciencia: 'ciencia', diasEf: 'días', falla: 'fallo crítico', critica: 'crítica', noCritica: 'no crítica',
@@ -46,21 +46,27 @@ const T = textos({
     sin: 'No data', ninguna: 'This department has no contingencies in this mission.',
     comprada: 'BOUGHT', activada: 'ACTIVATED', noComprada: 'not bought', mitiga: 'Mitigates', masa: 'Mass', precio: 'Price', prob: 'Probability', fase: 'Phase',
     efecto: 'Effect if not mitigated', leccion: 'Lesson', otras: 'Contingencies of the other departments',
-    estado: 'CURRENT DESIGN STATUS', parametros: 'MISSION PARAMETERS', piezas: 'PARTS OF YOUR WORKSHOP IN THIS MISSION', fasesVuelo: 'FLIGHT PHASES',
-    sombra: 'Shadow hours per day/cycle', enlace: 'Link hours with Earth per day', dias: 'Planned mission days', presupuesto: 'Budget', puntuacion: 'Scoring rule',
+    estado: 'CURRENT DESIGN STATUS', parametros: 'MISSION PARAMETERS', piezas: 'YOUR WORKSHOP PARTS FOR THIS MISSION', fasesVuelo: 'FLIGHT PHASES',
+    sombra: 'Shadow hours per day or cycle', enlace: 'Hours of contact with Earth per day', dias: 'Planned mission days', presupuesto: 'Budget', puntuacion: 'Scoring rule',
     limites: 'Mission caps', ninguno: 'none', destino: 'Destination',
-    cabPieza: ['ID', 'Part', 'Option #', 'Mass', 'Power', 'Volume', 'Rate', 'Price', 'Provides', 'Use h/day'],
-    fija: '24 h (always on)', eclipse: 'Stays on in the shadow: counts for the battery', sinPiezas: 'There are no parts for this department in this mission.',
+    cabPieza: ['Part', 'Option', 'Mass', 'Power', 'Volume', 'Rate', 'Price', 'Provides', 'Use h/day'],
+    fija: '24 h (always on)', eclipse: 'Stays on in the shadow, so it counts for the battery', sinPiezas: 'This department has no parts in this mission.',
     cohetes: 'AVAILABLE ROCKETS', rutas: 'AVAILABLE ROUTES', objetivos: 'MISSION GOALS', capacidad: 'Capacity to destination', operador: 'Operator',
-    cabRuta: ['Route', 'Days', 'Mass (propellant/module)', 'Price', 'Effect on probability'], cabCohete: ['Rocket', 'Operator', 'Capacity to destination', 'Price'],
-    cabObj: ['Goal', 'Priority', 'Value', 'Requires', 'Target usage'], si: 'yes', no: 'no',
-    cabFase: ['Phase', 'Critical', 'base p', 'Improvements (marked: from your department)'],
-    ocultos: (n) => `This mission hides ${n} unrevealed finding(s). Only a detector instrument switched on (usage > 0) discovers them.`,
-    unidadBarra: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/day', presupuesto: 'M USD', volumen: 'vol.' },
+    cabRuta: ['Route', 'Days', 'Mass (propellant or module)', 'Price', 'Effect on probability'], cabCohete: ['Rocket', 'Operator', 'Capacity to destination', 'Price'],
+    cabObj: ['Goal', 'Priority', 'Value', 'Instruments needed', 'Target usage'], si: 'yes', no: 'no',
+    cabFase: ['Phase', 'Critical', 'Base p', 'Improvements (highlighted: your department)'],
+    ocultos: (n) => `This mission hides ${n} undiscovered finding${n === 1 ? '' : 's'}. Only an instrument able to detect ${n === 1 ? 'it' : 'them'}, switched on (usage above 0), can reveal ${n === 1 ? 'it' : 'them'}.`,
+    unidadBarra: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/day', volumen: 'vol.' },
     nombreBarra: { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data link', presupuesto: 'Budget', volumen: 'Volume' },
-    cienciaTotal: 'Science covered', ok: 'within limits', tolerancia: 'tolerance (+20 %)', exceso: 'over the limit',
+    cienciaTotal: 'Science covered', ok: 'within limits', tolerancia: 'tolerance (+20%)', exceso: 'over the limit',
     ciencia: 'science', diasEf: 'days', falla: 'critical failure', critica: 'critical', noCritica: 'not critical',
     glosario: 'Term', etiq: { check: 'CHECK', cuidado: 'CAUTION', nota: 'NOTE' },
+    // Solo en inglés: nombres visibles de claves internas de los datos (sin ellas se mostraría el id).
+    generico: 'Other', unidadDias: 'days',
+    reglas: { datos: 'Data return (orbit)', cadena: 'Survival chain (landing)', oculto: 'Discovery (exploration)' },
+    cats: { estructura: 'Structure', propulsion: 'Propulsion', actitud: 'Attitude', guiado: 'Guidance', camara: 'Camera', proteccion: 'Protection', sondas: 'Probes',
+      instrumento: 'Instrument', paneles: 'Solar panels', bateria: 'Battery', termica: 'Thermal', polvo: 'Dust', antena: 'Antenna', computador: 'Computer',
+      memoria: 'Storage', navegacion: 'Navigation', tierra: 'Ground segment' },
   },
 });
 
@@ -76,58 +82,68 @@ const SECCIONES = [
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Contenido estático. Bloques: ['p', es, en] · ['h', es, en] · ['paso', es, en] · ['check'|'cuidado'|'nota', es, en]
-//   ['f', fórmula, es, en] · ['tabla', cabecera[], filas[][]] (celda = texto o [es, en]) · ['lista', [[es, en], ...]]
+//   ['f', fórmula en texto plano, es, en, LaTeX] · ['tabla', cabecera[], filas[][]] (celda = texto o [es, en]) · ['lista', [[es, en], ...]]
+// La fórmula en texto plano es la reserva si KaTeX no carga. Dentro de un texto, "[[texto plano||LaTeX]]" es una fórmula en línea.
+// El LaTeX va con TEX`…` (String.raw: sin dobles barras). Solo ASCII dentro del LaTeX: KaTeX avisa por consola con otros caracteres.
 // ---------------------------------------------------------------------------------------------------------------------
+const TEX = String.raw;
+
 const FLUJO = [
   ['h', 'El recorrido de la misión y qué toca en cada fase', 'The mission path and what happens in each phase'],
   ['tabla', [['Fase', 'Phase'], ['Qué ocurre', 'What happens'], ['Quién actúa', 'Who acts']], [
     [['1. Briefing', '1. Briefing'], ['Se lee el expediente, se marcan los objetivos (cada objetivo secundario marcado sube la dificultad) y todos pulsan "Listo".', 'Read the dossier, tick the goals (each secondary goal ticked raises difficulty) and everyone presses "Ready".'], ['Todos', 'Everyone']],
     [['2. Diseño', '2. Design'], ['Cada departamento monta las piezas de su taller. Al pedir revisión puede saltar un evento de diseño (dinero, límites o cambio de prioridad) en vez de la revisión.', 'Each department mounts the parts of its workshop. When you request a review, a design event (money, limits or a change of priority) may fire instead of the review.'], ['Cada departamento', 'Each department']],
-    [['3. Restricciones', '3. Constraints'], ['Solo si alguna barra está entre 100 % y 120 %: se puede quitar, bajar horas de uso o cambiar a algo que no suba ninguna barra. No se puede añadir ni comprar contingencias.', 'Only if some bar is between 100 % and 120 %: you may remove, lower usage hours or swap to something that raises no bar. You cannot add parts or buy contingencies.'], ['Cada departamento', 'Each department']],
+    [['3. Restricciones', '3. Constraints'], ['Solo si alguna barra está entre 100 % y 120 %: se puede quitar, bajar horas de uso o cambiar a algo que no suba ninguna barra. No se puede añadir ni comprar contingencias.', 'Only if some bar is between 100% and 120%: you may remove parts, lower usage hours or swap to something that raises no bar. You cannot add parts or buy contingencies.'], ['Cada departamento', 'Each department']],
     [['4. Verificación', '4. Verification'], ['Lista de comprobaciones. Cada departamento firma en la sala de control (votación GO / NO-GO). Un cambio de diseño borra las firmas. Con las cuatro firmas se lanza.', 'Checklist. Each department signs in the control room (GO / NO-GO poll). A design change clears the signatures. With all four signatures, launch.'], ['Todos firman', 'Everyone signs']],
     [['5. Misión', '5. Mission'], ['Sala de control: el vuelo se revela fase a fase. Si sale un evento que una contingencia comprada mitiga, su departamento la activa.', 'Control room: the flight is revealed phase by phase. If an event appears that a bought contingency mitigates, its department activates it.'], ['Todos (cada uno activa sus contingencias)', 'Everyone (each department activates its own contingencies)']],
     [['6. Informe', '6. Report'], ['Sala de control: veredicto (total / parcial / fallida), causas, hallazgos y datos perdidos. Se puede rediseñar y volver a lanzar.', 'Control room: verdict (full / partial / failed), causes, findings and lost data. You can redesign and launch again.'], ['Todos', 'Everyone']],
   ]],
   ['nota', 'Si un departamento no tiene jugador conectado (vacante), cualquiera puede operarlo y firmar por él. Si cambia de manos, hay que volver a firmar.', 'If a department has no connected player (vacant), anyone can operate it and sign for it. If it changes hands, sign again.'],
-  ['nota', 'Cada vez que se revisa el diseño: todas las barras ≤ 100 % pasa a Verificación; alguna entre 100 % y 120 % pasa a Restricciones; alguna por encima de 120 % vuelve a Diseño.', 'At each design review: all bars ≤ 100 % goes to Verification. Any bar between 100 % and 120 % goes to Constraints. Any bar above 120 % returns to Design.'],
+  ['nota', 'Cada vez que se revisa el diseño: todas las barras ≤ 100 % pasa a Verificación; alguna entre 100 % y 120 % pasa a Restricciones; alguna por encima de 120 % vuelve a Diseño.', 'At each design review: if every bar is at 100% or less, you go to Verification. If any bar is between 100% and 120%, you go to Constraints. If any bar is above 120%, you go back to Design.'],
 ];
 
 const COMUN_FORM = [
   ['h', 'Reglas comunes a todos los departamentos', 'Rules common to all departments'],
-  ['f', 'ratio = usado / límite', 'Cada barra (masa, potencia, batería, datos, presupuesto, volumen) se mide así. ≤ 1,00 = dentro; hasta 1,20 = tolerancia; más = fuera.', 'Every bar (mass, power, battery, data, budget, volume) is measured this way. ≤ 1.00 = within limits, up to 1.20 = tolerance, more = out.'],
-  ['f', 'TOLERANCIA = 1,2   (DEC-10 / DEC-11)', 'Hasta un 20 % por encima del límite pasa la revisión, pero te manda a Restricciones: tendrás que recortar hasta volver a ≤ 100 %. Para verificar y firmar, todas las barras deben estar en ≤ 100 %.', 'Up to 20 % above the limit passes the review but sends you to Constraints: you must reduce it to ≤ 100 %. To verify and sign, every bar must be at ≤ 100 %.'],
-  ['f', 'dificultad = nº de objetivos secundarios marcados\n0 → fácil (1 evento) · 1 → normal (2) · 2+ → difícil (3)', 'Los eventos de diseño llegan cuando pides una revisión. Más objetivos secundarios dan más eventos.', 'Design events arrive when you request a review. More secondary goals give more events.'],
-  ['f', 'p(fase) = p_base + Σ dp(mejoras)    (0 ≤ p ≤ 1)', 'Cada fase del vuelo tiene probabilidad base; sumas dp por cada pieza, contingencia o ruta que la mejora y que esté a bordo (las piezas con uso > 0, o sin control de uso).', 'Each flight phase has a base probability. Add dp for every part, contingency or route that improves it and is on board (parts with usage > 0, or with no usage control).'],
-  ['f', '1 kbps durante 1 h = 0,45 MB', '1 000 bits/s × 3 600 s = 3,6 Mbit = 0,45 MB. Es la constante MB_POR_KBPS_HORA del motor.', '1,000 bits/s × 3,600 s = 3.6 Mbit = 0.45 MB. It is the engine constant MB_POR_KBPS_HORA.'],
-  ['f', 'Pieza sin control de uso → 24 h/día', 'Estructura, paneles, baterías, antena... están "siempre encendidas". Las que tienen control de uso (instrumentos) se ajustan entre un mínimo y un máximo de h/día.', 'Structure, panels, batteries, antenna... are "always on". Parts with a usage control (instruments) are adjusted between a minimum and a maximum of h/day.'],
+  ['f', 'ratio = used / limit', 'Cada barra (masa, potencia, batería, datos, presupuesto, volumen) se mide así. ≤ 1,00 = dentro; hasta 1,20 = tolerancia; más = fuera.', 'Every bar (mass, power, battery, data, budget, volume) is measured this way. Up to 1.00 is within limits, up to 1.20 is tolerance, anything above is over the limit.',
+    TEX`\mathsf{ratio}=\dfrac{\mathsf{used}}{\mathsf{limit}}`],
+  ['f', 'tolerance = 1.2', 'Hasta un 20 % por encima del límite pasa la revisión, pero te manda a Restricciones: tendrás que recortar hasta volver a ≤ 100 %. Para verificar y firmar, todas las barras deben estar en ≤ 100 %.', 'A bar up to 20% over its limit passes the review but sends you to Constraints, where you must bring it back to 100% or less. To verify and sign, every bar must be at 100% or less.',
+    TEX`\mathsf{tolerance}=1.2`],
+  ['f', 'design events = 1 with no secondary goals (easy) · 2 with one (normal) · 3 with two or more (hard)', 'Los eventos de diseño llegan cuando pides una revisión. Más objetivos secundarios dan más eventos.', 'Design events arrive when you request a review. The more secondary goals you tick, the more events you get.',
+    TEX`\mathsf{design\ events}=\begin{cases}1 & n_{\mathsf{secondary}}=0\quad\textsf{(easy)}\\ 2 & n_{\mathsf{secondary}}=1\quad\textsf{(normal)}\\ 3 & n_{\mathsf{secondary}}\ge 2\quad\textsf{(hard)}\end{cases}`],
+  ['f', 'p(phase) = p_base + Σ dp(improvements)    (0 ≤ p ≤ 1)', 'Cada fase del vuelo tiene probabilidad base; sumas dp por cada pieza, contingencia o ruta que la mejora y que esté a bordo (las piezas con uso > 0, o sin control de uso).', 'Each flight phase has a base probability. Add the dp of every part, contingency or route that improves it and is on board (parts with usage above 0, or with no usage control).',
+    TEX`p(\mathsf{phase})=p_{\mathsf{base}}+\sum\mathsf{dp}_{\mathsf{improvements}},\qquad 0\le p\le 1`],
+  ['f', '1 kbps for 1 h = 0.45 MB', '1 000 bits/s × 3 600 s = 3,6 Mbit = 0,45 MB.', TEX`[[1,000 bit/s × 3,600 s = 3.6 Mbit = 0.45 MB||1{,}000\,\mathrm{bit/s}\times 3{,}600\,\mathrm{s}=3.6\,\mathrm{Mbit}=0.45\,\mathrm{MB}]]. Every data figure in the game uses this conversion.`,
+    TEX`1\,\mathrm{kbps}\times 1\,\mathrm{h}=0.45\,\mathrm{MB}`],
+  ['f', 'part with no usage control → 24 h/day', 'Estructura, paneles, baterías, antena... están "siempre encendidas". Las que tienen control de uso (instrumentos) se ajustan entre un mínimo y un máximo de h/día.', 'Structure, panels, batteries, antenna... are "always on". Parts with a usage control (instruments) are set between a minimum and a maximum number of hours per day.',
+    TEX`\textsf{no usage control}\;\Rightarrow\;u=24\,\mathrm{h/day}`],
   ['h', 'Constantes del vuelo (despliegue)', 'Flight constants (deployment)'],
   ['tabla', [['Constante', 'Constant'], ['Valor', 'Value'], ['Significa', 'Meaning']], [
-    ['FACTOR_DEGRADA', '× 0,75', ['Una fase no crítica falla su tirada: la ciencia baja a 75 %.', 'A non-critical phase fails its roll: science drops to 75 %.']],
-    ['FACTOR_GOLPE_CRITICO', '× 0,5', ['Primer fallo crítico: ciencia y días a la mitad; la misión sigue.', 'First critical failure: science and days halved. The mission continues.']],
-    ['GOLPES_PARA_PERDER', '2', ['El segundo fallo crítico pierde la nave: las fases siguientes no se juegan.', 'The second critical failure loses the spacecraft: later phases are not played.']],
-    ['FACTOR_MIN_EVENTO', '× 0,25', ['Un evento negativo sin mitigar nunca baja un factor por debajo de 0,25.', 'An unmitigated negative event never takes a factor below 0.25.']],
-    ['FACTOR_MAX_EVENTO', '× 2', ['Un evento positivo sube ciencia o días como mucho al doble.', 'A positive event raises science or days at most to double.']],
-    ['UMBRAL_TOTAL', '80 %', ['Éxito total = objetivo prioritario conseguido y ≥ 80 % de la ciencia. Si no, parcial; si falla el prioritario, fallida.', 'Full success = priority goal achieved and ≥ 80 % of the science. Otherwise partial. If the priority goal fails, failed.']],
+    [['Fase degradada', 'Degraded phase'], '× 0.75', ['Una fase no crítica falla su tirada: la ciencia baja a 75 %.', 'A non-critical phase fails its roll: science drops to 75%.']],
+    [['Primer golpe crítico', 'First critical hit'], '× 0.5', ['Primer fallo crítico: ciencia y días a la mitad; la misión sigue.', 'First critical failure: science and days are halved. The mission continues.']],
+    [['Golpes para perder la nave', 'Hits to lose the spacecraft'], '2', ['El segundo fallo crítico pierde la nave: las fases siguientes no se juegan.', 'The second critical failure loses the spacecraft: the remaining phases are not played.']],
+    [['Suelo de un evento', 'Event floor'], '× 0.25', ['Un evento negativo sin mitigar nunca baja un factor por debajo de 0,25.', 'An unmitigated negative event never takes a factor below 0.25.']],
+    [['Techo de un evento', 'Event ceiling'], '× 2', ['Un evento positivo sube ciencia o días como mucho al doble.', 'A positive event at most doubles science or days.']],
+    [['Umbral de éxito total', 'Full-success threshold'], '80%', ['Éxito total = objetivo prioritario conseguido y ≥ 80 % de la ciencia. Si no, parcial; si falla el prioritario, fallida.', 'Full success = priority goal achieved and at least 80% of the science. Otherwise the mission is partial; if the priority goal fails, it has failed.']],
   ]],
 ];
 
 const COMUN_CONT = [
   ['h', 'Reglas de las contingencias', 'Contingency rules'],
   ['lista', [
-    ['Una contingencia es un seguro: cuesta masa (kg) y dinero (M USD) en el diseño, y si sale el evento que mitiga, lo anula por completo.', 'A contingency is insurance: it costs mass (kg) and money (M USD) in the design, and if the event it mitigates fires, it cancels it completely.'],
-    ['Cada departamento compra y activa las suyas. El equipo entero puede tener como máximo 3 contingencias (G-11).', 'Each department buys and activates its own. The whole team can hold at most 3 contingencies (G-11).'],
+    ['Una contingencia es un seguro: cuesta masa (kg) y dinero en el diseño, y si sale el evento que mitiga, lo anula por completo.', 'A contingency is insurance: it costs mass (kg) and money in the design, and if the event it covers happens, it cancels it completely.'],
+    ['Cada departamento compra y activa las suyas. El equipo entero puede tener como máximo 3 contingencias.', 'Each department buys and activates its own. The whole team can hold at most 3 contingencies.'],
     ['Se compran en la app "Contingencias" durante el Diseño. En Restricciones solo se pueden quitar.', 'They are bought in the "Contingencies" app during Design. In Constraints they can only be removed.'],
-    ['Los eventos buenos (+) no se mitigan: son suerte. Los de signo ± se anulan por el lado malo y queda el bueno.', 'Good events (+) are not mitigated: they are luck. Events with sign ± lose their bad side and keep the good one.'],
+    ['Los eventos buenos (+) no se mitigan: son suerte. Los de signo ± se anulan por el lado malo y queda el bueno.', 'Good events (+) are not mitigated: they are luck. Mixed events (±) lose their bad side and keep the good one.'],
   ]],
   ['h', 'SOP de compra (fase de Diseño)', 'Purchase SOP (Design phase)'],
   ['paso', 'Abre "Contingencias" y mira el mazo de riesgos: cada evento muestra su fase, su probabilidad p y su efecto.', 'Open "Contingencies" and look at the risk deck: each event shows its phase, its probability p and its effect.'],
-  ['paso', 'Valora cada seguro: daño esperado ≈ p × (pérdida de ciencia o de días). Compáralo con los kg y los M USD que cuesta.', 'Value each insurance: expected damage ≈ p × (loss of science or days). Compare it with the kg and M USD it costs.'],
+  ['paso', 'Valora cada seguro: daño esperado ≈ p × (pérdida de ciencia o de días). Compáralo con los kg y el dinero que cuesta.', TEX`Weigh up each insurance: [[expected damage ≈ p × (science or days lost)||\mathsf{expected\ damage}\approx p\times\mathsf{loss}]]. Compare it with the kilograms and the money it costs.`],
   ['paso', 'Acuerda con el equipo cuáles son las 3 compras. Pulsa Comprar en la que sea de tu departamento.', 'Agree with the team on the 3 purchases. Press Buy on the one that belongs to your department.'],
-  ['cuidado', 'Si eliges un evento con "falla" (fallo crítico) en una fase crítica, comprarla vale mucho más que una que solo resta un 15 % de ciencia.', 'If an event has "failure" (critical failure) in a critical phase, buying its insurance is worth far more than one that only costs 15 % of science.'],
+  ['cuidado', 'Si eliges un evento con "falla" (fallo crítico) en una fase crítica, comprarla vale mucho más que una que solo resta un 15 % de ciencia.', 'If an event causes a critical failure in a critical phase, insuring it is worth far more than insuring one that only costs 15% of the science.'],
   ['h', 'SOP de activación (fase de Misión, Sala de control)', 'Activation SOP (Mission phase, Control room)'],
-  ['paso', 'El vuelo se revela paso a paso. Cuando el paso visible trae un evento que una contingencia comprada mitiga, la sala de control te pide que la actives.', 'The flight is revealed step by step. When the visible step has an event that a bought contingency mitigates, the control room asks you to activate it.'],
-  ['paso', 'El departamento dueño pulsa Activar. Mientras no se active, el equipo no puede avanzar al paso siguiente.', 'The owning department presses Activate. Until it is done, the team cannot advance to the next step.'],
-  ['paso', 'Lee el resultado: "mitigado" significa que el evento quedó anulado. Si no la compraste, se aplican sus factores (nunca por debajo de × 0,25).', 'Read the result: "mitigated" means the event was cancelled. If you did not buy it, its factors apply (never below × 0.25).'],
+  ['paso', 'El vuelo se revela paso a paso. Cuando el paso visible trae un evento que una contingencia comprada mitiga, la sala de control te pide que la actives.', 'The flight is revealed step by step. When the current step brings an event that a bought contingency covers, the control room asks you to activate it.'],
+  ['paso', 'El departamento dueño pulsa Activar. Mientras no se active, el equipo no puede avanzar al paso siguiente.', 'The owning department presses Activate. Until it does, the team cannot move on to the next step.'],
+  ['paso', 'Lee el resultado: "mitigado" significa que el evento quedó anulado. Si no la compraste, se aplican sus factores (nunca por debajo de × 0,25).', 'Read the result: "mitigated" means the event was cancelled. If you did not buy the insurance, the event\'s factors apply (never below × 0.25).'],
   ['check', 'Si tu departamento está vacante, cualquier jugador puede activar por él. Si tiene jugador, solo él.', 'If your department is vacant, any player can activate for it. If it has a player, only that player can.'],
 ];
 
