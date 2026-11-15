@@ -249,7 +249,9 @@ function irA(v, inmediato = false) {
   if (!enJuego()) return;
   if (v === 'laptop' && !miRol()) return;
   const nuevoLugar = v === 'control' || (v === 'sala' && lugar === 'control') ? 'control' : 'briefing';
-  if (v === 'briefing') v = 'sala';
+  // Al llegar a la sala de control desde otra sala se queda sentado en el puesto (la pared se abre con clic, como el portátil en el briefing).
+  // Estando ya en la sala de control, 'control' encuadra la pared.
+  if (v === 'briefing' || (v === 'control' && lugar !== 'control')) v = 'sala';
   if (proyectorEnMesa() && (v !== 'sala' || nuevoLugar !== 'briefing')) return; // hasta elegir escenario no se sale del proyector
   if (nuevoLugar !== lugar) {
     const cambiar = () => { lugar = nuevoLugar; vista = v; if (v === 'sala') reiniciarMirada(); empezarTransicion(true); sesion?.presencia(presencia()); actualizarTodo(); };
