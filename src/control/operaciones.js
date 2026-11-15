@@ -8,6 +8,7 @@ import { unaVez } from '../pantallas/panel-global.js';
 import { trayectoria } from './propagador.js';
 import { paleta, conAlfa } from './paleta.js';
 import { lanzamiento, lanzamientoFallido } from '../laptop/camara-lanzamiento.js';
+import { transcurrido, sonar } from './cine.js';
 
 const T = textos({
   es: {
@@ -16,7 +17,7 @@ const T = textos({
     siguiente: 'SIGUIENTE PASO ▶', informe: 'VER INFORME ▶', alerta: '⚠ EVENTO EN CURSO', activar: 'ACTIVAR', activada: 'CONTINGENCIA ACTIVADA',
     responsable: 'Responsable', esperaDepto: (d) => `Esperando a ${d}. Solo ese departamento puede activarla.`, sinEvento: 'Sin eventos en este paso.',
     bueno: 'Buenas noticias', noMitigado: 'Sin contingencia que lo cubra: el equipo no compró la adecuada.', mitigado: 'Cubierto por el plan de contingencia.',
-    pendiente: 'pendiente', ok: 'OK', falla: 'FALLO', omitida: 'no llegó', rover: 'ROVER', roverTxt: 'Ninguna misión actual lleva rover. El control queda listo por si alguna lo lleva.',
+    pendiente: 'pendiente', ok: 'OK', falla: 'FALLO', fallaEn: (f) => `FALLO EN ${f}`, alarma: 'ALERTA', omitida: 'no llegó', rover: 'ROVER', roverTxt: 'Ninguna misión actual lleva rover. El control queda listo por si alguna lo lleva.',
     paso: 'Paso', sinResultado: 'Esperando el lanzamiento…', fase: 'FASE', exito: 'prob.', sol: 'Sol', tierra: 'Tierra',
     nota: 'Propagador RK4 de dos cuerpos para el juego, con interfaz estilo GMAT (NASA). Órbitas aproximadas.',
   },
@@ -26,7 +27,7 @@ const T = textos({
     siguiente: 'NEXT STEP ▶', informe: 'VIEW REPORT ▶', alerta: '⚠ EVENT IN PROGRESS', activar: 'ACTIVATE', activada: 'CONTINGENCY ACTIVATED',
     responsable: 'Owner', esperaDepto: (d) => `Waiting for ${d}. Only that department can activate it.`, sinEvento: 'No events in this step.',
     bueno: 'Good news', noMitigado: 'No contingency covers it: the team did not buy the right one.', mitigado: 'Covered by the contingency plan.',
-    pendiente: 'pending', ok: 'OK', falla: 'FAIL', omitida: 'not reached', rover: 'ROVER', roverTxt: 'No current mission has a rover. The control is ready if one does.',
+    pendiente: 'pending', ok: 'OK', falla: 'FAIL', fallaEn: (f) => `FAILURE IN ${f}`, alarma: 'ALERT', omitida: 'not reached', rover: 'ROVER', roverTxt: 'No current mission has a rover. The control is ready if one does.',
     paso: 'Step', sinResultado: 'Waiting for launch…', fase: 'PHASE', exito: 'prob.', sol: 'Sun', tierra: 'Earth',
     nota: 'Two-body RK4 propagator for the game, with a GMAT-style (NASA) interface. Approximate orbits.',
   },
@@ -212,6 +213,15 @@ export function pantallaOperaciones(c) {
   }));
   const izq = h('section', { class: 'mc-panel op-izq' }, h('h3', {}, T.secuencia), secuencia);
 
+  // ---- efectos: fase fallida (golpe sobre la vista orbital) y alarma mientras un evento espera su contingencia ----
+  const semilla = c.e?.semilla ?? '';
+  let golpeFallo = null;
+  if (actual.ok === false && !actual.omitida) {
+    const k = `op:fallo:${semilla}:${paso}`, ya = transcurrido(c, k);
+    sonar(k, 'fallo', ya);
+    if (ya < 2.6) golpeFallo = h('div', { class: 'op-golpe', style: `--ya:${ya.toFixed(3)}s` }, h('b', {}, '✖ ', T.fallaEn(nombreFase(actual.fase).toUpperCase())));
+  }
+
   // ---- centro: vista orbital + mensajes ----
   const log = [];
   r.pasos.slice(0, paso + 1).forEach((p, i) => {
@@ -227,7 +237,7 @@ export function pantallaOperaciones(c) {
   });
   const centro = h('section', { class: 'mc-panel op-centro' },
     h('h3', {}, T.vista, h('small', {}, ' · ', T.fase, ' ', paso + 1, '/', total, ': ', nombreFase(actual.fase))),
-    h('div', { class: 'op-vista', title: T.nota }, ov.canvas),
+    h('div', { class: 'op-vista', title: T.nota }, ov.canvas, golpeFallo),
     h('h3', {}, T.mensajes),
     h('pre', { class: 'op-log', 'data-scroll': 'op-log' }, log.map((l) => h('span', { class: l.c }, l.t + '\n'))));
   requestAnimationFrame(() => { const el = document.querySelector('.op-log'); if (el) el.scrollTop = el.scrollHeight; });
@@ -242,14 +252,20 @@ export function pantallaOperaciones(c) {
   const estadoEnlace = perdido ? T.perdido : fallos ? T.degradado : T.estable;
 
   const ev = eventoDe(c, actual.evento);
-  let alerta = null;
+  let alerta = null, alarma = null;
   if (ev && !final) {
     const ct = actual.mitigador;
     const k = ct ? c.D?.CONTINGENCIAS?.[ct] : null;
     const rolCt = k?.rol ?? 'comms';
     const activada = ct && lista(c.e?.vista?.activadas).includes(ct);
     const puedo = ct && puedoPor(c, rolCt);
-    alerta = h('div', { class: 'op-alerta ' + (ev.signo === '+' ? 'buena' : activada ? 'resuelta' : ct ? 'roja' : 'gris') },
+    const estadoAl = ev.signo === '+' ? 'buena' : activada ? 'resuelta' : ct ? 'roja' : 'gris';
+    if (estadoAl === 'roja') {
+      const k = `op:alarma:${semilla}:${paso}`, ya = transcurrido(c, k);
+      sonar(k, 'alarma', ya);
+      alarma = ya;
+    }
+    alerta = h('div', { class: 'op-alerta ' + estadoAl, style: alarma != null ? `--ya:${alarma.toFixed(3)}s` : null },
       h('b', {}, ev.signo === '+' ? `★ ${T.bueno}` : T.alerta),
       h('p', { class: 'op-ev' }, tx(ev.nombre) || ev.id), tx(ev.texto) ? h('p', {}, tx(ev.texto)) : null,
       ct ? [h('p', {}, h('b', {}, tx(k?.nombre) || ct), ` · ${T.responsable}: `, h('span', { style: `color:var(--lp-rol-${rolCt})` }, depto(rolCt))),
@@ -276,5 +292,7 @@ export function pantallaOperaciones(c) {
       onclick: () => { if (unaVez('paso', 700)) c.enviar('avanzar', { paso }); },
     }, final ? T.informe : T.siguiente) : null);
 
-  return h('div', { class: 'op' }, izq, centro, der);
+  // Alarma: borde rojo que late en toda la pared y una franja de peligro sobre la consola mientras haya que actuar.
+  const franja = alarma != null ? h('div', { class: 'op-franja', role: 'alert' }, h('span', {}, '⚠ ', T.alarma, ' · ', tx(ev?.nombre) || '', ' ⚠')) : null;
+  return h('div', { class: 'op' + (alarma != null ? ' op-alarma' : ''), style: alarma != null ? `--ya:${alarma.toFixed(3)}s` : null }, izq, centro, der, franja);
 }

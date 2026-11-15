@@ -3,8 +3,8 @@
 //   vuelo    · ingeniera de vuelo: mono naranja con bandas reflectantes, coleta.
 //   ciencia  · científico: bata blanca sobre camisa verde, gafas, pelo rizado corto y barba.
 //   potencia · ingeniero eléctrico: casco blanco, chaleco amarillo de alta visibilidad.
-//   comms    · operadora de comunicaciones: hiyab azul y diadema con micrófono.
-//   jefe     · directora de misión: pelo canoso corto, americana, credencial y tableta (sin corbata ni bigote).
+//   comms    · operador de comunicaciones: polo azul, pelo castaño corto y diadema con micrófono.
+//   jefe     · director de misión: pelo gris corto, americana, credencial y tableta (sin corbata ni bigote).
 // Contrato con escena.js / main.js: devuelve { grupo, cabeza }. La cabeza es un grupo cuyo centro queda donde estaba antes
 // (sentado 1,33 m, de pie 1,35 m): main.js pone ahí la cámara y gira esa cabeza hacia donde mira cada jugador. El cuerpo mira a +z.
 import * as THREE from 'three';
@@ -36,11 +36,11 @@ export const LOOKS = {
     torso: 0x5b6470, mangas: 0x5b6470, pantalon: 0x2f3a4a, zapatos: 0x4a3626, chaleco: 0xe9cf2e, bandas: 0xd8dde4,
   },
   comms: {
-    piel: 0xa4704a, hiyab: 0x2f5fa8, cascos: 0x1f2328,
+    piel: 0xf0c8a6, pelo: { tipo: 'corto', color: 0x6a4428 }, cascos: 0x1f2328,
     torso: 0x4a7fd0, mangas: 0x4a7fd0, pantalon: 0x2a2f3a, zapatos: 0x222226,
   },
   jefe: {
-    piel: 0x8a5a3a, pelo: { tipo: 'canoso', color: 0xd8d6d2 },
+    piel: 0xe9bf9c, pelo: { tipo: 'corto', color: 0x9c9a96 },
     torso: 0xe9e4da, mangas: 0x34405a, pantalon: 0x34405a, zapatos: 0x1f1f22, americana: 0x34405a, credencial: true, tableta: true,
   },
 };
@@ -97,7 +97,7 @@ function cabezaDe(L, colorRol) {
     g.add(en(caja(0.07, 0.035, 0.01, colorRol), 0, 0.12, 0.165));                    // escudo del departamento
   }
   if (L.cascos) { // diadema de operadora con micrófono
-    const arco = malla(new THREE.TorusGeometry(0.17, 0.012, 4, 16, Math.PI), L.cascos); arco.rotation.y = Math.PI / 2; g.add(en(arco, 0, 0.02, 0));
+    const arco = malla(new THREE.TorusGeometry(0.17, 0.012, 4, 16, Math.PI), L.cascos); g.add(en(arco, 0, 0.02, -0.01)); // arco de oreja a oreja por encima de la cabeza (plano XY)
     for (const s of [-1, 1]) { const auricular = cil(0.045, 0.045, 0.03, L.cascos, 10); auricular.rotation.z = Math.PI / 2; g.add(en(auricular, s * 0.175, 0.0, 0)); }
     const brazo = caja(0.008, 0.008, 0.12, L.cascos); brazo.rotation.y = -0.5; g.add(en(brazo, 0.15, -0.05, 0.08));
     g.add(en(bola(0.015, colorRol, 0), 0.115, -0.06, 0.135));

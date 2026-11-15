@@ -6,18 +6,21 @@ import { h, en, lista, redondear, fuenteLink } from '../pantallas/ui.js';
 import { eventoDe } from '../pantallas/mision.js';
 import { explicarPuntos } from '../reglas/explicar.js';
 import { lanzamientoFallido, olvidarLanzamiento } from '../laptop/camara-lanzamiento.js';
+import { transcurrido, terminar, sonarEn } from './cine.js';
 
 const T = textos({
   es: { sinLanz: 'El cohete nunca llegó al espacio: el lanzamiento falló y las fases siguientes no se volaron.', pts: 'puntos', sinResultado: 'Aún no hay resultado.', pasos: 'Pasos', ciencia: 'Ciencia', real: 'Misión real',
     ref: 'Referencia', agencia: 'Agencia', cohete: 'Cohete real', encontro: 'Qué encontró', ok: 'Logrado', no: 'No logrado', prio: 'prioritario',
     hallazgos: 'Hallazgos ocultos', porque: 'Por qué ha pasado', suerte: 'Mala suerte', decision: 'Decisión', fuentes: 'Fuentes', ninguno: 'Ninguno',
     visto: 'detectado', perdido: 'se escapó', ausente: 'no estaba', otra: 'Volver a volar', nueva: 'Nueva misión', sinMision: 'Sin datos de misión.',
-    leyenda: 'Mala suerte: el fallo no dependía de tus decisiones. Decisión: había algo que cambiar.', estimaciones: 'Estimaciones del equipo de diseño' },
+    leyenda: 'Mala suerte: el fallo no dependía de tus decisiones. Decisión: había algo que cambiar.', estimaciones: 'Estimaciones del equipo de diseño',
+    transmision: 'TRANSMISIÓN FINAL RECIBIDA', saltar: 'Clic para saltar' },
   en: { sinLanz: 'The rocket never reached space: the launch failed and the following phases were not flown.', pts: 'points', sinResultado: 'No result yet.', pasos: 'Steps', ciencia: 'Science', real: 'Real mission',
     ref: 'Reference', agencia: 'Agency', cohete: 'Real rocket', encontro: 'What it found', ok: 'Achieved', no: 'Not achieved', prio: 'priority',
     hallazgos: 'Hidden findings', porque: 'Why it happened', suerte: 'Bad luck', decision: 'Decision', fuentes: 'Sources', ninguno: 'None',
     visto: 'detected', perdido: 'missed', ausente: 'not there', otra: 'Fly again', nueva: 'New mission', sinMision: 'No mission data.',
-    leyenda: 'Bad luck: the failure did not depend on your decisions. Decision: there was something to change.', estimaciones: 'Design team estimates' },
+    leyenda: 'Bad luck: the failure did not depend on your decisions. Decision: there was something to change.', estimaciones: 'Design team estimates',
+    transmision: 'FINAL TRANSMISSION RECEIVED', saltar: 'Click to skip' },
 });
 
 function recogerFuentes(c, set) {
@@ -56,6 +59,33 @@ function bloquePuntos(c, r) {
       h('span', { class: 'dbf-causa' }, p.causa),
       p.decision || p.evitar ? h('small', {}, [p.decision, p.evitar].filter(Boolean).join(' → ')) : null))),
     puntos.some((p) => p.tipo === 'suerte') && puntos.some((p) => p.tipo === 'decision') ? h('p', { class: 'dbf-nota' }, T.leyenda) : null);
+}
+
+const DUR_CINE = 4.6; // s: teletipo 0-1,2 · sello 1,5 · puntos 1,9-3,2 · fundido 3,9-4,6
+
+function introCine(c, r, m, clave, ya, tono) {
+  sonarEn(clave + ':tecleo', 'tecleo', 0.1, ya);
+  sonarEn(clave + ':vd', tono, 1.5, ya);
+  const titulo = r.cancelada ? TG.cancelledTitle : (TG.verdicts[r.veredicto] ?? '-');
+  const total = r.puntos != null ? Math.round(Number(r.puntos)) : null;
+  const puntos = h('b', { class: 'cine-num' }, total == null ? '' : '0');
+  if (total != null) { // la cifra sube de 0 a los puntos entre 1,9 s y 3,2 s
+    const t0 = performance.now() / 1000 - ya;
+    const paso = () => {
+      if (!puntos.isConnected) return;
+      const k = Math.min(1, Math.max(0, (performance.now() / 1000 - t0 - 1.9) / 1.3));
+      puntos.textContent = String(Math.round(total * (1 - (1 - k) ** 3)));
+      if (k < 1) requestAnimationFrame(paso);
+    };
+    requestAnimationFrame(paso);
+  }
+  return h('div', { class: 'dbf-cine c-' + tono, role: 'presentation', onclick: () => { terminar(c, clave, DUR_CINE); c.repintar(); } },
+    h('i', { class: 'cine-rayos' }), h('i', { class: 'cine-scan' }),
+    h('p', { class: 'cine-linea' }, T.transmision, h('span', { class: 'cine-cursor' }, '▌')),
+    h('p', { class: 'cine-mision' }, en(m?.nombre) || ''),
+    h('div', { class: 'cine-sello' }, titulo),
+    total == null ? null : h('p', { class: 'cine-puntos' }, puntos, ' ', T.pts),
+    h('small', { class: 'cine-saltar' }, T.saltar));
 }
 
 export function pantallaDebrief(c) {
@@ -122,6 +152,13 @@ export function pantallaDebrief(c) {
       return h('li', {}, f.url ? h('a', { href: f.url, target: '_blank', rel: 'noopener noreferrer' }, titulo) : titulo, agencia ? h('small', {}, ` (${agencia})`) : null);
     }), hayInternas ? h('li', {}, h('small', {}, T.estimaciones)) : null) : h('p', { class: 'dbf-nota' }, T.ninguno)));
 
-  return h('div', { class: 'dbf' }, banner, tiempo,
-    h('div', { class: 'dbf-cols' }, bloquePuntos(c, r), h('div', { class: 'dbf-col' }, ciencia, real)), botones);
+  // Intro cinematográfica (una vez por resultado): transmisión, nombre de la misión, sello del veredicto y puntos que suben.
+  // Después los paneles del informe entran uno tras otro. Clic para saltar.
+  const clave = `dbf:${c.e?.semilla ?? ''}:${r.veredicto}:${r.puntos ?? ''}:${pasos.length}`;
+  const ya = transcurrido(c, clave);
+  const tono = r.cancelada ? 'fallida' : vd;
+  const cine = ya < DUR_CINE ? introCine(c, r, m, clave, ya, tono) : null;
+  const entra = ya < DUR_CINE + 1.5;
+  return h('div', { class: 'dbf' + (entra ? ' dbf-entra' : ''), style: `--ya:${ya.toFixed(3)}s` }, banner, tiempo,
+    h('div', { class: 'dbf-cols' }, bloquePuntos(c, r), h('div', { class: 'dbf-col' }, ciencia, real)), botones, cine);
 }

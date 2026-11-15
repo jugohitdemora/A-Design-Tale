@@ -87,3 +87,50 @@
 .dbf-tiempo h3 { flex: none; }
 .dbf-tiempo .dbf-pasos { flex: 1; min-width: 0; padding-bottom: 0; }
 .dbf-punto { padding: var(--e-1) var(--e-3); }
+
+/* ---------- Informe: intro cinematográfica y entrada escalonada (src/control/cine.js resta --ya, lo ya transcurrido) ---------- */
+.dbf { position: relative; }
+.dbf-cine { position: absolute; inset: -6px; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--e-4);
+  background: radial-gradient(ellipse at center, #0b1a2e 0%, #02060c 75%); cursor: pointer; overflow: hidden; --c: var(--f-tinta);
+  animation: cine-fuera 0.7s ease-in calc(3.9s - var(--ya)) both; }
+.dbf-cine.c-total { --c: var(--f-verde); } .dbf-cine.c-parcial { --c: var(--f-ambar); } .dbf-cine.c-fallida { --c: var(--f-rojo); }
+@keyframes cine-fuera { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+.cine-scan { position: absolute; inset: 0; pointer-events: none; opacity: 0.18;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 4px); }
+.cine-linea { margin: 0; font: var(--tp-titulo) var(--lp-pixel); color: var(--f-cian); letter-spacing: 2px; white-space: nowrap; overflow: hidden;
+  width: 0; animation: cine-teclea 1.1s steps(28) calc(0.1s - var(--ya)) forwards; }
+@keyframes cine-teclea { to { width: 30ch; } }
+.cine-cursor { animation: cine-parpadeo 0.5s steps(1) infinite; }
+@keyframes cine-parpadeo { 50% { opacity: 0; } }
+.cine-mision { margin: 0; font: 600 var(--t-titulo) var(--lp-ui); color: var(--f-tenue); opacity: 0; animation: cine-aparece 0.4s ease-out calc(1.05s - var(--ya)) forwards; }
+@keyframes cine-aparece { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.cine-sello { position: relative; font: 56px/1.1 var(--lp-pixel); color: var(--c); text-transform: uppercase; text-align: center; padding: var(--e-4) var(--e-6);
+  border: 6px solid var(--c); border-radius: 6px; text-shadow: 0 0 18px var(--c), 4px 4px 0 #000;
+  box-shadow: 0 0 40px color-mix(in srgb, var(--c) 45%, transparent), inset 0 0 30px color-mix(in srgb, var(--c) 25%, transparent);
+  opacity: 0; transform: scale(2.6) rotate(-8deg); animation: cine-sello 0.42s cubic-bezier(.2, 1.6, .4, 1) calc(1.5s - var(--ya)) forwards; }
+@keyframes cine-sello { to { opacity: 1; transform: scale(1) rotate(-3deg); } }
+.cine-puntos { position: relative; margin: 0; font: var(--tp-titulo) var(--lp-pixel); color: var(--f-tinta); opacity: 0; animation: cine-aparece 0.3s ease-out calc(1.9s - var(--ya)) forwards; }
+.cine-num { font-size: 36px; color: var(--c); text-shadow: 0 0 12px var(--c); }
+.cine-saltar { position: absolute; right: var(--e-4); bottom: var(--e-3); font-size: var(--t-meta); color: var(--f-tenue); opacity: 0.7; }
+/* Éxito total: rayos que giran detrás del sello; parcial: halo ámbar; fallo: destello rojo y temblor */
+.cine-rayos { position: absolute; left: 50%; top: 50%; width: 1400px; height: 1400px; margin: -700px 0 0 -700px; pointer-events: none; opacity: 0; }
+.c-total .cine-rayos { background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--f-verde) 22%, transparent) 0 6deg, transparent 6deg 18deg);
+  animation: cine-aparece 0.6s ease-out calc(1.5s - var(--ya)) forwards, cine-gira 14s linear calc(1.5s - var(--ya)) infinite; }
+.c-parcial .cine-rayos { background: radial-gradient(circle, color-mix(in srgb, var(--f-ambar) 22%, transparent) 0 18%, transparent 40%); animation: cine-aparece 0.6s ease-out calc(1.5s - var(--ya)) forwards; }
+@keyframes cine-gira { to { transform: rotate(360deg); } }
+.dbf-cine.c-fallida { animation: cine-fuera 0.7s ease-in calc(3.9s - var(--ya)) both, cine-temblor 0.5s linear calc(1.55s - var(--ya)) 1; }
+.c-fallida .cine-rayos { background: radial-gradient(circle, rgba(239, 91, 74, 0.55), transparent 55%); animation: cine-destello 0.9s ease-out calc(1.5s - var(--ya)) forwards; }
+@keyframes cine-destello { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0.35; } }
+@keyframes cine-temblor { 0%, 100% { transform: none; } 15% { transform: translate(-10px, 4px); } 30% { transform: translate(9px, -6px); } 45% { transform: translate(-7px, 3px); } 60% { transform: translate(6px, 2px); } 80% { transform: translate(-3px, -2px); } }
+/* Después de la intro, los paneles entran uno tras otro */
+.dbf-entra > .dbf-veredicto, .dbf-entra > .dbf-tiempo, .dbf-entra > .dbf-cols, .dbf-entra > .dbf-botones { opacity: 0; animation: cine-aparece 0.45s ease-out forwards; }
+.dbf-entra > .dbf-veredicto { animation-delay: calc(4.0s - var(--ya)); }
+.dbf-entra > .dbf-tiempo { animation-delay: calc(4.2s - var(--ya)); }
+.dbf-entra > .dbf-cols { animation-delay: calc(4.4s - var(--ya)); }
+.dbf-entra > .dbf-botones { animation-delay: calc(4.6s - var(--ya)); }
+@media (prefers-reduced-motion: reduce) {
+  .dbf-cine, .dbf-cine.c-fallida { animation: cine-fuera 0.3s linear calc(2.4s - var(--ya)) both; }
+  .cine-linea { width: auto; animation: none; } .cine-mision, .cine-sello, .cine-puntos { opacity: 1; transform: none; animation: none; }
+  .cine-rayos { display: none; } .cine-cursor { animation: none; }
+  .dbf-entra > * { opacity: 1; animation: none; }
+}
