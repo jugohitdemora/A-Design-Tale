@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { textos, depto } from './i18n.js';
 import { decorarSala } from './decorado-briefing.js';
+import { crearPersonaje, LOOKS } from './avatares.js';
 
 const T = textos({
   es: { pizarra: 'BRIEFING DE MISIÓN', objetivos: 'Objetivos', tareas: 'Tareas', riesgos: 'Riesgos', puerta: 'CONTROL DE MISIÓN', jefe: 'Jefe de misión',
@@ -257,7 +258,8 @@ export function crearEscena() {
       const s = (mio ? 1.7 : sobre ? 1.55 : voto ? 1.2 : 1.4) * uS;
       h.escala += (s - h.escala) * Math.min(1, dt * 8);
       h.grupo.scale.setScalar(Math.max(0.001, h.escala));
-      h.grupo.traverse((o) => { if (o.material?.userData?.holo) o.material.opacity = mio || sobre || !voto ? 0.92 : 0.45; });
+      const lleno = mio || sobre || !voto;
+      h.grupo.traverse((o) => { const u = o.material?.userData; if (u?.holo) o.material.opacity = lleno ? 0.92 : 0.45; else if (u?.halo) o.material.opacity = u.halo * (lleno ? 1 : 0.5); });
       h.etiqueta.visible = proy.u > 0.7;
       h.etiqueta.element.classList.toggle('elegido', mio);
       h.etiqueta.element.classList.toggle('encima', sobre && !mio);
@@ -578,62 +580,102 @@ function holoMat(color) {
   m.userData.holo = true;
   return m;
 }
-function crearHolograma(id) {
+// Halo translúcido (atmósfera, coma, cola): aditivo y sin escribir profundidad para que no tape lo de dentro.
+function haloMat(color, opacidad) {
+  const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: opacidad, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  m.userData.halo = opacidad; // opacidad base: el foco del proyector la atenúa, no la sustituye
+  return m;
+}
+// Superficie irregular: desplaza cada vértice de una esfera con una función de ruido barata y determinista.
+function rocoso(r, det, amp, semilla, escala = [1, 1, 1]) {
+  const geo = new THREE.IcosahedronGeometry(r, det);
+  const p = geo.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const n = Math.sin(v.x * 37 + semilla) * Math.cos(v.y * 29 - semilla) + Math.sin(v.z * 41 + semilla * 2) * 0.6;
+    v.multiplyScalar(1 + n * amp);
+    p.setXYZ(i, v.x * escala[0], v.y * escala[1], v.z * escala[2]);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+// Satélite: cuerpo con aislante dorado, dos alas de paneles con celdas y antena parabólica.
+function satelite(escala = 1) {
+  const s = new THREE.Group();
+  s.add(new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.036, 0.032), holoMat(0xe8c060)));
+  for (const k of [-1, 1]) {
+    const brazo = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.003, 0.003), holoMat(0xdddddd)); brazo.position.x = k * 0.026; s.add(brazo);
+    for (let c = 0; c < 3; c++) {
+      const celda = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.002, 0.03), holoMat(0x4f8fe0)); celda.position.x = k * (0.048 + c * 0.024); s.add(celda);
+    }
+  }
+  const plato = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.01, 10, 1, true), holoMat(0xffffff)); plato.position.y = 0.026; plato.rotation.x = Math.PI; s.add(plato);
+  s.scale.setScalar(escala);
+  return s;
+}
+export function crearHolograma(id) { // exportada también para pruebas/personajes.html
   const g = new THREE.Group();
   if (id === 'orbita') {
-    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.085, 1), holoMat(0x3f8fe0)));
-    const anillo = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.006, 4, 32), holoMat(0xbfe8ff));
-    anillo.rotation.x = Math.PI / 2 - 0.35; g.add(anillo);
-    const sat = new THREE.Group();
-    sat.add(new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.03), holoMat(0xffffff)));
-    for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.004, 0.022), holoMat(0x7fd0ff)); p.position.x = s * 0.04; sat.add(p); }
-    sat.position.set(0.15, 0.05, 0); g.add(sat);
+    // Planeta azul con continentes, atmósfera, órbita marcada y satélite sobre ella.
+    const planeta = new THREE.Mesh(new THREE.IcosahedronGeometry(0.085, 3), holoMat(0x2f7fd8)); g.add(planeta);
+    const tierra = new THREE.Mesh(rocoso(0.0862, 2, 0.06, 1.7), holoMat(0x5fbf7a)); tierra.material.opacity = 0.75; g.add(tierra);
+    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.1, 3), haloMat(0x7fd0ff, 0.12)));
+    const orbita = new THREE.Group(); orbita.rotation.x = Math.PI / 2 - 0.35;
+    const traza = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.0025, 4, 64), holoMat(0xbfe8ff)); orbita.add(traza);
+    const sat = satelite(1.1); sat.position.set(0.16, 0, 0); sat.rotation.x = -orbita.rotation.x; orbita.add(sat);
+    g.add(orbita);
   } else if (id === 'landing') {
-    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.1, 1), holoMat(0xb8bcc4)));
-    const lander = new THREE.Group();
-    lander.add(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.035, 0.05), holoMat(0xf2c14e)));
-    for (const [x, z] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
-      const pata = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.04, 0.006), holoMat(0xe8e8e8));
-      pata.position.set(x * 0.03, -0.025, z * 0.03); pata.rotation.set(z * 0.4, 0, -x * 0.4); lander.add(pata);
+    // Luna con cráteres y un módulo de aterrizaje posado arriba.
+    const luna = new THREE.Mesh(rocoso(0.1, 3, 0.02, 4.2), holoMat(0xc4c7cd)); g.add(luna);
+    const crateres = [[0.3, 0.5], [1.2, 0.2], [2.4, 0.9], [3.6, -0.3], [4.8, 0.6], [5.6, -0.7], [0.9, -0.9], [2.0, -0.4]];
+    for (const [lon, lat] of crateres) {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.006, 10), holoMat(0x8d9098));
+      const n = new THREE.Vector3(Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon));
+      c.position.copy(n).multiplyScalar(0.099);
+      c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
+      g.add(c);
     }
-    lander.position.y = 0.125; g.add(lander);
+    const lander = new THREE.Group();
+    lander.add(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 8), holoMat(0xf2c14e)));          // etapa de descenso
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.024, 0.03), holoMat(0xe8e8e8)); cab.position.y = 0.027; lander.add(cab);
+    const tobera = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.016, 8, 1, true), holoMat(0x9aa0a8)); tobera.position.y = -0.022; lander.add(tobera);
+    const mastil = new THREE.Mesh(new THREE.CylinderGeometry(0.0015, 0.0015, 0.03, 4), holoMat(0xffffff)); mastil.position.set(0.01, 0.052, 0); lander.add(mastil);
+    const plato = new THREE.Mesh(new THREE.ConeGeometry(0.01, 0.006, 8, 1, true), holoMat(0xffffff)); plato.position.set(0.01, 0.068, 0); plato.rotation.x = Math.PI; lander.add(plato);
+    for (const [x, z] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { // cada pata va del borde inferior de la etapa a su pie
+      const a = new THREE.Vector3(x * 0.019, -0.012, z * 0.019), b = new THREE.Vector3(x * 0.036, -0.046, z * 0.036);
+      const pata = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0022, a.distanceTo(b), 5), holoMat(0xe8e8e8));
+      pata.position.copy(a).add(b).multiplyScalar(0.5);
+      pata.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); lander.add(pata);
+      const pie = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.003, 8), holoMat(0xe8e8e8)); pie.position.copy(b); lander.add(pie);
+    }
+    lander.position.y = 0.14; g.add(lander);
   } else {
-    const geo = new THREE.DodecahedronGeometry(0.08, 0);
-    const pos = geo.attributes.position;
-    for (let i = 0; i < pos.count; i++) pos.setXYZ(i, pos.getX(i) * 1.35, pos.getY(i) * (0.8 + (i % 3) * 0.08), pos.getZ(i));
-    geo.computeVertexNormals();
-    g.add(new THREE.Mesh(geo, holoMat(0x9a8a78)));
-    const cola = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.3, 8, 1, true), holoMat(0x8fe9ff));
-    cola.material.opacity = 0.5; cola.rotation.z = Math.PI / 2; cola.position.x = -0.2; g.add(cola);
+    // Cometa de dos lóbulos (como 67P), coma brillante y dos colas: polvo (curva, ancha) e iones (recta, azul).
+    const nucleo = new THREE.Group();
+    nucleo.add(new THREE.Mesh(rocoso(0.07, 2, 0.12, 2.3, [1.2, 0.9, 1]), holoMat(0x8a7f74)));
+    const cabeza = new THREE.Mesh(rocoso(0.05, 2, 0.12, 5.1, [1, 0.95, 1]), holoMat(0x9a8f84)); cabeza.position.set(0.085, 0.035, 0.01); nucleo.add(cabeza);
+    nucleo.rotation.z = -0.25; g.add(nucleo);
+    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 2), haloMat(0xbfefff, 0.1)));
+    // Colas hacia arriba e inclinadas: el holograma gira sin parar, y una cola horizontal barrería a los hologramas vecinos.
+    // El vértice del cono queda en el núcleo y la cola se abre hacia fuera.
+    const cola = (radio, largo, color, op, dir) => {
+      const c = new THREE.Mesh(new THREE.ConeGeometry(radio, largo, 16, 1, true), haloMat(color, op));
+      const d = dir.clone().normalize();
+      c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().negate());
+      c.position.copy(d).multiplyScalar(0.06 + largo / 2);
+      return c;
+    };
+    g.add(cola(0.07, 0.26, 0xfff1c8, 0.3, new THREE.Vector3(-0.45, 1, -0.2)));  // polvo: más ancha y curvada
+    g.add(cola(0.03, 0.32, 0x7fd0ff, 0.35, new THREE.Vector3(-0.15, 1, 0.1)));    // iones: recta y azul
   }
   return g;
 }
 
 // Avatar en bloques: cuerpo con el color del rol y cabeza con ojos para ver hacia dónde mira.
+// Personaje de cada departamento (vestido según su oficio) o del jefe de misión: ver src/avatares.js.
 export function crearAvatar(rol, asiento, dePie = false) {
-  const grupo = new THREE.Group();
-  const base = dePie ? 0.0 : 0.5;
-  if (dePie) { const piernas = caja(0.4, 0.85, 0.24, 0x26262a); piernas.position.y = 0.43; grupo.add(piernas); }
-  const torso = caja(0.5, 0.6, 0.3, dePie ? 0x2b2b30 : 0x6f7a87);
-  torso.position.y = base + (dePie ? 0.85 : 0.33);
-  grupo.add(torso);
-  const parche = caja(0.14, 0.14, 0.02, rol.color);
-  parche.position.set(0.12, torso.position.y + 0.12, 0.16);
-  grupo.add(parche);
-  if (dePie) { // gafete y corbata del jefe
-    const corbata = caja(0.06, 0.32, 0.02, 0x1a1a1a); corbata.position.set(0, torso.position.y + 0.02, 0.16); grupo.add(corbata);
-    const gafete = caja(0.1, 0.13, 0.01, 0xf2f2ee); gafete.position.set(-0.13, torso.position.y - 0.05, 0.16); grupo.add(gafete);
-  }
-  const cabeza = new THREE.Group();
-  cabeza.position.y = torso.position.y + 0.3 + 0.2;
-  const craneo = caja(0.34, 0.36, 0.34, 0xe8c4a0); cabeza.add(craneo);
-  const pelo = caja(0.36, 0.1, 0.36, dePie ? 0xbfbfbf : 0x4a3222); pelo.position.y = 0.18; cabeza.add(pelo);
-  for (const x of [-0.07, 0.07]) { const ojo = caja(0.05, 0.06, 0.02, 0x1a1a1a); ojo.position.set(x, 0.03, 0.175); cabeza.add(ojo); }
-  if (dePie) {
-    for (const x of [-0.075, 0.075]) { const l = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.01, 4, 10), mat(0x111111)); l.position.set(x, 0.03, 0.18); cabeza.add(l); }
-    const bigote = caja(0.16, 0.04, 0.02, 0x9a9a9a); bigote.position.set(0, -0.07, 0.178); cabeza.add(bigote);
-  }
-  grupo.add(cabeza);
+  const look = dePie ? LOOKS.jefe : LOOKS[rol.id] ?? LOOKS.vuelo;
+  const { grupo, cabeza } = crearPersonaje(look, { dePie, colorRol: rol.color });
   const nombre = etiqueta(rol.nombre ?? '');
   nombre.position.y = cabeza.position.y + 0.38;
   grupo.add(nombre);

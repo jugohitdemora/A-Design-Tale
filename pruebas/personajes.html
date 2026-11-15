@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Personajes y hologramas</title>
+  <!-- Vista de revisión: los cuatro departamentos sentados, el jefe de pie y los tres hologramas del proyector. Arrastra para girar. -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #1b2230; color: #eef4f8; font: 14px system-ui, sans-serif; overflow: hidden; }
+    #info { position: fixed; left: 12px; top: 10px; opacity: 0.8; }
+  </style>
+  <script type="importmap">
+  { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/" } }
+  </script>
+</head>
+<body>
+  <p id="info">Vuelo · Ciencia · Energía · Comunicaciones · Jefe · hologramas (arrastra para girar)</p>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { crearPersonaje, LOOKS } from '../src/avatares.js';
+    import { crearHolograma } from '../src/escena.js';
+
+    const render = new THREE.WebGLRenderer({ antialias: true });
+    render.setPixelRatio(Math.min(devicePixelRatio, 2));
+    render.setSize(innerWidth, innerHeight);
+    document.body.append(render.domElement);
+    const escena = new THREE.Scene();
+    escena.background = new THREE.Color(0x1b2230);
+    escena.add(new THREE.HemisphereLight(0xffffff, 0x445066, 1.6));
+    const sol = new THREE.DirectionalLight(0xffffff, 1.6); sol.position.set(2, 4, 3); escena.add(sol);
+    const camara = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 50);
+    camara.position.set(0, 1.5, 4.2);
+    const ctl = new OrbitControls(camara, render.domElement); ctl.target.set(0, 0.9, 0); ctl.update();
+    const suelo = new THREE.Mesh(new THREE.CircleGeometry(4, 32), new THREE.MeshStandardMaterial({ color: 0x3b4656 })); suelo.rotation.x = -Math.PI / 2; escena.add(suelo);
+
+    const colores = { vuelo: 0xd9822b, ciencia: 0x3fa66b, potencia: 0xe0c040, comms: 0x4a7fd0 };
+    ['vuelo', 'ciencia', 'potencia', 'comms'].forEach((id, i) => {
+      const silla = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.08, 0.46), new THREE.MeshStandardMaterial({ color: 0x2a2f38 }));
+      const { grupo } = crearPersonaje(LOOKS[id], { colorRol: colores[id] });
+      grupo.position.x = -2.1 + i * 0.95; silla.position.set(grupo.position.x, 0.46, 0.05);
+      escena.add(grupo, silla);
+    });
+    const jefe = crearPersonaje(LOOKS.jefe, { dePie: true });
+    jefe.grupo.position.x = 1.9; escena.add(jefe.grupo);
+    ['orbita', 'landing', 'exploracion'].forEach((id, i) => {
+      const h = crearHolograma(id); h.position.set(-0.7 + i * 0.7, 2.25, 0); h.scale.setScalar(1.6); escena.add(h);
+    });
+    addEventListener('resize', () => { render.setSize(innerWidth, innerHeight); camara.aspect = innerWidth / innerHeight; camara.updateProjectionMatrix(); });
+    render.setAnimationLoop(() => render.render(escena, camara));
+    window.__vista = { camara, ctl };
+  </script>
+</body>
+</html>

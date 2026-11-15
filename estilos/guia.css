@@ -91,8 +91,10 @@ body.en-proyector .f-hud .g-linea { display: none; } /* la barra del proyector y
 /* compacto (barras): textos cortos; la tarjeta de la sala usa los largos */
 .rm-l { display: none; }
 .f-hud .rm-l { display: inline; } .f-hud .rm-c { display: none; }
-.f-hud .rm { grid-template-columns: 1fr; grid-template-areas: 'fecha' 'barra' 'linea'; max-width: none; row-gap: var(--e-1); font-size: var(--t-meta); padding: var(--e-2) var(--e-3); background: rgba(0, 0, 0, 0.25); border-radius: 4px; }
+.f-hud .rm { grid-template-columns: minmax(0, 1fr); min-width: 0; grid-template-areas: 'fecha' 'barra' 'linea'; max-width: none; row-gap: var(--e-1); font-size: var(--t-meta); padding: var(--e-2) var(--e-3); background: rgba(0, 0, 0, 0.25); border-radius: 4px; }
 .f-hud .rm-mes { font-size: var(--t-titulo); }
+.f-hud .rm-fecha { flex-wrap: wrap; white-space: normal; row-gap: 2px; } /* la fecha y el ritmo bajan de línea: la barra no se sale de la tarjeta */
+.f-hud .rm-fecha > * { white-space: nowrap; }
 .f-hud .rm-barra { height: 12px; }
 .f-hud .rm-linea { flex-direction: column; gap: 2px; }
 .f-hud .rm-linea > span { white-space: normal; }
