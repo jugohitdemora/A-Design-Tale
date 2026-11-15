@@ -101,9 +101,13 @@
 .mc-informe { height: 100%; box-sizing: border-box; overflow: auto; background: var(--lp-panel); border: 3px solid var(--lp-borde); box-shadow: var(--lp-sombra); padding: 14px; border-radius: 3px; color: var(--lp-tinta); }
 
 /* ---------- Planificador ---------- */
-.pl { height: 100%; display: grid; grid-template-columns: 300px 1fr 360px; grid-template-rows: auto minmax(0, 1fr); gap: var(--e-3); }
-.pl > .pl-tiempo { grid-column: 1 / -1; }
-.pl-centro-col { overflow: auto; }
+/* Dos columnas: a la izquierda ruta (arriba) y sitio (abajo); a la derecha la línea de tiempo y, debajo, el mapa con todo el ancho. */
+.pl { height: 100%; display: grid; grid-template-columns: 300px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'izq tiempo' 'der mapa'; gap: var(--e-3); }
+.pl > .pl-tiempo { grid-area: tiempo; min-width: 0; }
+.pl > .pl-izq { grid-area: izq; min-height: 0; }
+.pl > .pl-centro-col { grid-area: mapa; min-height: 0; }
+.pl > .pl-der { grid-area: der; min-height: 0; }
+.pl-centro-col { overflow: hidden; }
 .pl-izq, .pl-der { overflow: auto; display: flex; flex-direction: column; gap: var(--e-3); }
 .pl-sola { max-width: 600px; margin: 0 auto; }
 .pl-rutas { display: flex; flex-direction: column; gap: var(--e-2); }
@@ -115,8 +119,9 @@
 .pl-centro-col { display: flex; flex-direction: column; min-width: 0; }
 .pl-capas { display: flex; flex-wrap: wrap; gap: var(--e-2); align-items: center; margin-bottom: var(--e-2); }
 .pl-capas .boton { padding: 4px 12px; min-height: 32px; }
-.pl-mapa { position: relative; width: 100%; max-height: 520px; max-width: 100%; background: var(--mc-hundido); border: 2px solid var(--mc-borde); overflow: hidden; cursor: crosshair; user-select: none; }
-.pl-mapa.figura { max-width: 720px; margin: 0 auto; }
+/* La caja toma el alto libre de la columna; el mapa se dibuja con su proporción real (--ar) al mayor tamaño que quepa. */
+.pl-mapa-caja { flex: 1 1 0; min-height: 120px; container-type: size; display: flex; align-items: center; justify-content: center; }
+.pl-mapa { position: relative; flex: none; box-sizing: border-box; aspect-ratio: var(--ar, 2 / 1); width: min(100cqw, 100cqh * (var(--ar, 2 / 1))); height: auto; background: var(--mc-hundido); border: 2px solid var(--mc-borde); overflow: hidden; cursor: crosshair; user-select: none; }
 .pl-mapa img, .pl-mapa canvas.pl-capa { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; image-rendering: auto; }
 .pl-mapa .pl-capa { opacity: 0.72; mix-blend-mode: normal; }
 .pl-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -231,10 +236,11 @@
 
 /* Línea de tiempo del mes de lanzamiento (a todo el ancho; la ven todos los roles) */
 .pl-tiempo { padding: var(--e-2) var(--e-3); }
-.pl-lt-cab { display: flex; align-items: center; gap: var(--e-3); flex-wrap: wrap; }
-.pl-lt-cab h3 { margin: 0; }
-.pl-lt-esp { flex: 1; }
-.pl-lt-fijado { font: 600 var(--t-cuerpo) var(--lp-ui); color: var(--mc-tenue); }
+.pl-lt-cab { display: flex; align-items: center; gap: var(--e-1) var(--e-2); flex-wrap: wrap; }
+.pl-lt-cab h3 { margin: 0; white-space: nowrap; }
+.pl-lt-cab > * { flex: none; }
+.pl-lt-esp { flex: 1 1 0 !important; }
+.pl-lt-fijado { font: 600 var(--t-cuerpo) var(--lp-ui); color: var(--mc-tenue); flex: 0 1 auto !important; min-width: 8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-lt-fijado.ok { color: var(--mc-ambar); } .pl-lt-fijado.mal { color: var(--mc-rojo); }
 .pl-lt-cab .boton { padding: 4px 12px; min-height: 32px; }
 .pl-lt-zona { position: relative; margin: var(--e-1) 10px 0; touch-action: none; user-select: none; }
@@ -245,7 +251,7 @@
 .pl-lt-marca.plazo { color: var(--mc-cian); } .pl-lt-marca.ahora { color: var(--mc-blanco); }
 .pl-lt-marca.fijado { color: var(--mc-ambar); } .pl-lt-marca.fijado.perdido { color: var(--mc-rojo); text-decoration: line-through; }
 .pl-lt-rango { display: block; width: calc(100% + 20px); margin: 0 -10px; height: 22px; background: transparent; cursor: pointer; accent-color: var(--mc-ambar); }
-.pl-lt-graf { position: relative; height: 80px; border: 1px solid var(--mc-borde); background: var(--mc-hundido); cursor: crosshair; }
+.pl-lt-graf { position: relative; height: 56px; border: 1px solid var(--mc-borde); background: var(--mc-hundido); cursor: crosshair; }
 .pl-lt-banda { position: absolute; top: 0; bottom: 0; pointer-events: none; }
 .pl-lt-banda.pasado { background: repeating-linear-gradient(135deg, var(--mc-pasado) 0 4px, var(--mc-pasado-2) 4px 8px); opacity: 0.92; z-index: 2; }
 .pl-lt-banda.pronto { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--mc-tenue) 25%, transparent) 0 4px, transparent 4px 8px); z-index: 2; }
@@ -266,8 +272,11 @@
 .pl-lt-eje { position: relative; height: 14px; font: var(--t-meta)/14px var(--lp-ui); color: var(--mc-tenue); }
 .pl-lt-eje span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .pl-lt-eje span.anio { color: var(--mc-tinta); font-weight: 600; }
-.pl-lt-lectura { display: flex; flex-wrap: wrap; gap: var(--e-1) var(--e-3); margin-top: var(--e-1); }
-.pl-lt-chip { display: flex; flex-direction: column; min-width: 110px; font-size: var(--t-meta); line-height: 1.25; }
+.pl-lt-pie { display: flex; align-items: center; gap: var(--e-3); }
+.pl-lt-pie > .pl-lt-lectura { flex: 1; min-width: 0; }
+.pl-lt-pie > .boton { flex: none; padding: 4px 12px; min-height: 32px; }
+.pl-lt-lectura { display: flex; flex-wrap: wrap; gap: 2px var(--e-3); margin-top: 2px; }
+.pl-lt-chip { display: flex; flex-direction: column; min-width: 96px; font-size: var(--t-meta); line-height: 1.25; }
 .pl-lt-chip small { font-size: var(--t-meta); color: var(--mc-tenue); text-transform: uppercase; letter-spacing: 0.3px; }
 .pl-lt-chip b { font-size: var(--t-cuerpo); color: var(--mc-tinta); }
 .pl-lt-chip em { font-style: normal; margin-left: 6px; padding: 0 5px; border: 1px solid var(--mc-borde); border-radius: 3px; color: var(--mc-tenue); }
@@ -308,7 +317,6 @@
   background: var(--mc-panel); border: 2px solid var(--mc-borde); border-radius: 3px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
 .pl-cond-pop h3 { margin: 0 0 var(--e-2); }
 .pl-lt-chip .mal { color: var(--mc-ambar); }
-.pl { grid-template-columns: 330px 1fr 360px; }
 .pl-izq .mc-barras li { grid-template-columns: minmax(0, 1fr) 70px 40px; margin: 1px 0; }
 .pl-izq { gap: var(--e-2); }
 .pl-izq .mc-panel { padding-top: var(--e-2); padding-bottom: var(--e-2); }

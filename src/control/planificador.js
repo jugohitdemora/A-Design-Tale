@@ -289,7 +289,7 @@ function panelMeses(c, u) {
   const delta = h('div', { class: 'pl-lt-delta' });
   // Leyenda y nota de retraso: consulta, plegadas tras "¿Cómo se lee?" (cada franja también lo dice al pasar el ratón).
   const ayuda = recordarAbierto(h('details', { class: 'pl-lt-ayuda' }, h('summary', { class: 'boton texto' }, T.ayuda), leyenda), u, 'ayudaAbierta');
-  tiempo.append(h('div', { class: 'pl-lt-cab' }, h('h3', {}, T.mesTit), fijado, delta, h('span', { class: 'pl-lt-esp' }), cond, ayuda, fijar));
+  tiempo.append(h('div', { class: 'pl-lt-cab' }, h('h3', {}, T.mesTit), fijado, delta, h('span', { class: 'pl-lt-esp' }), cond, ayuda));
 
   // --- marcas (ahora, plazo, fijado) en dos carriles para que no se pisen ---
   const lista_ = [{ mes: rl.mes, txt: `▸ ${T.marcaAhora}`, cls: 'ahora' }];
@@ -354,7 +354,8 @@ function panelMeses(c, u) {
   graf.addEventListener('click', (ev) => { cand = cercano(mesBajoRaton(ev)); u.mesVer = cand; act(); });
 
   const lectura = h('div', { class: 'pl-lt-lectura', 'aria-live': 'polite' });
-  tiempo.append(zona, lectura);
+  // El botón de fijar va a la derecha de la lectura del mes: la cabecera cabe en una línea y el mapa gana alto.
+  tiempo.append(zona, h('div', { class: 'pl-lt-pie' }, lectura, fijar));
   if (info.perdida) {
     const sug = A.mejor ?? libres[0];
     tiempo.append(h('p', { class: 'mc-nota aviso pl-perdida', role: 'alert' }, T.perdida(nombre(info.elegido, true), sug ? nombre(sug.mes, true) : null)));
@@ -459,7 +460,9 @@ function mapa(c, P, u) {
   const figura = P.mapa.proyeccion === 'figura';
   const elegido = c.e?.ruta?.sitio ?? null;
   const puedoSitio = puedoPor(c, 'vuelo') || puedoPor(c, 'ciencia');
-  const escenario = h('div', { class: 'pl-mapa' + (figura ? ' figura' : ''), style: figura ? `aspect-ratio:${base?.ancho ?? 625}/${base?.alto ?? 450}` : 'aspect-ratio:2/1' });
+  // Proporción real de la imagen (equirectangular = 2:1): el mapa nunca se estira; la caja lo centra y lo ajusta al espacio libre.
+  const ar = figura ? `${base?.ancho ?? 625} / ${base?.alto ?? 450}` : '2 / 1';
+  const escenario = h('div', { class: 'pl-mapa' + (figura ? ' figura' : ''), style: `--ar:${ar}` });
   if (base) escenario.append(h('img', { src: ruta(base.archivo), alt: tx(base.nombre), draggable: 'false' }));
   for (const capa of lista(P.capas)) {
     if (!u.capas.includes(capa.id) || capa.id === 'color') continue;
@@ -534,7 +537,7 @@ function mapa(c, P, u) {
     h('i', { style: `background:linear-gradient(90deg,${[0, 0.2, 0.4, 0.6, 0.8, 1].map((t) => `rgb(${color(t).join(',')})`).join(',')})` }),
     h('span', {}, T.alto), h('small', {}, tx(foco.nota))) : null;
   return h('section', { class: 'mc-panel pl-centro-col' }, h('h3', {}, T.mapa),
-    botones, escenario, ficha, leyenda, puedoSitio ? null : avisoBloqueo(T.soloSitio()));
+    botones, h('div', { class: 'pl-mapa-caja' }, escenario), ficha, leyenda, puedoSitio ? null : avisoBloqueo(T.soloSitio()));
 }
 
 function fichaSitio(c, P, u, res) {
