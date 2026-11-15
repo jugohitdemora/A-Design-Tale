@@ -38,11 +38,15 @@ Abre `http://localhost:8770/` en dos pestañas o en dos equipos con la **misma U
 - `src/config.js`: nombre del juego y textos de marca.
 - `src/inicio.js`: centro de control del fondo.
 - `src/escena.js`: sala de briefing, avatares y NPC.
-- `src/red.js`: conexión entre pares.
-- `src/main.js`: pantallas, lobby, cámara por asiento y sincronización.
+- `src/main.js`: pantallas, lobby, cámara por asiento.
+- `src/red/`: protocolo multijugador (ver [PROTOCOLO.md](PROTOCOLO.md)).
+  - `protocolo.js`: estado, fases y acciones validadas. Aquí se añaden las acciones de cada fase nueva.
+  - `sesion.js`: anfitrión, réplica del estado, relevos y fusiones.
+  - `transporte-trystero.js` (real) y `transporte-memoria.js` (simulado, para pruebas).
+- `pruebas/`: pruebas del protocolo sobre la red simulada. Abrir `http://localhost:8770/pruebas/`.
 
 ## Límites conocidos
 
 - Algunas redes (corporativas, universitarias) bloquean WebRTC sin un servidor TURN. Si dos jugadores no se ven, es lo primero que hay que revisar.
-- El estado compartido se resuelve con "gana la última versión". Basta para el prototipo; la fase de Diseño necesitará algo más sólido.
-- `window.__depurar` expone el estado para pruebas; quitarlo antes de la entrega.
+- El estado se replica entero a todos: la información "privada" de cada rol solo se oculta en la interfaz.
+- `window.__depurar` expone la sesión para pruebas; quitarlo antes de la entrega.
