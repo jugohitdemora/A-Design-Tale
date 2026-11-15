@@ -5,7 +5,7 @@ import { JUEGO, RED } from './config.js';
 import { ponerIdioma, idioma, tx } from './i18n.js';
 import { TI } from './textos-inicio.js';
 import { crearEscena, ROLES, ASIENTOS, nombreEscenario } from './escena.js';
-import { crearCentroDeControl } from './inicio.js';
+import { crearCentroDeControl, ASIENTOS_CONTROL, PARED } from './inicio.js';
 import { crearSesion } from './red/sesion.js';
 import { crearTransporteMqtt } from './red/transporte-mqtt.js';
 import { MAX_JUGADORES, conectados, duenoDeRol } from './red/protocolo.js';
@@ -34,11 +34,13 @@ contenedor.appendChild(renderEtiquetas.domElement);
 
 const centro = crearCentroDeControl();   // fondo del inicio
 const sala = crearEscena();              // sala de briefing
-const control = crearCentroDeControl({ holograma: false }); // sala de control de misión (misma sala, sin la Tierra: encima va la interfaz)
+// Sala de control de misión: la misma sala del inicio, ahora con un puesto por rol (avatares, consolas con lámpara GO, puerta al briefing).
+// La Tierra de la pantalla central se ve al mirar la sala y se quita cuando la interfaz de la fase se proyecta encima (ver bucle).
+const control = crearCentroDeControl({ jugadores: true });
 const camaraSala = new THREE.PerspectiveCamera(70, 1, 0.03, 60);
 camaraSala.rotation.order = 'YXZ';
-// Pared principal de la sala de control (ver inicio.js: pantalla(7.2, 3.6, 0, 3.3) en z = -7.35 + 0.1).
-const PARED = { centro: new THREE.Vector3(0, 3.3, -7.24), normal: new THREE.Vector3(0, 0, 1), arriba: new THREE.Vector3(0, 1, 0), ancho: 7.2, alto: 3.6 };
+// Mirada inicial (cabeceo) al sentarse: en el briefing algo hacia la mesa; en la sala de control hacia la pared de pantallas.
+const CABECEO = { briefing: -0.25, control: 0.28 };
 
 function aplicarCalidad() {
   render.setPixelRatio(ajustes.calidad === 'baja' ? 1 : Math.min(devicePixelRatio, 2));
@@ -76,8 +78,9 @@ let proyectorVisto = null; // último estado del proyector pintado (null: aún n
 let vestidoClave = '';     // reparto + idioma con el que se dibujaron las carpetas
 const nickDePestana = () => { try { return sessionStorage.getItem('nick'); } catch { return null; } };
 let nick = nickDePestana() ?? leer('nick', '');
-const mirada = { yaw: 0, pitch: -0.25 };
+const mirada = { yaw: 0, pitch: CABECEO.briefing };
 const poses = new Map();
+const reiniciarMirada = () => { mirada.yaw = 0; mirada.pitch = CABECEO[lugar] ?? CABECEO.briefing; difundirMirada(); };
 let sesion = null;
 let transporte = null;
 let codigo = '';
@@ -177,9 +180,9 @@ function salirDeSala() {
   actualizarTodo();
 }
 
-// Presencia = mirada + voto de escenario (el voto es solo una pista visual: no pasa por las reglas).
+// Presencia = mirada + voto de escenario + en qué sala estoy (para dibujar mi avatar solo allí). El voto es una pista visual: no pasa por las reglas.
 let miVoto = null;
-const presencia = () => ({ ...mirada, voto: miVoto });
+const presencia = () => ({ ...mirada, voto: miVoto, lugar });
 let ultimoEnvio = 0, envioPendiente = null;
 function difundirMirada() {
   const ahora = performance.now();
@@ -234,20 +237,22 @@ function vistaAutomatica(fase) {
   if (fase === faseVista) return;
   const antes = faseVista;
   faseVista = fase;
-  if (fase === 'briefing') irA('sala', !antes);
+  if (fase === 'briefing') irA('briefing', !antes);
   else if (['diseno', 'restricciones'].includes(fase)) { if (!(lugar === 'control' && antes && antes !== 'informe' && antes !== 'mision' && antes !== 'verificacion')) irA('laptop', !antes); }
   else if (['verificacion', 'mision', 'informe'].includes(fase)) irA('control', !antes); // GO / NO-GO, vuelo e informe: en la sala de control
 }
 
 let fundido = null;
-// v: 'sala' | 'laptop' | 'control'. 'control' cambia de sala con un fundido; volver de control a 'sala' también.
+// v: 'sala' (mirar la sala en la que estoy) | 'briefing' (mirar la sala de briefing) | 'laptop' (portátil, en el briefing) | 'control' (pared de la sala de control).
+// Cambiar de sala se hace con un fundido. Desde la pared o la consola, 'sala' vuelve a mirar la sala de control; desde el portátil, la de briefing.
 function irA(v, inmediato = false) {
   if (!enJuego()) return;
   if (v === 'laptop' && !miRol()) return;
-  if (v !== 'sala' && proyectorEnMesa()) return; // hasta elegir escenario no se sale del proyector
-  const nuevoLugar = v === 'control' ? 'control' : 'briefing';
+  const nuevoLugar = v === 'control' || (v === 'sala' && lugar === 'control') ? 'control' : 'briefing';
+  if (v === 'briefing') v = 'sala';
+  if (proyectorEnMesa() && (v !== 'sala' || nuevoLugar !== 'briefing')) return; // hasta elegir escenario no se sale del proyector
   if (nuevoLugar !== lugar) {
-    const cambiar = () => { lugar = nuevoLugar; vista = v; empezarTransicion(true); actualizarTodo(); };
+    const cambiar = () => { lugar = nuevoLugar; vista = v; if (v === 'sala') reiniciarMirada(); empezarTransicion(true); sesion?.presencia(presencia()); actualizarTodo(); };
     if (inmediato) { cambiar(); return; }
     clearTimeout(fundido);
     $('fundido').classList.add('on');
@@ -258,7 +263,7 @@ function irA(v, inmediato = false) {
   }
   if (v === vista && pantallaLista) return;
   vista = v;
-  if (v === 'sala') { mirada.yaw = 0; mirada.pitch = -0.25; }
+  if (v === 'sala') reiniciarMirada();
   empezarTransicion(inmediato);
   actualizarTodo();
 }
@@ -275,10 +280,11 @@ function actualizarTodo() {
 
   $('inicio').classList.toggle('oculto', pantalla !== 'inicio');
   $('lobby').classList.toggle('oculto', pantalla !== 'lobby');
-  const enSala = pantalla === 'sala' && lugar === 'briefing';
-  document.body.classList.toggle('en-sala', enSala && vista === 'sala');
+  // Mirando una sala 3D (briefing o control): se puede arrastrar para mirar y se ven las etiquetas de los avatares.
+  const mirando = pantalla === 'sala' && vista === 'sala';
+  document.body.classList.toggle('en-sala', mirando);
   document.body.classList.toggle('en-juego', pantalla === 'sala');
-  renderEtiquetas.domElement.style.display = enSala && vista === 'sala' ? '' : 'none';
+  renderEtiquetas.domElement.style.display = mirando ? '' : 'none';
   const foco = modoProyector();
   document.body.classList.toggle('en-proyector', foco);
   if (foco !== focoAntes) {
@@ -289,15 +295,18 @@ function actualizarTodo() {
   pintarProyectorUI();
   vestirCarpetas();
   ui.pintar({
-    estado: e, rol, jugadorId, nick, activo: pantalla === 'sala', vista: pantalla === 'sala' ? vista : 'sala', pantallaLista,
+    estado: e, rol, jugadorId, nick, activo: pantalla === 'sala', vista: pantalla === 'sala' ? vista : 'sala', lugar, pantallaLista,
     enLinea: e ? T.online(conectados(e).length, MAX_JUGADORES) : '',
     intentar: (tipo, payload) => sesion?.intentar(tipo, payload),
     volverAlLobby: () => { lobbyForzado = true; pantalla = 'lobby'; actualizarTodo(); },
     irA: (v) => irA(v),
   });
-  // Baliza 3D sobre el siguiente objeto (solo mirando la sala de briefing).
+  // Baliza 3D sobre el siguiente objeto (solo mirando la sala: el portátil o la puerta en el briefing, la pantalla central en el control).
   const g = ui.guia;
   sala.guiar(enJuego() && lugar === 'briefing' && vista === 'sala' && !sala.enCinematica ? g?.objetivo : null, Math.max(0, indiceRol(rol)));
+  control.guiar(enJuego() && lugar === 'control' && vista === 'sala' ? g?.objetivo : null);
+  // Lámparas GO de las consolas: reflejan las firmas de cada departamento durante la verificación.
+  control.marcarFirmas(e?.firmas, e?.fase === 'verificacion');
   if (pantalla === 'inicio') return;
 
   const ul = $('tripulacion');
@@ -359,19 +368,23 @@ function actualizarTodo() {
 }
 
 // Avatares de los demás: los que tienen rol, con su nick y hacia dónde miran.
+// Cada sala dibuja a los jugadores que están en ella (su presencia dice en cuál; si aún no hay datos, se asume que en la mía).
 function actualizarAvatares() {
   const e = estado();
   ROLES.forEach((r, i) => {
     const d = e ? duenoDeRol(e, r.id) : null;
-    const av = sala.avatares[i];
-    const visible = !!d && d[0] !== jugadorId && d[1].conectado;
-    av.grupo.visible = visible;
-    av.nombre.visible = visible;
-    if (visible) {
+    const otro = !!d && d[0] !== jugadorId && d[1].conectado;
+    const p = (d && poses.get(d[0])) ?? null;
+    const donde = p?.lugar ?? lugar;
+    for (const [sitio, hab] of [['briefing', sala], ['control', control]]) {
+      const av = hab.avatares[i];
+      const visible = otro && donde === sitio;
+      av.grupo.visible = visible;
+      av.nombre.visible = visible;
+      if (!visible) continue;
       av.nombre.element.textContent = `${d[1].nick} · ${r.nombre}`;
-      const p = poses.get(d[0]) ?? { yaw: 0, pitch: -0.25 };
-      av.cabeza.rotation.y = p.yaw;
-      av.cabeza.rotation.x = -p.pitch;
+      av.cabeza.rotation.y = p?.yaw ?? 0;
+      av.cabeza.rotation.x = -(p?.pitch ?? CABECEO[sitio]);
     }
   });
 }
@@ -453,7 +466,7 @@ setInterval(() => {
   enLineaAntes = ok;
   vestirCarpetas(); // los datos de misión pueden llegar después del reparto
 }, 2000);
-window.__depurar = { sesion: () => sesion, transporte: () => transporte, mirada, camara: camaraSala, clicables: sala.clicables, THREE, irA: (v) => irA(v), estadoVista: () => ({ lugar, vista, pantallaLista }) };
+window.__depurar = { sesion: () => sesion, transporte: () => transporte, mirada, poses, control, camara: camaraSala, clicables: sala.clicables, THREE, irA: (v) => irA(v), estadoVista: () => ({ lugar, vista, pantallaLista }) };
 
 let moduloLocal = null;
 if (SIMULADO) {
@@ -471,10 +484,11 @@ addEventListener('keydown', (ev) => {
   if (vista !== 'sala') irA('sala');
 });
 
-// ---------- Mirar (arrastrar) y clic, solo mirando la sala de briefing ----------
+// ---------- Mirar (arrastrar) y clic, mirando la sala de briefing o la de control ----------
 let arrastre = null;
 const raycaster = new THREE.Raycaster();
-const puedeMirar = () => enJuego() && lugar === 'briefing' && vista === 'sala' && !ui.overlay;
+const puedeMirar = () => enJuego() && vista === 'sala' && !ui.overlay;
+const habitacion = () => (lugar === 'control' ? control : sala); // sala 3D en la que estoy
 contenedor.addEventListener('pointerdown', (e) => {
   if (!puedeMirar()) return;
   if (modoProyector()) { arrastre = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, fijo: true }; return; } // cámara fija: solo clic
@@ -498,7 +512,7 @@ contenedor.addEventListener('pointerup', (e) => {
 function tocado(e) {
   const p = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(p, camaraSala);
-  let hits = raycaster.intersectObjects(sala.clicables).filter((x) => x.object.userData.activo !== false);
+  let hits = raycaster.intersectObjects(habitacion().clicables).filter((x) => x.object.userData.activo !== false);
   // Con el proyector en la mesa solo cuentan los hologramas.
   if (modoProyector()) hits = hits.filter((x) => x.object.userData.tipo === 'escenario');
   // Una carpeta se ve a través de lo que la tape (contorno), así que también gana el clic.
@@ -506,8 +520,10 @@ function tocado(e) {
 }
 function resaltar(e) {
   const hit = tocado(e);
-  contenedor.style.cursor = hit ? 'pointer' : '';
-  sala.resaltar(hit?.object ?? null);
+  // En la sala de control solo es pulsable la consola propia (la de otro puesto no hace nada).
+  const util = hit && !(hit.object.userData.tipo === 'consola' && hit.object.userData.asiento !== indiceRol(miRol()));
+  contenedor.style.cursor = util ? 'pointer' : '';
+  habitacion().resaltar(util ? hit.object : null);
 }
 
 function clic(e) {
@@ -526,7 +542,16 @@ function clic(e) {
   if (d.tipo === 'carpeta' && d.id) ui.abrir({ tipo: 'expediente', id: d.id });
   if (d.tipo === 'laptop') irA('laptop');
   if (d.tipo === 'manual') ui.abrir({ tipo: 'manual', rol: d.rol });
-  if (d.tipo === 'puerta') irA('control');
+  // Puerta del briefing → sala de control; puerta de la sala de control → briefing.
+  if (d.tipo === 'puerta') irA(lugar === 'control' ? 'briefing' : 'control');
+  // Sala de control: la pantalla central abre la interfaz de la fase (ruta, GO / NO-GO, operaciones, informe).
+  if (d.tipo === 'pared') irA('control');
+  // Mi consola: en la votación pone o quita el GO de mi departamento; fuera de ella lleva a la pantalla central.
+  if (d.tipo === 'consola' && d.asiento === indiceRol(miRol())) {
+    const r = miRol();
+    if (fase === 'verificacion') sesion?.intentar('firmar', { on: !estado()?.firmas?.[r] });
+    else irA('control');
+  }
 }
 
 // ---------- Cámara: pose objetivo por vista y transición suave ----------
@@ -554,7 +579,15 @@ function encuadrar(rect, llenado, out) {
 const puntoMirar = new THREE.Vector3();
 function poseObjetivo(out) {
   const i = Math.max(0, indiceRol(miRol()));
-  if (lugar === 'control') { encuadrar(PARED, 0.97, out); return; }
+  if (lugar === 'control') {
+    if (vista !== 'sala') { encuadrar(PARED, 0.97, out); return; }
+    // Sentado en mi puesto de la sala de control, mirando a la pared de pantallas.
+    control.avatares[i].cabeza.getWorldPosition(posCabeza);
+    out.pos.copy(posCabeza);
+    euler.set(mirada.pitch, ASIENTOS_CONTROL[i].ry + Math.PI + mirada.yaw, 0);
+    out.quat.setFromEuler(euler);
+    return;
+  }
   if (vista === 'laptop') { encuadrar(sala.pantallaLaptop(i), 0.96, out); return; }
   sala.avatares[i].cabeza.getWorldPosition(posCabeza);
   out.pos.copy(posCabeza);
@@ -603,7 +636,7 @@ function colocarPantalla() {
 
 // ---------- Bucle (solo dibuja: la lógica de red no depende de él) ----------
 const reloj = new THREE.Clock();
-let tFondo = 0, tControl = 0, enCineAntes = false;
+let tFondo = 0, tControl = 0, enCineAntes = false, salaDibujada = null;
 function bucle() {
   const dt = Math.min(0.1, reloj.getDelta());
   sala.actualizar(dt);
@@ -632,10 +665,14 @@ function bucle() {
         if (vista !== 'sala') { pantallaLista = true; rectoAnterior = ''; actualizarTodo(); }
       }
     }
+    // El render de etiquetas HTML no retira las de la sala anterior al cambiar de escena: se vacía su capa en cada cambio de sala.
+    if (lugar !== salaDibujada) { salaDibujada = lugar; renderEtiquetas.domElement.replaceChildren(); }
     if (lugar === 'control') {
       tControl += dt;
       control.actualizar(tControl);
+      control.ponerHolograma(!pantallaLista); // la Tierra de la pantalla central se quita cuando la interfaz se proyecta encima
       render.render(control.escena, camaraSala);
+      if (vista === 'sala') renderEtiquetas.render(control.escena, camaraSala);
     } else {
       render.render(sala.escena, camaraSala);
       if (vista === 'sala') { sala.escalonarPistas(camaraSala.position); renderEtiquetas.render(sala.escena, camaraSala); sala.desencimarPistas(); }

@@ -1,8 +1,23 @@
 // Fondo de la pantalla de inicio: sala de control low poly inspirada en los centros de control reales
 // (gradas de consolas mirando a una pared de pantallas). Solo geometría y colores planos.
 import * as THREE from 'three';
+import { crearAvatar, etiqueta, ROLES } from './escena.js';
+import { textos } from './i18n.js';
 
 const VERDE = 0x5fe08a, CIAN = 0x62c6ff, AMBAR = 0xf2b844, ROJO = 0xe0584a;
+
+const TC = textos({
+  es: { briefing: 'SALA DE BRIEFING' },
+  en: { briefing: 'BRIEFING ROOM' },
+});
+
+// Sala de control de misión con jugadores: un puesto por rol en la primera fila de consolas, mirando a la pared de pantallas.
+// ry = hacia dónde mira el cuerpo (π = hacia -z, la pared). El avatar queda 0,3 m detrás de (x, z): justo sobre la silla de la consola.
+const X_CONSOLAS = [-3.075, -1.025, 1.025, 3.075];
+const Z_FILA = -4.2, Z_SILLA = Z_FILA + 0.95;
+export const ASIENTOS_CONTROL = X_CONSOLAS.map((x) => ({ x, z: Z_SILLA - 0.3, ry: Math.PI }));
+// Pared principal (pantalla central): centro, normal hacia el espectador, arriba y tamaño en metros.
+export const PARED = { centro: new THREE.Vector3(0, 3.3, -7.24), normal: new THREE.Vector3(0, 0, 1), arriba: new THREE.Vector3(0, 1, 0), ancho: 7.2, alto: 3.6 };
 
 const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.85, ...extra });
 const brillo = (color, intensidad = 1) => new THREE.MeshStandardMaterial({ color: 0x000000, emissive: color, emissiveIntensity: intensidad });
@@ -15,11 +30,20 @@ const linea = (puntos, color, cerrada = false) => {
 
 // holograma: false quita la Tierra, la órbita y el indicador de la pantalla central. La sala de control de misión
 // proyecta su interfaz encima de esa pantalla y la Tierra (que sobresale de la pared) asomaba por debajo.
-export function crearCentroDeControl({ holograma = true } = {}) {
+// jugadores: true monta la sala de control jugable: cuatro puestos con avatar, consolas con la lámpara GO de cada departamento,
+// zonas de clic (pared, consolas, puerta al briefing) y una baliza de guía. Sin jugadores es solo el fondo del inicio.
+export function crearCentroDeControl({ holograma = true, jugadores = false } = {}) {
   const escena = new THREE.Scene();
+  const clicables = [];
+  const zona = (w, h, d, datos) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ visible: false }));
+    m.userData = { ...datos, activo: true };
+    return m;
+  };
   escena.background = new THREE.Color(0x0b0e13);
   escena.fog = new THREE.Fog(0x0b0e13, 14, 30);
   const animados = []; // funciones (t) => void
+  const lamparas = []; // material de la lámpara GO de cada puesto (una por rol)
 
   // ---------- Luz: tenue y fría, con las pantallas como fuente principal ----------
   escena.add(new THREE.HemisphereLight(0x8aa4c8, 0x1a1712, 0.55));
@@ -183,15 +207,61 @@ export function crearCentroDeControl({ holograma = true } = {}) {
     const n = fi === 0 ? 4 : 5;
     for (let i = 0; i < n; i++) {
       const x = (i - (n - 1) / 2) * 2.05;
-      const c = crearConsola(fi * 10 + i, animados);
+      const puesto = jugadores && fi === 0; // primera fila: un puesto por rol
+      const c = crearConsola(fi * 10 + i, animados, puesto ? ROLES[i].color : null);
       c.position.set(x, f.base, f.z);
       escena.add(c);
+      if (puesto) {
+        lamparas.push(c.userData.lampara);
+        const z = zona(1.95, 1.0, 1.0, { tipo: 'consola', asiento: i });
+        z.position.set(x, 0.9, f.z - 0.3);
+        escena.add(z); clicables.push(z);
+      }
     }
   });
-  // Operador sentado en la primera fila, de espaldas a la cámara
-  const op = crearOperador();
-  op.position.set(3.1, 0, -3.35);
-  escena.add(op);
+  // Operador sentado en la primera fila, de espaldas a la cámara (solo en el fondo del inicio)
+  if (!jugadores) {
+    const op = crearOperador();
+    op.position.set(3.1, 0, -3.35);
+    escena.add(op);
+  }
+
+  // ---------- Jugadores: avatares, pared y puerta ----------
+  const avatares = [];
+  let encima = null;
+  const contorno = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(PARED.ancho + 0.3, PARED.alto + 0.3, 0.05)),
+    new THREE.LineBasicMaterial({ color: 0xffd76a }));
+  contorno.position.set(0, PARED.centro.y, zPared + 0.14);
+  contorno.visible = false;
+  const baliza = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.07, 4),
+    new THREE.MeshStandardMaterial({ color: 0xf2c14e, emissive: 0xf2c14e, emissiveIntensity: 0.9, flatShading: true }));
+  baliza.rotation.x = Math.PI; // punta hacia abajo
+  baliza.scale.setScalar(6);
+  baliza.position.set(0, 5.1, zPared + 0.7);
+  baliza.visible = false;
+  let puerta = null;
+  if (jugadores) {
+    ASIENTOS_CONTROL.forEach((a, i) => { const av = crearAvatar(ROLES[i], a); escena.add(av.grupo); avatares.push(av); });
+    // Clic en la pantalla central: encuadrarla y usar la interfaz de la fase.
+    const zPared3 = zona(PARED.ancho, PARED.alto, 0.2, { tipo: 'pared' });
+    zPared3.position.copy(PARED.centro);
+    escena.add(zPared3, contorno, baliza); clicables.push(zPared3);
+    // Luz cálida sobre los puestos: sin ella los avatares se pierden en la penumbra azul de las pantallas.
+    for (const x of [-2.1, 2.1]) {
+      const l = new THREE.PointLight(0xffd9a8, 9, 7, 1.5);
+      l.position.set(x, 3.0, -2.6);
+      escena.add(l);
+    }
+    // Puerta de vuelta a la sala de briefing (pared izquierda).
+    const zPuerta = -5.2;
+    const marcoP = caja(0.06, 2.24, 1.14, 0x15171b); marcoP.position.set(-9.86, 1.12, zPuerta); escena.add(marcoP);
+    const hoja = caja(0.06, 2.1, 1.0, 0x6d7278); hoja.position.set(-9.82, 1.05, zPuerta); escena.add(hoja);
+    const pomo = caja(0.06, 0.04, 0.12, 0xb8bcc0); pomo.position.set(-9.77, 1.0, zPuerta + 0.38); escena.add(pomo);
+    const placa = etiqueta(() => TC.briefing, 'etiqueta puerta-etq'); placa.position.set(-9.7, 2.4, zPuerta); escena.add(placa);
+    puerta = zona(0.3, 2.1, 1.0, { tipo: 'puerta' });
+    puerta.position.set(-9.75, 1.05, zPuerta); escena.add(puerta); clicables.push(puerta);
+  }
+  const estadoGo = ['reposo', 'reposo', 'reposo', 'reposo']; // 'reposo' | 'espera' | 'go'
 
   // ---------- Racks de servidores (pared derecha) ----------
   for (let i = 0; i < 4; i++) {
@@ -215,7 +285,39 @@ export function crearCentroDeControl({ holograma = true } = {}) {
   return {
     escena,
     camara,
-    actualizar(t) { animados.forEach((f) => f(t)); },
+    avatares,
+    clicables,
+    asientos: ASIENTOS_CONTROL,
+    pared: PARED,
+    actualizar(t) {
+      animados.forEach((f) => f(t));
+      contorno.visible = !!encima && encima.userData.tipo === 'pared';
+      if (baliza.visible) {
+        baliza.position.y = 5.1 + Math.sin(t * 3) * 0.12;
+        baliza.rotation.y = t * 1.5;
+        baliza.material.emissiveIntensity = 0.7 + Math.sin(t * 4) * 0.3;
+      }
+      // Lámpara de cada puesto: parpadea en ámbar mientras falta el GO del departamento.
+      lamparas.forEach((l, i) => {
+        const e = estadoGo[i];
+        if (e === 'go') l.emissiveIntensity = 2.2;
+        else if (e === 'espera') l.emissiveIntensity = 0.6 + 0.9 * (0.5 + 0.5 * Math.sin(t * 4 + i));
+      });
+    },
+    // La Tierra y la órbita de la pantalla central: se quitan cuando la interfaz de la fase se proyecta encima.
+    ponerHolograma(v) { plano.visible = v; grupoOrbita.visible = v; },
+    resaltar(obj) { encima = obj ?? null; },
+    // Baliza sobre la pantalla central cuando toca ir allí.
+    guiar(tipo) { baliza.visible = jugadores && tipo === 'control'; },
+    // firmas: { rol: bool }; activo: solo hay votación en la fase de verificación (fuera de ella las lámparas lucen el color del rol).
+    marcarFirmas(firmas, activo) {
+      lamparas.forEach((l, i) => {
+        const id = ROLES[i].id;
+        estadoGo[i] = activo ? (firmas?.[id] ? 'go' : 'espera') : 'reposo';
+        l.emissive.setHex(!activo ? ROLES[i].color : firmas?.[id] ? VERDE : AMBAR);
+        if (!activo) l.emissiveIntensity = 0.8;
+      });
+    },
   };
 }
 
@@ -243,7 +345,8 @@ function crearTierra(radio, recorte) {
 }
 
 // Consola: escritorio, panel inclinado con dos monitores, botonera, teclado y silla.
-function crearConsola(semilla, animados) {
+// colorRol: puesto de un jugador (silla fija frente a la consola, franja del color del departamento y lámpara GO en g.userData.lampara).
+function crearConsola(semilla, animados, colorRol = null) {
   const rnd = mulberry(semilla + 7);
   const g = new THREE.Group();
   const cuerpo = caja(1.95, 0.78, 0.95, 0x6b6e70); cuerpo.position.set(0, 0.39, 0); g.add(cuerpo);
@@ -281,6 +384,12 @@ function crearConsola(semilla, animados) {
     modulo.add(b);
     if (rnd() > 0.7) { const f = rnd() * 10; animados.push((t) => { b.visible = Math.sin(t * 2.2 + f) > -0.5; }); }
   }
+  if (colorRol != null) {
+    const banda = caja(1.95, 0.05, 0.34, colorRol); banda.position.set(0, 0.72, 0); modulo.add(banda);
+    const lampara = brillo(colorRol, 0.8);
+    const luz = caja(0.5, 0.06, 0.06, lampara); luz.position.set(0, 0.77, 0.12); modulo.add(luz);
+    g.userData.lampara = lampara;
+  }
   g.add(modulo);
   const teclado = caja(0.6, 0.03, 0.2, 0xb9b4a8); teclado.position.set(0, 0.84, 0.25); g.add(teclado);
   if (rnd() > 0.45) { // cascos sobre la mesa
@@ -298,8 +407,11 @@ function crearConsola(semilla, animados) {
     pata.position.set(Math.sin(pata.rotation.y) * 0.13, 0.03, Math.cos(pata.rotation.y) * 0.13);
     silla.add(pata);
   }
-  silla.position.set((rnd() - 0.5) * 0.4, 0, 0.85 + rnd() * 0.2);
-  silla.rotation.y = (rnd() - 0.5) * 0.6;
+  if (colorRol != null) silla.position.set(0, 0, 0.95); // puesto de jugador: justo detrás del teclado, de frente a la pared
+  else {
+    silla.position.set((rnd() - 0.5) * 0.4, 0, 0.85 + rnd() * 0.2);
+    silla.rotation.y = (rnd() - 0.5) * 0.6;
+  }
   g.add(silla);
   return g;
 }

@@ -17,7 +17,7 @@ export const FASES_JUEGO = ['briefing', 'diseno', 'restricciones', 'verificacion
 export const LOGICO = { laptop: { w: 1024, h: 640 }, control: { w: 1280, h: 640 } };
 
 const TV = textos({
-  es: { laptop: 'Portátil', sala: 'Sala', control: 'Sala de control', briefing: 'Sala de briefing', manualTitulo: 'MANUAL DE PROCEDIMIENTOS', cerrar: 'Cerrar',
+  es: { laptop: 'Portátil', sala: 'Sala', control: 'Sala de control', pared: 'Pantalla principal', briefing: 'Sala de briefing', manualTitulo: 'MANUAL DE PROCEDIMIENTOS', cerrar: 'Cerrar',
     cargando: 'Cargando…', esc: 'Esc: levantar la vista', lobby: 'Salir al lobby', siguiente: 'Siguiente', y: 'y',
     g: {
       proyector: 'Elige un escenario en el proyector.',
@@ -37,7 +37,7 @@ const TV = textos({
       mision: 'Sigue el vuelo y pulsa Siguiente paso.',
       informe: 'Revisa el informe y elige el siguiente vuelo.',
     } },
-  en: { laptop: 'Laptop', sala: 'Room', control: 'Control room', briefing: 'Briefing room', manualTitulo: 'STANDARD OPERATING PROCEDURES', cerrar: 'Close',
+  en: { laptop: 'Laptop', sala: 'Room', control: 'Control room', pared: 'Main screen', briefing: 'Briefing room', manualTitulo: 'STANDARD OPERATING PROCEDURES', cerrar: 'Close',
     cargando: 'Loading…', esc: 'Esc: look up', lobby: 'Leave to lobby', siguiente: 'Next', y: 'and',
     g: {
       proyector: 'Choose a scenario on the projector.',
@@ -170,13 +170,16 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     const vista = ultimo?.vista ?? 'sala';
     const nodos = [h('p', { class: 'f-aviso' + (avisoTxt ? '' : ' vacio'), role: 'status', 'aria-live': 'polite' }, avisoTxt)];
     if (vista === 'sala') {
-      const boton = (v, icono, txt) => h('button', { class: 'boton ancho f-vista' + (c.guia?.objetivo === v ? ' primario guia' : ''), type: 'button', onclick: () => c.irA(v) }, h('span', { 'aria-hidden': 'true' }, icono), txt);
+      const boton = (v, icono, txt, destino = v) => h('button', { class: 'boton ancho f-vista' + (c.guia?.objetivo === v ? ' primario guia' : ''), type: 'button', onclick: () => c.irA(destino) }, h('span', { 'aria-hidden': 'true' }, icono), txt);
+      // En la sala de control: la pantalla central (interfaz de la fase), el portátil (en el briefing) y la puerta al briefing.
+      const enControl = ultimo?.lugar === 'control';
       nodos.push(h('aside', { class: 'f-hud' },
         pasosFase(c.guia),
         lineaGuia(c.guia),
         h('div', { class: 'f-vistas' },
           boton('laptop', '💻', TV.laptop),
-          boton('control', '🛰', TV.control)),
+          enControl ? boton('control', '🛰', TV.pared) : boton('control', '🛰', TV.control),
+          enControl ? boton('briefing', '🚪', TV.briefing) : null),
         h('div', { class: 'f-pie' },
           h('span', {}, ultimo?.nick ?? '', ' · ', c.rol ? nombreRol(c.rol) : T.noRole, ' · ', ultimo?.enLinea ?? ''),
           h('button', { class: 'boton f-salir', type: 'button', onclick: () => ultimo?.volverAlLobby?.() }, TV.lobby))));
@@ -263,7 +266,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     c.guia = c.D && c.motor ? calcularGuia(c, e.fase) : null;
     revisarEventos();
 
-    const nueva = JSON.stringify([e, p.rol, p.enLinea, !!c.D, errorCarga, c.ui, vista, conPantalla]);
+    const nueva = JSON.stringify([e, p.rol, p.enLinea, !!c.D, errorCarga, c.ui, vista, conPantalla, p.lugar]);
     if (!forzar && nueva === firma) return;
     if (arrastrando) return;
     firma = nueva;

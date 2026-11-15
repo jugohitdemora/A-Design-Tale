@@ -49,7 +49,7 @@ function zona(w, h, d, datos) {
 }
 
 const etiquetas = []; // { div, f } para repintar al cambiar de idioma
-function etiqueta(texto, clase = 'etiqueta') {
+export function etiqueta(texto, clase = 'etiqueta') {
   const div = document.createElement('div');
   div.className = clase;
   if (typeof texto === 'function') { etiquetas.push({ div, f: texto }); div.textContent = texto(); } else div.textContent = texto;
@@ -634,7 +634,7 @@ function crearHolograma(id) {
 }
 
 // Avatar en bloques: cuerpo con el color del rol y cabeza con ojos para ver hacia dónde mira.
-function crearAvatar(rol, asiento, dePie = false) {
+export function crearAvatar(rol, asiento, dePie = false) {
   const grupo = new THREE.Group();
   const base = dePie ? 0.0 : 0.5;
   if (dePie) { const piernas = caja(0.4, 0.85, 0.24, 0x26262a); piernas.position.y = 0.43; grupo.add(piernas); }
