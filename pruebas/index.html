@@ -3,19 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pruebas del protocolo</title>
+  <title>Pruebas del protocolo y del transporte</title>
   <style>
     body { font: 15px/1.5 system-ui, sans-serif; background: #111418; color: #e8e4dc; margin: 0; padding: 16px; }
     h1 { font-size: 18px; }
+    h2 { font-size: 15px; margin: 18px 0 4px; }
     li { margin: 4px 0; }
     .ok { color: #6fd38f; }
     .fallo { color: #f07a6a; }
   </style>
 </head>
 <body>
-  <h1>Pruebas del protocolo multijugador (red simulada)</h1>
+  <h1>Pruebas del protocolo multijugador</h1>
   <p id="resumen">Ejecutando…</p>
+  <h2>Protocolo y sesión (red simulada)</h2>
   <ol id="resultados"></ol>
-  <script type="module" src="pruebas.js"></script>
+  <h2>Transporte MQTT (brokers falsos)</h2>
+  <ol id="resultados-transporte"></ol>
+  <!-- Una suite tras otra: las dos usan el reloj real y no deben solaparse. Parámetros: ?solo= ?veces= ?lento= -->
+  <script type="module">
+    try { await import('./pruebas.js'); } catch (e) { console.error('pruebas.js', e); }
+    await import('./pruebas-transporte.js');
+  </script>
 </body>
 </html>

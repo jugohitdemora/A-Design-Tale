@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { JUEGO, TEXTOS } from './config.js';
+import mqtt from 'mqtt';
+import { JUEGO, TEXTOS, RED } from './config.js';
 import { crearEscena, ROLES, ASIENTOS } from './escena.js';
 import { crearCentroDeControl } from './inicio.js';
 import { crearSesion } from './red/sesion.js';
-import { crearTransporteTrystero } from './red/transporte-trystero.js';
+import { crearTransporteMqtt } from './red/transporte-mqtt.js';
 import { MAX_JUGADORES, conectados, duenoDeRol } from './red/protocolo.js';
 
 const $ = (id) => document.getElementById(id);
@@ -72,6 +73,7 @@ let nick = nickDePestana() ?? leer('nick', '');
 const mirada = { yaw: 0, pitch: -0.25 }; // hacia dónde mira mi cámara
 const poses = new Map();                 // jugadorId -> { yaw, pitch } de los demás (presencia)
 let sesion = null;
+let transporte = null;
 let codigo = '';
 let lobbyForzado = false;
 let versionAjena = false;
@@ -127,7 +129,8 @@ function entrarEnSala(cod) {
   lobbyForzado = false;
   versionAjena = false;
   poses.clear();
-  sesion = crearSesion({ transporte: crearTransporteTrystero(JUEGO.APP_ID, codigo), jugadorId, nick });
+  transporte = crearTransporteMqtt(JUEGO.APP_ID, codigo, { brokers: RED.BROKERS, conectar: (url, o) => mqtt.connect(url, o) });
+  sesion = crearSesion({ transporte, jugadorId, nick });
   sesion.on('estado', () => { pintarMesa(); actualizarTodo(); });
   sesion.on('aviso', (motivo) => { avisar(motivo); actualizarTodo(); });
   sesion.on('version', () => { versionAjena = true; actualizarTodo(); });
@@ -216,7 +219,10 @@ function actualizarTodo() {
     li.textContent = 'Buscando a la tripulación en la sala…';
     ul.appendChild(li);
   } else {
-    $('contador').textContent = `${conectados(e).length}/${MAX_JUGADORES} EN LA SALA`;
+    // Sin ningún relé no hay sala compartida: mejor decirlo que enseñar un "1/4" que parece normal.
+    $('contador').textContent = transporte?.enLinea().listos
+      ? `${conectados(e).length}/${MAX_JUGADORES} EN LA SALA`
+      : 'SIN CONEXIÓN · REINTENTANDO…';
     const miembros = Object.entries(e.jugadores).sort((a, b) => a[1].orden - b[1].orden);
     for (const [id, j] of miembros) {
       const r = ROLES[indiceRol(j.rol)];
@@ -261,6 +267,7 @@ function actualizarTodo() {
     btn.title = btn.disabled ? 'Todos los jugadores tienen que elegir rol' : '';
   }
   if (e && !sesion.yo() && !$('aviso').textContent) avisar('Entrando en la sala…');
+  else if (sesion.yo() && $('aviso').textContent === 'Entrando en la sala…') avisar('');
   if (versionAjena) avisar('Alguien en la sala tiene otra versión del juego. Recargad la página (Ctrl+F5) todos.');
 
   // HUD
@@ -299,7 +306,14 @@ function pintarMesa() {
   });
 }
 actualizarTodo();
-window.__depurar = { sesion: () => sesion, mirada, camara: camaraSala, clicables: sala.clicables, THREE };
+// El aviso de "sin conexión" no depende de ningún mensaje: se repasa cada 2 s mientras se ve el lobby.
+let enLineaAntes = true;
+setInterval(() => {
+  const ok = !sesion || transporte.enLinea().listos > 0;
+  if (ok !== enLineaAntes && pantalla === 'lobby') actualizarTodo();
+  enLineaAntes = ok;
+}, 2000);
+window.__depurar = { sesion: () => sesion, transporte: () => transporte, mirada, camara: camaraSala, clicables: sala.clicables, THREE };
 
 // Si el enlace trae código de sala, abrimos directamente el diálogo de unirse.
 if (/^#[A-Za-z0-9]{4,8}$/.test(location.hash)) $('btn-unirse').click();

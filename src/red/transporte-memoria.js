@@ -1,7 +1,7 @@
 // Transporte simulado para pruebas: entrega asíncrona, retrasos, descubrimiento asimétrico y salidas.
 // Mantiene el orden por pareja de pares (como un canal WebRTC fiable y ordenado).
 
-// retrasoSalida: [min, max] ms hasta que los demás se enteran de que alguien se fue (Trystero puede tardar).
+// retrasoSalida: [min, max] ms hasta que los demás se enteran de que alguien se fue (el transporte real puede tardar).
 export function crearRed({ retrasoMin = 5, retrasoMax = 40, descubrimiento = [50, 400], retrasoSalida = null } = {}) {
   const nodos = new Map(); // peerId -> nodo
   const azar = (a, b) => a + Math.random() * (b - a);
@@ -12,7 +12,9 @@ export function crearRed({ retrasoMin = 5, retrasoMax = 40, descubrimiento = [50
     const clave = `${de}>${a}`;
     const t = Math.max(performance.now() + azar(retrasoMin, retrasoMax), (ultimaEntrega.get(clave) || 0) + 0.1);
     ultimaEntrega.set(clave, t);
-    setTimeout(() => { if (nodos.has(a) && nodos.has(de) && nodos.get(a).conoce.has(de)) f(); }, t - performance.now());
+    setTimeout(() => {
+      if (nodos.has(a) && nodos.has(de) && nodos.get(a).conoce.has(de) && !nodos.get(a).aislado && !nodos.get(de).aislado) f();
+    }, t - performance.now());
   }
 
   return {
@@ -40,6 +42,20 @@ export function crearRed({ retrasoMin = 5, retrasoMax = 40, descubrimiento = [50
         alEntrar: (f) => { nodo.alEntrar = f; },
         alSalir: (f) => { nodo.alSalir = f; },
         pares: () => [...nodo.conoce],
+        // Corte largo de un par (como un socket MQTT caído): los demás lo dan por perdido, pero él no se
+        // entera de nada y sigue conociéndolos. Al reconectar, los demás lo vuelven a descubrir; él no.
+        aislar() {
+          nodo.aislado = true;
+          for (const otro of nodos.values()) {
+            if (otro.conoce.has(id)) setTimeout(() => { if (otro.conoce.delete(id)) otro.alSalir(id); }, azar(retrasoMin, retrasoMax));
+          }
+        },
+        reconectar() {
+          nodo.aislado = false;
+          for (const otro of nodos.values()) {
+            if (otro !== nodo) setTimeout(() => { if (nodos.has(id) && !otro.conoce.has(id)) { otro.conoce.add(id); otro.alEntrar(id); } }, azar(...descubrimiento));
+          }
+        },
         salir() {
           nodos.delete(id);
           for (const otro of nodos.values()) {

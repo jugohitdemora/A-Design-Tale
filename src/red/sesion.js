@@ -1,5 +1,6 @@
 // Sesión multijugador: elige anfitrión, replica el estado y gestiona relevos.
-// No sabe nada de Trystero: recibe un "transporte" (ver transporte-trystero.js y transporte-memoria.js).
+// No sabe nada de la red: recibe un "transporte" (ver transporte-mqtt.js y transporte-memoria.js).
+// Sin peerId, transporte.enviar difunde a todos los pares.
 import {
   VERSION_PROTOCOLO, MAX_JUGADORES, estadoInicial, reducir, marcarDesconectado, ganaEtiqueta, conectados, pesoDe,
 } from './protocolo.js';
@@ -26,6 +27,7 @@ export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora =
   let rechazadoPorLlena = false;
   let relevo = null;            // { candidato, excluidos:Set, timer }
   let cerrada = false;
+  let vueltas = 0;
   const timers = [];
 
   const nuevoId = () => (ultimoId = Math.max(ahora(), ultimoId + 1));
@@ -36,12 +38,13 @@ export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora =
   // ---------- Envíos ----------
   const enviar = (tipo, datos, peerId) => { if (!cerrada) transporte.enviar(tipo, { v: version, ...datos }, peerId); };
   const compatibles = () => [...pares].filter(([, p]) => p.compatible).map(([id]) => id);
-  const saludar = (peerId) => enviar('hola', { jugadorId, nick, etiqueta: etiqueta() }, peerId);
+  // r: 1 marca la respuesta a un saludo (a una respuesta no se responde: evita el ping-pong).
+  const saludar = (peerId, respuesta = false) => enviar('hola', { jugadorId, nick, etiqueta: etiqueta(), ...(respuesta && { r: 1 }) }, peerId);
   const difundirEstado = (peerId) => {
     if (!soyHost()) return;
     const datos = { etiqueta: etiqueta(), estado };
     if (peerId) enviar('estado', datos, peerId);
-    else compatibles().forEach((p) => enviar('estado', datos, p));
+    else if (compatibles().length) enviar('estado', datos); // difusión: el transporte lo manda una sola vez a todos
   };
 
   // ---------- Anfitrión ----------
@@ -174,7 +177,10 @@ export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora =
       const nuevo = !pares.has(peerId);
       const compatible = m.v === version;
       pares.set(peerId, { jugadorId: m.jugadorId, compatible });
-      if (nuevo) saludar(peerId); // responder siempre, también a otra versión, para que ella también lo sepa
+      // Al saludo inicial se responde siempre (también a otra versión, para que ella lo sepa), aunque ya
+      // conozcamos a quien saluda: tras un corte largo pudo darnos por perdidos mientras nosotros lo seguíamos
+      // teniendo en `pares`, y sin respuesta nunca volvería a registrarnos.
+      if (!m.r) saludar(peerId, true);
       if (!compatible) { emitir('version', m.v); return; }
       const anterior = peerDe.get(m.jugadorId);
       peerDe.set(m.jugadorId, peerId);
@@ -187,7 +193,9 @@ export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora =
         iniciarRelevo(m.jugadorId);
         return;
       }
-      if (soyHost()) difundirEstado(peerId);
+      // Solo si le falta: los ya sincronizados saludan cada pocos segundos para comprobar que van al día.
+      const e = m.etiqueta;
+      if (soyHost() && !(e && e.host === jugadorId && e.term === term && e.seq === seq)) difundirEstado(peerId);
       // Si es un sucesor esperado, ya habló: el relevo sigue su curso.
       return;
     }
@@ -218,11 +226,15 @@ export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora =
 
   // ---------- Arranque ----------
   asegurarUnirse(true, null, null);
-  compatibles().forEach(saludar);
-  transporte.pares().forEach(saludar);
+  transporte.pares().forEach((p) => saludar(p));
   timers.push(setInterval(() => {
-    if (!sincronizado) transporte.pares().forEach(saludar);
-    else if (!soyHost()) enviarPendientes();
+    if (!sincronizado) transporte.pares().forEach((p) => saludar(p));
+    else if (!soyHost()) {
+      enviarPendientes();
+      // Un relé puede perder un `estado` sin avisar: cada 3 vueltas le enseño mi etiqueta al anfitrión
+      // (como respuesta, para que no me salude de vuelta) y, si voy atrasado, me lo reenvía.
+      if (++vueltas % 3 === 0 && peerDe.has(host)) saludar(peerDe.get(host), true);
+    }
     // Pares conectados que nunca saludaron: otra versión del juego (anterior a este protocolo).
     for (const p of transporte.pares()) {
       if (!vistos.has(p)) vistos.set(p, ahora());
@@ -250,7 +262,7 @@ export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora =
       enviarPendientes();
       return it.id;
     },
-    presencia(datos) { compatibles().forEach((p) => enviar('pres', { datos }, p)); },
+    presencia(datos) { if (compatibles().length) enviar('pres', { datos }); }, // difusión, como el estado
     salir() {
       cerrada = true;
       timers.forEach((t) => { clearInterval(t); clearTimeout(t); });

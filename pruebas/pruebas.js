@@ -13,7 +13,9 @@ async function esperarHasta(cond, ms = 4000, desc = 'condición') {
 const afirmar = (c, msg) => { if (!c) throw new Error(msg); };
 
 function jugador(red, id, nick, extra = {}) {
-  const s = crearSesion({ transporte: red.unir(extra.red), jugadorId: id, nick, tiempos: TIEMPOS, version: extra.version });
+  const transporte = red.unir(extra.red);
+  const s = crearSesion({ transporte, jugadorId: id, nick, tiempos: { ...TIEMPOS, ...extra.tiempos }, version: extra.version });
+  s.transporte = transporte;
   s.avisos = [];
   s.versiones = [];
   s.on('aviso', (m) => s.avisos.push(m));
@@ -206,6 +208,45 @@ const pruebas = {
     afirmar(z.estado.fase === 'briefing', 'se perdió la fase');
     afirmar(y.soyHost() && y.etiqueta.term >= 2, 'Y debería haber tomado el relevo');
     [z, y].forEach((s) => s.salir());
+  },
+
+  // Tras un corte largo, los demás lo dieron por perdido pero él los sigue teniendo en `pares`:
+  // tiene que responder a su saludo aunque no sea "nuevo" para él, o nunca lo vuelven a registrar.
+  async 'Vuelve tras un corte largo: los demás lo registran otra vez'() {
+    const red = crearRed({ descubrimiento: [20, 80] });
+    const rapido = { tiempos: { sinSaludo: 1000 } }; // para cazar el aviso falso de "otra versión"
+    const a = jugador(red, 'jA', 'A', rapido);
+    await esperarHasta(() => a.soyHost());
+    const b = jugador(red, 'jB', 'B', rapido);
+    await esperarHasta(() => deAcuerdo([a, b]) && b.yo());
+    b.transporte.aislar();
+    await esperarHasta(() => a.estado.jugadores.jB && !a.estado.jugadores.jB.conectado, 3000, 'A da a B por desconectado');
+    b.transporte.reconectar();
+    await esperarHasta(() => deAcuerdo([a, b]) && a.estado.jugadores.jB?.conectado, 3000, 'A vuelve a registrar a B');
+    b.intentar('elegirRol', { rol: 'comms' });
+    await esperarHasta(() => a.estado.jugadores.jB?.rol === 'comms', 3000, 'A acepta las intenciones de B');
+    await dormir(1500);
+    afirmar(!a.versiones.length && !b.versiones.length, 'aviso falso de otra versión');
+    [a, b].forEach((s) => s.salir());
+  },
+
+  async 'El anfitrión vuelve tras un corte largo: se une a la sala nueva'() {
+    const red = crearRed({ descubrimiento: [20, 80] });
+    const rapido = { tiempos: { sinSaludo: 1000 } };
+    const a = jugador(red, 'jA', 'A', rapido);
+    await esperarHasta(() => a.soyHost());
+    const b = jugador(red, 'jB', 'B', rapido);
+    await esperarHasta(() => deAcuerdo([a, b]) && b.yo());
+    a.intentar('elegirRol', { rol: 'vuelo' });
+    await esperarHasta(() => b.estado.jugadores.jA?.rol === 'vuelo');
+    a.transporte.aislar();
+    await esperarHasta(() => b.soyHost(), 3000, 'B toma el relevo');
+    a.transporte.reconectar();
+    await esperarHasta(() => deAcuerdo([a, b]) && hosts([a, b]) === 1 && a.yo()?.conectado && a.yo()?.rol === 'vuelo', 4000, 'A vuelve con su rol');
+    afirmar(b.soyHost(), 'el anfitrión debería seguir siendo B');
+    await dormir(1500);
+    afirmar(!a.versiones.length && !b.versiones.length, 'aviso falso de otra versión');
+    [a, b].forEach((s) => s.salir());
   },
 
   async 'Intención malformada: el anfitrión la ignora sin romperse'() {
