@@ -52,15 +52,11 @@ export function alCargarApps(f) { avisarCarga = f; }
 // El icono "Sala de control" del dock no abre una ventana: lleva directamente allí.
 function appsDeFase(fase) {
   if (fase === 'briefing') return ['expediente', 'manual'];
-  if (fase === 'diseno' || fase === 'restricciones') return ['constructor', 'cohete', 'contingencias', 'estado', 'expediente', 'manual'];
+  // En diseño el Constructor ya muestra los recursos del equipo: la app Estado repetiría lo mismo.
+  if (fase === 'diseno' || fase === 'restricciones') return ['constructor', 'cohete', 'contingencias', 'expediente', 'manual'];
   return ['estado', 'expediente', 'manual'];
 }
 const TODAS = ['constructor', 'cohete', 'contingencias', 'estado', 'expediente', 'manual'];
-
-function reloj() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
 
 function contenidoApp(c, app, fase, irA) {
   const restr = fase === 'restricciones';
@@ -84,7 +80,7 @@ function contenidoApp(c, app, fase, irA) {
         h('div', { class: 'lp-ruta-icono', 'aria-hidden': 'true' }, fase === 'mision' || fase === 'informe' ? '🛰' : '🗺'),
         h('h3', {}, fase === 'mision' || fase === 'informe' ? T.enControl : T.ruta),
         fase === 'mision' || fase === 'informe' ? null : h('p', {}, T.rutaTxt),
-        h('button', { class: 'lp-btn primario', type: 'button', onclick: () => irA('control') }, T.irControl));
+        h('button', { class: 'boton primario grande', type: 'button', onclick: () => irA('control') }, T.irControl));
       default: return h('div', { class: 'lp-vacio' });
     }
   } catch (err) {
@@ -104,8 +100,7 @@ export function pantallaLaptop(c, fase, { irA }) {
     pasosFase(c.guia),
     lineaGuia(c.guia, 'lp-guia'),
     h('span', { class: 'lp-usuario', style: `--rol: var(--lp-rol-${c.rol})` }, c.nick, ' · ', depto(c.rol)),
-    h('button', { class: 'lp-salir', type: 'button', title: T.levantarse, onclick: () => irA('sala') }, '⏏ ', T.levantarse),
-    h('span', { class: 'lp-reloj' }, reloj()));
+    h('button', { class: 'boton lp-salir', type: 'button', title: T.levantarse, onclick: () => irA('sala') }, '⏏ ', T.levantarse));
   const dock = h('nav', { class: 'lp-dock', role: 'tablist' }, TODAS.filter((a) => apps.includes(a) || a === 'constructor').map((a) => {
     const ok = apps.includes(a);
     return h('button', {

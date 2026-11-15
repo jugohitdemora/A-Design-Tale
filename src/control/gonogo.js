@@ -3,10 +3,10 @@ import { textos } from '../i18n.js';
 import { h, en, lista, ROLES_IDS, ROL_COLOR, nombreRol, puedoPor, conRol } from '../pantallas/ui.js';
 
 const T = textos({
-  es: { titulo: 'CONSULTA GO / NO-GO', checks: 'Comprobaciones', deptos: 'Departamentos', go: 'GO', nogo: 'NO-GO', espera: 'En espera', vacante: 'vacante',
+  es: { checks: 'Comprobaciones', deptos: 'Departamentos', go: 'GO', nogo: 'NO-GO', espera: 'En espera', vacante: 'vacante',
     lanzar: 'LANZAR', volver: 'Volver al diseño', borra: 'Editar el diseño borra las firmas.', sinDatos: 'Sin datos de verificación.',
     falta: (x) => `Falta: ${x}`, arregla: (x) => `Arregla: ${x}` },
-  en: { titulo: 'GO / NO-GO POLL', checks: 'Checks', deptos: 'Departments', go: 'GO', nogo: 'NO-GO', espera: 'Standing by', vacante: 'vacant',
+  en: { checks: 'Checks', deptos: 'Departments', go: 'GO', nogo: 'NO-GO', espera: 'Standing by', vacante: 'vacant',
     lanzar: 'LAUNCH', volver: 'Return to design', borra: 'Editing the design clears signatures.', sinDatos: 'No verification data.',
     falta: (x) => `Waiting for: ${x}`, arregla: (x) => `Fix: ${x}` },
 });
@@ -40,15 +40,15 @@ export function pantallaGoNoGo(c) {
     consolas.append(h('div', { class: 'gng-consola' + (on ? ' on' : ''), style: `--rol:${ROL_COLOR[r]}` },
       h('b', { class: 'gng-depto' }, nombreRol(r)),
       h('small', {}, j ? j.nick : T.vacante),
-      h('button', { class: 'gng-toggle', type: 'button', disabled: !puedoPor(c, r), 'aria-pressed': String(on),
+      h('button', { class: 'boton grande gng-toggle' + (on ? ' on' : ''), type: 'button', disabled: !puedoPor(c, r), 'aria-pressed': String(on),
         onclick: () => c.enviar('firmar', conRol(c, r, { on: !on })) }, on ? T.go : T.espera)));
   }
   const deptos = h('section', { class: 'gng-grupo gng-deptos' }, h('h3', {}, T.deptos), consolas, h('p', { class: 'gng-nota' }, T.borra));
 
   const lanzar = h('section', { class: 'gng-grupo gng-lanzar' },
-    h('button', { class: 'gng-lanzar-btn', type: 'button', disabled: !puedeLanzar, onclick: () => c.enviar('lanzar', {}) }, T.lanzar),
+    h('button', { class: 'boton primario enorme gng-lanzar-btn', type: 'button', disabled: !puedeLanzar, onclick: () => c.enviar('lanzar', {}) }, T.lanzar),
     h('p', { class: 'gng-falta' + (puedeLanzar ? ' ok' : '') }, puedeLanzar ? T.go : linea),
-    h('button', { class: 'gng-volver', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'diseno' }) }, T.volver));
+    h('button', { class: 'boton gng-volver', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'diseno' }) }, T.volver));
 
-  return h('div', { class: 'gng' }, h('h2', { class: 'gng-titulo' }, T.titulo), h('div', { class: 'gng-cuerpo' }, tablero, deptos, lanzar));
+  return h('div', { class: 'gng' }, h('div', { class: 'gng-cuerpo' }, tablero, deptos, lanzar));
 }

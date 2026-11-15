@@ -21,7 +21,7 @@ const T = textos({
     masa: 'Masa', coste: 'Coste', creditos: 'créditos', mitiga: 'Mitiga', comprar: 'Comprar', quitar: 'Quitar',
     comprada: 'COMPRADA', impacto: 'Coste del plan', recursoMasa: 'Masa', recursoPres: 'Presupuesto',
     restr: 'Restricciones: no se acepta un cambio que suba una barra.',
-    nota: 'Cuando salga el evento, su departamento debe activar la contingencia en la sala de control. El vuelo espera hasta entonces.',
+    nota: 'Cuando salga el evento, su departamento activa la contingencia en la sala de control.',
     notaTit: 'IMPORTANTE',
   },
   en: {
@@ -37,7 +37,7 @@ const T = textos({
     masa: 'Mass', coste: 'Cost', creditos: 'credits', mitiga: 'Mitigates', comprar: 'Buy', quitar: 'Drop',
     comprada: 'BOUGHT', impacto: 'Plan cost', recursoMasa: 'Mass', recursoPres: 'Budget',
     restr: 'Constraints: do not raise any bar.',
-    nota: 'When the event occurs, its department must activate the contingency in the control room. The flight waits until then.',
+    nota: 'When the event occurs, its department activates the contingency in the control room.',
     notaTit: 'IMPORTANT',
   },
 });
@@ -108,11 +108,8 @@ function columnaRiesgos(c, u, res) {
         ? [h('span', {}, T.mitigaCon + ': '), mit.map((id) => h('span', { class: 'ct-tag', style: `--rol:${colorRol(rolDe(c, id))}` },
           tx(c.D?.CONTINGENCIAS?.[id]?.nombre) || id, h('small', {}, ` · ${depto(rolDe(c, id), 'sigla')}`)))]
         : h('em', {}, T.nadaMitiga)),
-      tx(ev.casoReal) ? h('button', {
-        class: 'ct-caso-btn', type: 'button', 'aria-expanded': String(abiertoCaso),
-        onclick: () => { u.abierto[r.id] = !abiertoCaso; c.repintar(); },
-      }, abiertoCaso ? '▾ ' + T.ocultarCaso : '▸ ' + T.verCaso) : null,
-      abiertoCaso && tx(ev.casoReal) ? h('div', { class: 'ct-caso' },
+      tx(ev.casoReal) ? h('details', { class: 'ct-caso', open: abiertoCaso ? '' : null, ontoggle: (ev2) => { u.abierto[r.id] = ev2.target.open; } },
+        h('summary', {}, T.verCaso),
         h('p', {}, h('b', {}, T.casoReal + ': '), tx(ev.casoReal), ev.src ? h('sup', { class: 'src' }, ev.src) : null),
         tx(ev.leccion) ? h('p', { class: 'ct-leccion' }, h('b', {}, T.leccion + ': '), tx(ev.leccion)) : null) : null));
   }
@@ -132,15 +129,9 @@ function fila(c, id, tomadas, res) {
   const lleno = !on && tomadas.length >= MAX_CONTINGENCIAS;
   const bloqueada = !puedo || lleno;
   const motivo = !puedo ? T.soloPuede(depto(rol)) : lleno ? T.cupoLleno(MAX_CONTINGENCIAS) : null;
-  const precio = num(c, k.precio);
   const riesgo = (e) => lista(res?.riesgos).find((r) => r.id === e);
   const alternar = () => { if (!bloqueada && unaVez(id)) c.enviar('contingencia', { id, on: !on }); };
   return h('div', { class: 'ct-fila' + (on ? ' on' : '') + (bloqueada ? ' bloqueada' : ''), style: `--rol:${colorRol(rol)}` },
-    h('button', {
-      class: 'ct-check', type: 'button', role: 'checkbox', 'aria-checked': String(on), disabled: bloqueada,
-      'aria-label': `${on ? T.quitar : T.comprar}: ${tx(k.nombre) || id}`, title: motivo ?? (on ? T.quitar : T.comprar), onclick: alternar,
-    }, on ? pixel('check', 'var(--lp-tinta)', 16) : null),
-    h('span', { class: 'ct-f-ico' }, pixel('kit', colorRol(rol), 28)),
     h('div', { class: 'ct-f-info' },
       h('b', {}, tx(k.nombre) || id, on ? h('span', { class: 'ct-badge comprada' }, T.comprada) : null),
       tx(k.texto) ? h('p', {}, tx(k.texto)) : null,
@@ -152,22 +143,15 @@ function fila(c, id, tomadas, res) {
       })) : null,
       motivo ? h('p', { class: 'ct-solo' }, motivo) : null),
     h('div', { class: 'ct-f-coste' },
-      h('span', { class: 'ct-masa' }, h('small', {}, T.masa), valor(c, k.masa, 'kg')),
-      h('span', { class: 'ct-monedas', title: `${fmt(precio)} M USD` }, pixel('moneda', 'var(--lp-aviso)', 14), h('b', {}, fmt(precio)), h('small', {}, ` ${T.creditos}`)),
-      h('span', { class: 'ct-musd' }, valor(c, k.precio, 'M USD'))));
+      h('span', { class: 'ct-masa' }, valor(c, k.masa, 'kg')),
+      h('span', { class: 'ct-monedas' }, pixel('moneda', 'var(--lp-aviso)', 14), valor(c, k.precio, 'M USD')),
+      h('button', {
+        class: 'boton ancho' + (on ? ' on' : ''), type: 'button', role: 'checkbox', 'aria-checked': String(on), disabled: bloqueada,
+        title: motivo ?? undefined, onclick: alternar,
+      }, on ? T.quitar : T.comprar)));
 }
 
-function miniBarra(nombre, b, unidad) {
-  const usado = Number(b?.usado) || 0, limite = Number(b?.limite) || 0;
-  const est = b?.estado ?? 'ok';
-  const pct = limite > 0 ? Math.min(150, (usado / limite) * 100) / 1.5 : usado > 0 ? 100 : 0;
-  return h('div', { class: 'ct-mini ' + est },
-    h('span', { class: 'ct-mini-nom' }, nombre),
-    h('span', { class: 'ct-mini-pista' }, h('i', { class: 'ct-mini-relleno', style: `width:${pct}%` }), limite > 0 ? h('i', { class: 'ct-mini-marca' }) : null),
-    h('span', { class: 'ct-mini-num' }, `${fmt(usado, 0)} / ${limite > 0 ? fmt(limite, 0) : '—'} ${unidad}`));
-}
-
-function columnaPlan(c, res, restr) {
+function columnaPlan(c, res) {
   const m = c.mision;
   const tomadas = lista(c.e?.porRol?.comms?.contingencias);
   const ids = lista(m?.contingencias).filter((id) => c.D?.CONTINGENCIAS?.[id]);
@@ -193,11 +177,7 @@ function columnaPlan(c, res, restr) {
 
   return h('section', { class: 'ct-col ct-plan' },
     h('header', { class: 'ct-cab' }, h('h3', {}, T.plan), cupo),
-    h('div', { class: 'ct-impacto' },
-      h('span', { class: 'ct-impacto-tit' }, `${T.impacto}: +${fmt(masa)} kg · +${fmt(precio)} M USD`),
-      res ? miniBarra(T.recursoMasa, res.barras?.masa, 'kg') : null,
-      res ? miniBarra(T.recursoPres, res.barras?.presupuesto, 'M USD') : null),
-    restr ? h('p', { class: 'ct-restr' }, '⚠ ', T.restr) : null,
+    h('p', { class: 'ct-impacto' }, `${T.impacto}: +${fmt(masa)} kg · +${fmt(precio)} M USD`),
     cuerpo);
 }
 
@@ -207,8 +187,8 @@ export function appContingencias(c) {
   const res = resumenSeguro(c);
   const restr = c.e?.fase === 'restricciones';
   return h('div', { class: 'ct-app' },
-    h('div', { class: 'ct-cols' }, columnaRiesgos(c, u, res), columnaPlan(c, res, restr)),
-    h('footer', { class: 'ct-nota' }, h('b', {}, T.notaTit), h('span', {}, T.nota)));
+    h('div', { class: 'ct-cols' }, columnaRiesgos(c, u, res), columnaPlan(c, res)),
+    h('footer', { class: 'ct-nota' }, '⚠ ', restr ? T.restr : T.nota));
 }
 
 export default appContingencias;

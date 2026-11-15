@@ -56,7 +56,7 @@ function columnaPiezas(c, rol, restr) {
       h('div', { class: 'acciones izq' },
         m ? h('span', { class: 'etq ok' }, T.mounted)
           : h('button', {
-            class: 'btn-plano', type: 'button', disabled: !editable || restr || !op,
+            class: 'boton', type: 'button', disabled: !editable || restr || !op,
             title: restr ? T.addDisabled : undefined,
             onclick: () => c.enviar('montar', conRol(c, rol, { pieza: p.id, op: opId, uso: p.uso?.def ?? 24 })),
           }, T.mount))));
@@ -89,7 +89,7 @@ function loteRol(c, rol, activo) {
         });
         baldosa.append(h('label', { class: 'uso' }, h('small', {}, T.usage), rng, lbl));
       } else baldosa.append(h('small', { class: 'tenue' }, T.alwaysOn));
-      baldosa.append(h('button', { class: 'btn-plano peligro', type: 'button', onclick: () => c.enviar('quitar', conRol(c, rol, { pieza: id })) }, T.remove));
+      baldosa.append(h('button', { class: 'boton peligro', type: 'button', onclick: () => c.enviar('quitar', conRol(c, rol, { pieza: id })) }, T.remove));
     } else {
       baldosa.append(h('small', { class: 'tenue' }, `${T.option} ${m.op ?? '?'}${p?.uso ? ` · ${m.uso ?? '?'} ${T.hoursPerDay}` : ''}`));
     }
@@ -113,7 +113,7 @@ function selectorRol(c, activo) {
   if (puedo.length < 2) return null;
   return h('div', { class: 'selector-rol' }, h('span', { class: 'tenue pequeno' }, T.actingAs),
     puedo.map((r) => h('button', {
-      class: 'btn-plano' + (r === activo ? ' primario' : ''), type: 'button',
+      class: 'boton' + (r === activo ? ' on' : ''), type: 'button',
       onclick: () => { c.ui.rolActivo = r; c.repintar(); },
     }, nombreRol(r), r !== c.rol ? ` (${T.vacant})` : '')));
 }
@@ -145,7 +145,7 @@ export function pantallaTaller(c, restr) {
   const tab = TABS.includes(c.ui.tab) ? c.ui.tab : 'taller';
 
   const tabs = h('nav', { class: 'tabs', role: 'tablist' }, TABS.map((t) => h('button', {
-    class: 'tab' + (t === tab ? ' activa' : ''), type: 'button', role: 'tab', 'aria-selected': String(t === tab),
+    class: 'boton' + (t === tab ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': String(t === tab),
     onclick: () => { c.ui.tab = t; c.repintar(); },
   }, T.tabs[t])));
 

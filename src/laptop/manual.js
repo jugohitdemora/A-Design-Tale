@@ -676,18 +676,15 @@ export function appManual(c, { rol } = {}) {
   try { cuerpo = contenido(c, rolVer, u.seccion); } catch (err) { console.error('manual', err); cuerpo = [h('p', { class: 'sop-call cuidado' }, String(err?.message ?? err))]; }
 
   const tabs = h('nav', { class: 'sop-tabs', role: 'tablist', 'aria-label': T.depto }, ROLES.map((r) => h('button', {
-    class: 'sop-tab' + (r === rolVer ? ' activa' : ''), type: 'button', role: 'tab', 'aria-selected': String(r === rolVer), style: color(r),
+    class: 'boton sop-tab' + (r === rolVer ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': String(r === rolVer), style: color(r),
     title: depto(r, 'largo'),
     onclick: () => { u.rol = r; u.seccion = SECCIONES[0].id; c.repintar(); requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.querySelector(`[data-scroll="sop-${r}"]`); if (el) el.scrollTop = 0; })); },
   }, h('b', {}, depto(r, 'sigla')), h('span', { class: 'sop-tab-t' }, ' ' + depto(r, 'corto')), r === c.rol ? h('i', { class: 'sop-tab-yo', title: T.tuDepto }, '★') : null)));
 
   const portada = h('aside', { class: 'sop-lado' },
     h('div', { class: 'sop-portada' },
-      h('div', { class: 'sop-portada-t' }, T.titulo),
-      h('div', { class: 'sop-doc' }, `SOP-${depto(rolVer, 'sigla')}-${M.num} ${T.rev} ${M.rev}`),
       h('div', { class: 'sop-depto' }, depto(rolVer, 'largo')),
       h('div', { class: 'sop-mision-r' }, L(M.mision)),
-      h('div', { class: 'sop-clasif' }, T.clasif),
       h('div', { class: 'sop-anexo' }, c.mision ? `${T.anexo}: ${c.mision.id} · ${tx(c.mision.nombre)}` : `${T.anexo}: ${T.sinMision}`)),
     h('div', { class: 'sop-indice-t' }, T.indice),
     h('ol', { class: 'sop-indice' }, SECCIONES.map((s, i) => h('li', {}, h('button', {
@@ -695,9 +692,9 @@ export function appManual(c, { rol } = {}) {
     }, L(s.t))))));
 
   const pie = h('div', { class: 'sop-pie' },
-    h('button', { class: 'sop-nav', type: 'button', disabled: idx <= 0, onclick: () => ir(idx - 1) }, '◀ ' + (idx > 0 ? L(SECCIONES[idx - 1].t) : T.anterior)),
+    h('button', { class: 'boton texto sop-nav', type: 'button', disabled: idx <= 0, onclick: () => ir(idx - 1) }, '◀ ' + (idx > 0 ? L(SECCIONES[idx - 1].t) : T.anterior)),
     h('span', { class: 'sop-pag' }, `${T.pag} ${idx + 1} ${T.de} ${SECCIONES.length}`),
-    h('button', { class: 'sop-nav', type: 'button', disabled: idx >= SECCIONES.length - 1, onclick: () => ir(idx + 1) }, (idx < SECCIONES.length - 1 ? L(SECCIONES[idx + 1].t) : T.siguiente) + ' ▶'));
+    h('button', { class: 'boton texto sop-nav', type: 'button', disabled: idx >= SECCIONES.length - 1, onclick: () => ir(idx + 1) }, (idx < SECCIONES.length - 1 ? L(SECCIONES[idx + 1].t) : T.siguiente) + ' ▶'));
 
   const pagina = h('article', { class: 'sop-pagina', 'data-scroll': `sop-${rolVer}`, tabindex: '-1' },
     h('header', { class: 'sop-cab' }, h('span', { class: 'sop-cab-d' }, `SOP-${depto(rolVer, 'sigla')}-${M.num} ${T.rev} ${M.rev}`), h('h2', { class: 'sop-h1' }, L(SECCIONES[idx].t))),

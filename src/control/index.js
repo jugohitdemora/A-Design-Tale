@@ -1,4 +1,4 @@
-// Pared principal de la sala de control de misión (pantalla proyectada de 1600×800 px lógicos).
+// Pared principal de la sala de control de misión (pantalla proyectada de 1280×640 px lógicos).
 // Diseño → planificación de ruta; misión → consola de operaciones; informe → informe final y resumen de operaciones.
 import { h } from '../pantallas/ui.js';
 import { textos, depto } from '../i18n.js';
@@ -9,18 +9,13 @@ import { pantallaDebrief } from './debrief.js';
 import { pasosFase, lineaGuia } from '../pantallas/index.js';
 
 const T = textos({
-  es: { cabecera: 'CONTROL DE MISIÓN', plan: 'PLANIFICACIÓN DE RUTA', ops: 'OPERACIONES', informe: 'INFORME FINAL', espera: 'EN ESPERA',
+  es: { cabecera: 'CONTROL', plan: 'PLANIFICACIÓN', ops: 'OPERACIONES', informe: 'INFORME FINAL', espera: 'EN ESPERA',
     esperaTxt: 'La misión se prepara en la sala de briefing.',
-    verif: 'GO / NO-GO', portatil: 'Portátil', sala: 'Sala (Esc)' },
-  en: { cabecera: 'MISSION CONTROL', plan: 'ROUTE PLANNING', ops: 'OPERATIONS', informe: 'FINAL REPORT', espera: 'STANDING BY',
+    verif: 'GO / NO-GO', portatil: 'Portátil', sala: 'Sala', salaTip: 'Volver a la sala (Esc)' },
+  en: { cabecera: 'CONTROL', plan: 'PLANNING', ops: 'OPERATIONS', informe: 'FINAL REPORT', espera: 'STANDING BY',
     esperaTxt: 'The crew prepares the mission in the briefing room.',
-    verif: 'GO / NO-GO', portatil: 'Laptop', sala: 'Room (Esc)' },
+    verif: 'GO / NO-GO', portatil: 'Laptop', sala: 'Room', salaTip: 'Back to the room (Esc)' },
 });
-
-function reloj() {
-  const d = new Date();
-  return [d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()].map((x) => String(x).padStart(2, '0')).join(':') + ' UTC';
-}
 
 export function pantallaControl(c, fase) {
   let modo, cuerpo;
@@ -34,8 +29,7 @@ export function pantallaControl(c, fase) {
       pasosFase(c.guia), lineaGuia(c.guia, 'mc-guia'),
       h('span', { class: 'mc-yo' }, c.nick, ' · ', depto(c.rol)),
       h('nav', { class: 'mc-nav' },
-        h('button', { class: 'mc-ir' + (c.guia?.objetivo === 'laptop' ? ' guia' : ''), type: 'button', onclick: () => c.irA('laptop') }, '💻 ', T.portatil),
-        h('button', { class: 'mc-ir', type: 'button', onclick: () => c.irA('sala') }, '⏏ ', T.sala)),
-      h('span', { class: 'mc-reloj' }, reloj())),
+        h('button', { class: 'boton mc-ir' + (c.guia?.objetivo === 'laptop' ? ' guia' : ''), type: 'button', onclick: () => c.irA('laptop') }, '💻 ', T.portatil),
+        h('button', { class: 'boton mc-ir', type: 'button', title: T.salaTip, onclick: () => c.irA('sala') }, '⏏ ', T.sala))),
     h('div', { class: 'mc-cuerpo' }, cuerpo));
 }

@@ -20,7 +20,7 @@ const T = textos({
     margen: 'Margen de masa', masaNave: 'Masa de la nave', capacidad: 'Capacidad del cohete',
     libres: (n) => `Quedan ${n} kg libres.`, tolerancia: (n) => `Excede ${n} kg (tolerancia del 20 %). Habrá que recortar.`,
     exceso: (n) => `Excede ${n} kg. No pasa la revisión.`, sinCapacidad: 'Sin capacidad hacia este destino.',
-    presupuesto: 'Impacto en el presupuesto', musd: 'M USD', sinCohete: 'sin cohete', conEste: 'con este cohete',
+    presupuesto: 'Presupuesto', musd: 'M USD', sinCohete: 'sin cohete', conEste: 'con este cohete',
     presOk: (n) => `Quedan ${n} M USD.`, presTol: (n) => `Excede ${n} M USD (tolerancia). Habrá que recortar.`, presExc: (n) => `Excede ${n} M USD. No pasa la revisión.`,
     teclas: 'Flechas ← → para cambiar de cohete', juego: '≈ valor de juego',
     cohetes: 'COHETES',
@@ -35,7 +35,7 @@ const T = textos({
     margen: 'Mass margin', masaNave: 'Spacecraft mass', capacidad: 'Rocket capacity',
     libres: (n) => `${n} kg left.`, tolerancia: (n) => `Over by ${n} kg (20 % tolerance). Cut mass.`,
     exceso: (n) => `Over by ${n} kg. Review fails.`, sinCapacidad: 'No capacity to this destination.',
-    presupuesto: 'Budget impact', musd: 'M USD', sinCohete: 'no rocket', conEste: 'with this rocket',
+    presupuesto: 'Budget', musd: 'M USD', sinCohete: 'no rocket', conEste: 'with this rocket',
     presOk: (n) => `${n} M USD left.`, presTol: (n) => `Over by ${n} M USD (tolerance). Cut cost.`, presExc: (n) => `Over by ${n} M USD. Review fails.`,
     teclas: 'Arrow keys ← → switch rocket', juego: '≈ game value',
     cohetes: 'ROCKETS',
@@ -514,14 +514,12 @@ function panelMargen(c, k, cap) {
       h('h4', {}, T.margen),
       medidor(ratio, est),
       h('p', { class: 'cifras' }, `${fmt(usada)} kg / ${fmt(cap)} kg`, h('b', { class: est }, Number.isFinite(ratio) ? ` ${fmt(ratio * 100)} %` : '')),
-      h('p', { class: 'msg ' + est }, msg),
-      h('p', { class: 'pie' }, T.masaNave)),
+      h('p', { class: 'msg ' + est }, msg)),
     h('div', { class: 'cam-bloque' },
       h('h4', {}, T.presupuesto),
       medidor(rp, ep),
-      h('p', { class: 'cifras' }, `${fmt(sin, 1)} + ${fmt(pk, 1)} = ${fmt(con, 1)} / ${fmt(lim, 1)} ${T.musd}`, h('b', { class: ep }, Number.isFinite(rp) ? ` ${fmt(rp * 100)} %` : '')),
-      h('p', { class: 'msg ' + ep }, mp),
-      h('p', { class: 'pie' }, `${T.sinCohete}: ${fmt(sin, 1)} · ${T.conEste}: ${fmt(con, 1)} ${T.musd}`)));
+      h('p', { class: 'cifras', title: `${T.sinCohete}: ${fmt(sin, 1)} · ${T.conEste}: ${fmt(con, 1)} ${T.musd}` }, `${fmt(con, 1)} / ${fmt(lim, 1)} ${T.musd}`, h('b', { class: ep }, Number.isFinite(rp) ? ` ${fmt(rp * 100)} %` : '')),
+      h('p', { class: 'msg ' + ep }, mp)));
 }
 
 export function appCohete(c) {
@@ -541,13 +539,13 @@ export function appCohete(c) {
   const destino = tx(m.cuerpo, m.destino ?? '?');
 
   const ctx = contexto();
-  const feed = h('div', { class: 'cam-feed' });
+  const feed = h('div', { class: 'cam-feed', title: T.sim });
   if (ctx.error) feed.append(h('p', { class: 'cam-vacio' }, T.sinWebgl));
   else {
     feed.append(ctx.canvas);
     ctx.feed = feed;
-    ctx.reloj = h('span', { class: 'cam-reloj' }, marcaTiempo());
-    ctx.relojTxt = ctx.reloj.textContent;
+    ctx.reloj = null;
+    ctx.relojTxt = '';
     if (ctx.ro) ctx.ro.disconnect();
     ctx.ro = new ResizeObserver(() => ajustarTamano());
     ctx.ro.observe(feed);
@@ -560,17 +558,13 @@ export function appCohete(c) {
     h('div', { class: 'cam-ruido', 'aria-hidden': 'true' }), h('div', { class: 'cam-lineas', 'aria-hidden': 'true' }), h('div', { class: 'cam-vineta', 'aria-hidden': 'true' }),
     h('div', { class: 'cam-sup izq' }, T.cam),
     h('div', { class: 'cam-sup der' }, h('i', { class: 'rec-punto' }), T.rec),
-    h('div', { class: 'cam-inf izq' }, ctx.reloj ?? ''),
-    h('div', { class: 'cam-inf der' }, T.camId),
-    h('div', { class: 'cam-sim' }, T.sim),
     h('div', { class: 'cam-cambio' }, T.cambiando),
-    h('button', { class: 'cam-flecha izq', type: 'button', 'aria-label': T.prev, onclick: () => mover(-1) }, '◀'),
-    h('button', { class: 'cam-flecha der', type: 'button', 'aria-label': T.next, onclick: () => mover(1) }, '▶'));
+    h('button', { class: 'boton cam-flecha izq', type: 'button', 'aria-label': T.prev, onclick: () => mover(-1) }, '◀'),
+    h('button', { class: 'boton cam-flecha der', type: 'button', 'aria-label': T.next, onclick: () => mover(1) }, '▶'));
 
   const ficha = h('div', { class: 'cam-carpeta' },
     h('div', { class: 'solapa' }, `${T.cohetes} ${i + 1}/${lst.length}`),
     h('div', { class: 'hoja' },
-      h('p', { class: 'etq' }, T.carpeta),
       h('h3', {}, tx(k.nombre) || k.id),
       esElegido ? h('span', { class: 'sello' }, T.elegido) : null,
       h('dl', {},
@@ -578,18 +572,13 @@ export function appCohete(c) {
         h('dt', {}, T.capacidadA(destino)), h('dd', {}, valor(c, k.capacidad?.[m.destino], 'kg')),
         h('dt', {}, T.precio), h('dd', {}, valor(c, k.precio, T.musd)),
         h('dt', {}, T.usoNasa), h('dd', {}, k.usoNasa ?? T.ninguno)),
-      k.nota ? h('p', { class: 'nota' }, h('b', {}, T.nota + ': '), tx(k.nota)) : null,
-      h('div', { class: 'acciones' },
-        h('button', {
-          class: 'btn-elegir', type: 'button', disabled: !puedo || esElegido,
-          onclick: () => c.enviar('elegirCohete', { id: k.id }),
-        }, esElegido ? T.elegido : T.elegir),
-        puedo ? null : h('p', { class: 'aviso' }, T.soloRol(depto('vuelo')))),
-      h('p', { class: 'teclas' }, T.teclas)),
-    h('div', { class: 'nav' },
-      h('button', { type: 'button', 'aria-label': T.prev, onclick: () => mover(-1) }, '◀'),
-      h('span', {}, tx(k.nombre) || k.id),
-      h('button', { type: 'button', 'aria-label': T.next, onclick: () => mover(1) }, '▶')));
+      k.nota ? h('p', { class: 'nota' }, tx(k.nota)) : null),
+    h('div', { class: 'acciones' },
+      h('button', {
+        class: 'boton primario grande ancho', type: 'button', disabled: !puedo || esElegido, title: T.teclas,
+        onclick: () => c.enviar('elegirCohete', { id: k.id }),
+      }, esElegido ? T.elegido : T.elegir),
+      puedo ? null : h('p', { class: 'aviso' }, T.soloRol(depto('vuelo')))));
 
   raiz.append(feed, panelMargen(c, k, cap), ficha);
   raiz.addEventListener('focus', () => { u.foco = true; });

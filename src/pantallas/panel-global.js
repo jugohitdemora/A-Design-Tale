@@ -63,8 +63,8 @@ export function panelGlobal(c, res, opts = {}) {
 
   if (opts.revision) {
     raiz.append(
-      h('button', { class: 'btn-plano primario ancho', type: 'button', onclick: () => { if (unaVez('rev')) c.enviar('pedirRevision', { revision: c.e?.diseno?.revisiones ?? 0 }); } }, T.requestReview), // el número evita que un doble clic pida dos revisiones
-      h('p', { class: 'tenue pequeno' }, T.reviewsDone(c.e?.diseno?.revisiones ?? 0), ' · ', T.reviewHint));
+      h('button', { class: 'boton primario grande ancho', type: 'button', onclick: () => { if (unaVez('rev')) c.enviar('pedirRevision', { revision: c.e?.diseno?.revisiones ?? 0 }); } }, T.requestReview), // el número evita que un doble clic pida dos revisiones
+      h('p', { class: 'tenue pequeno' }, T.reviewsDone(c.e?.diseno?.revisiones ?? 0)));
     // Resultado de la última revisión (lo guarda el anfitrión en diseno.ultima): lo ve todo el equipo.
     const u = c.e?.diseno?.ultima;
     if (u?.tipo === 'revision') {

@@ -14,7 +14,7 @@ import { pantallaControl } from '../control/index.js';
 
 export const FASES_JUEGO = ['briefing', 'diseno', 'restricciones', 'verificacion', 'mision', 'informe'];
 // Tamaño lógico de cada pantalla (px CSS antes de escalar sobre el 3D).
-export const LOGICO = { laptop: { w: 1280, h: 800 }, control: { w: 1600, h: 800 } };
+export const LOGICO = { laptop: { w: 1024, h: 640 }, control: { w: 1280, h: 640 } };
 
 const TV = textos({
   es: { laptop: 'Portátil', sala: 'Sala', control: 'Sala de control', briefing: 'Sala de briefing', manualTitulo: 'MANUAL DE PROCEDIMIENTOS', cerrar: 'Cerrar',
@@ -24,18 +24,18 @@ const TV = textos({
       carpeta: 'Abre una carpeta de la mesa y elige la misión.',
       listo: 'Marca los objetivos en el expediente y pulsa Listo.',
       esperaListos: (a, b) => `Esperando a la tripulación (${a}/${b} listos).`,
-      piezas: 'Abre tu portátil y monta piezas en el Constructor.',
+      piezas: 'Monta tus piezas en el Constructor del portátil.',
       cohete: 'Elige un cohete en la Cámara de lanzamiento.',
       ruta: 'Planifica la ruta en la sala de control.',
       revision: 'Cuando el equipo esté listo, pulsa Pedir revisión.',
       exceso: (b) => `Reduce ${b}: hay exceso sobre el límite.`,
       recorta: (b) => `Recorta ${b} hasta quedar dentro del límite.`,
-      gonogo: 'Ve a la sala de control y da GO.',
+      gonogo: 'Da tu GO en la consola de tu departamento.',
       fallaCheck: 'Hay comprobaciones en rojo: vuelve al diseño.',
       esperaGo: (l) => `Esperando GO de: ${l}.`,
       lanzar: 'Todo en GO. Pulsa Lanzar.',
       mision: 'Sigue el vuelo y pulsa Siguiente paso.',
-      informe: 'Lee el informe. Vuela de nuevo o elige otra misión.',
+      informe: 'Revisa el informe y elige el siguiente vuelo.',
     } },
   en: { laptop: 'Laptop', sala: 'Room', control: 'Control room', briefing: 'Briefing room', manualTitulo: 'STANDARD OPERATING PROCEDURES', cerrar: 'Close',
     cargando: 'Loading…', esc: 'Esc: look up', lobby: 'Leave to lobby', siguiente: 'Next', y: 'and',
@@ -44,18 +44,18 @@ const TV = textos({
       carpeta: 'Open a folder on the table and choose the mission.',
       listo: 'Tick the goals in the dossier and press Ready.',
       esperaListos: (a, b) => `Waiting for the crew (${a}/${b} ready).`,
-      piezas: 'Open your laptop and add parts in the Builder.',
+      piezas: 'Add your parts in the laptop Builder.',
       cohete: 'Choose a rocket in the Launch camera.',
       ruta: 'Plan the route in the control room.',
       revision: 'When the team is ready, press Request review.',
       exceso: (b) => `Reduce ${b}: over the limit.`,
       recorta: (b) => `Cut ${b} until it is within the limit.`,
-      gonogo: 'Go to the control room and give your GO.',
+      gonogo: 'Give your GO on your department console.',
       fallaCheck: 'Some checks are red: return to design.',
       esperaGo: (l) => `Waiting for GO from: ${l}.`,
       lanzar: 'All GO. Press Launch.',
       mision: 'Follow the flight and press Next step.',
-      informe: 'Read the report. Fly again or choose another mission.',
+      informe: 'Read the report and choose the next flight.',
     } },
 });
 
@@ -170,7 +170,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     const vista = ultimo?.vista ?? 'sala';
     const nodos = [h('p', { class: 'f-aviso' + (avisoTxt ? '' : ' vacio'), role: 'status', 'aria-live': 'polite' }, avisoTxt)];
     if (vista === 'sala') {
-      const boton = (v, icono, txt) => h('button', { class: 'f-vista' + (c.guia?.objetivo === v ? ' guia' : ''), type: 'button', onclick: () => c.irA(v) }, icono, ' ', txt);
+      const boton = (v, icono, txt) => h('button', { class: 'boton ancho f-vista' + (c.guia?.objetivo === v ? ' primario guia' : ''), type: 'button', onclick: () => c.irA(v) }, h('span', { 'aria-hidden': 'true' }, icono), txt);
       nodos.push(h('aside', { class: 'f-hud' },
         pasosFase(c.guia),
         lineaGuia(c.guia),
@@ -179,7 +179,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
           boton('control', '🛰', TV.control)),
         h('div', { class: 'f-pie' },
           h('span', {}, ultimo?.nick ?? '', ' · ', c.rol ? nombreRol(c.rol) : T.noRole, ' · ', ultimo?.enLinea ?? ''),
-          h('button', { class: 'f-salir', type: 'button', onclick: () => ultimo?.volverAlLobby?.() }, TV.lobby))));
+          h('button', { class: 'boton f-salir', type: 'button', onclick: () => ultimo?.volverAlLobby?.() }, TV.lobby))));
     }
     franja.replaceChildren(...nodos);
   }
@@ -210,7 +210,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
       en(ev.texto) ? h('p', {}, en(ev.texto)) : null,
       cambios.length ? h('p', {}, h('b', {}, T.changed + ': '), cambios.join(' · ')) : null,
       en(ev.casoReal) ? h('p', { class: 'caso' }, h('b', {}, T.realCase + ': '), en(ev.casoReal), ev.src ? h('sup', { class: 'src' }, ev.src) : null) : null,
-      h('div', { class: 'acciones' }, h('button', { class: 'btn-plano primario', type: 'button', onclick: () => { cola.shift(); dibujarModal(); } }, T.close))));
+      h('div', { class: 'acciones' }, h('button', { class: 'boton primario', type: 'button', onclick: () => { cola.shift(); dibujarModal(); } }, T.close))));
   }
 
   // ---- capa: HUD del expediente + modales de expediente y manual ----
@@ -218,8 +218,8 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
   function cerrarOverlay() { c.ui.overlay = null; dibujar(true); }
   function construirCapa(fase) {
     const nodos = [];
-    if (c.D && c.mision && fase !== 'briefing') nodos.push(expedienteMini(c, (id) => abrir({ tipo: 'expediente', id })));
-    if (c.D && fase === 'briefing' && c.mision) nodos.push(expedienteMini(c, (id) => abrir({ tipo: 'expediente', id })));
+    // La ficha del expediente solo se ve mirando la sala: en el portátil ya es una app y en la pared no hace falta.
+    if (c.D && c.mision && c.vista === 'sala') nodos.push(expedienteMini(c, (id) => abrir({ tipo: 'expediente', id })));
     const o = c.ui.overlay;
     if (o?.tipo === 'expediente' && c.D) {
       const el = expedienteCompleto(c, o.id, { cerrar: cerrarOverlay });

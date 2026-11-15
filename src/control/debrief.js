@@ -38,8 +38,8 @@ export function pantallaDebrief(c) {
   const r = c.e?.resultado;
   const m = c.mision;
   const botones = h('div', { class: 'dbf-botones' },
-    h('button', { class: 'dbf-btn', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'lobby' }) }, T.nueva),
-    h('button', { class: 'dbf-btn primario', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'diseno' }) }, T.otra));
+    h('button', { class: 'boton', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'lobby' }) }, T.nueva),
+    h('button', { class: 'boton primario grande', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'diseno' }) }, T.otra));
   if (!r) return h('div', { class: 'dbf' }, h('p', { class: 'dbf-vacio' }, T.sinResultado), botones);
 
   const vd = r.veredicto;

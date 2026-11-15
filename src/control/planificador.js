@@ -7,7 +7,7 @@ import { lienzoCapa, valorEn, color } from './capas.js';
 
 const T = textos({
   es: {
-    titulo: 'PLANIFICACIÓN DE RUTA', ruta: 'RUTA', ventana: 'VENTANA DE LANZAMIENTO', mapa: 'SITIO / ÓRBITA', efectos: 'EFECTOS EN EL DISEÑO',
+    titulo: 'PLANIFICACIÓN DE RUTA', ruta: 'RUTA', ventana: 'VENTANA DE LANZAMIENTO', mapa: 'SITIO / ÓRBITA', efectos: 'EFECTOS EN EL DISEÑO', sitio: 'SITIO', cambiarSitio: 'Cambiar sitio',
     dias: 'días', dia: (d, n) => `Día ${d} de ${n}`, sinDia: 'Sin día elegido', dv: 'ΔV necesario', optimo: 'ÓPTIMO', extra: 'Propelente extra',
     bono: (p) => `Día óptimo: +${p} % de éxito`, fuera: 'Fuera del óptimo: más ΔV, más propelente.',
     elegirDia: 'Fijar este día', soloVuelo: `Solo ${depto('vuelo')} elige la ruta y el día.`,
@@ -18,10 +18,10 @@ const T = textos({
     sinRuta: 'Elige primero una ruta. El día de lanzamiento cambia el propelente.', propelente: 'Propelente', precio: 'Precio',
     efecto: 'Efecto', sinEfectos: 'Sin efectos especiales.', factor: (f) => `× ${f}`, fuente: 'Fuente',
     noPlan: 'Esta misión no tiene planificación de ruta.', bajo: 'bajo', alto: 'alto', leyenda: 'Leyenda',
-    inc: (i) => `inclinación ${i}°`, quien: 'Decide', ok: 'Listo para verificación', falta: 'Falta: día y sitio',
+    inc: (i) => `inclinación ${i}°`, quien: 'Decide', ok: 'Listo para verificación', falta: 'Falta: día y sitio', faltaDia: 'Falta: día de lanzamiento', faltaSitio: 'Falta: sitio',
   },
   en: {
-    titulo: 'ROUTE PLANNING', ruta: 'ROUTE', ventana: 'LAUNCH WINDOW', mapa: 'SITE / ORBIT', efectos: 'EFFECTS ON THE DESIGN',
+    titulo: 'ROUTE PLANNING', ruta: 'ROUTE', ventana: 'LAUNCH WINDOW', mapa: 'SITE / ORBIT', efectos: 'EFFECTS ON THE DESIGN', sitio: 'SITE', cambiarSitio: 'Change site',
     dias: 'days', dia: (d, n) => `Day ${d} of ${n}`, sinDia: 'No day chosen', dv: 'Required ΔV', optimo: 'OPTIMUM', extra: 'Extra propellant',
     bono: (p) => `Optimum day: +${p} % success.`, fuera: 'Off the optimum: more ΔV, more propellant.',
     elegirDia: 'Set this day', soloVuelo: `Only ${depto('vuelo')} can choose the route and day.`,
@@ -32,7 +32,7 @@ const T = textos({
     sinRuta: 'Choose a route first. The launch day changes the propellant.', propelente: 'Propellant', precio: 'Price',
     efecto: 'Effect', sinEfectos: 'No special effects.', factor: (f) => `× ${f}`, fuente: 'Source',
     noPlan: 'This mission has no route planning.', bajo: 'low', alto: 'high', leyenda: 'Legend',
-    inc: (i) => `inclination ${i}°`, quien: 'Decides', ok: 'Ready for verification', falta: 'Missing: day and site',
+    inc: (i) => `inclination ${i}°`, quien: 'Decides', ok: 'Ready for verification', falta: 'Missing: day and site', faltaDia: 'Missing: launch day', faltaSitio: 'Missing: site',
   },
 });
 
@@ -41,7 +41,7 @@ const pct = (x) => `${redondear((x ?? 0) * 100, 0)} %`;
 
 // ---------- Ventana de lanzamiento: curva ΔV(día) ----------
 function curvaVentana(c, P, dia, puedo) {
-  const V = P.ventana, W = 380, H = 170, m = { l: 34, r: 8, t: 10, b: 22 };
+  const V = P.ventana, W = 310, H = 112, m = { l: 36, r: 8, t: 8, b: 22 };
   const f = (d) => c.motor.factorVentana ? c.motor.factorVentana(V, d) : 1;
   const maxF = V.maxFactor ?? 1.6;
   const X = (d) => m.l + (d / V.dias) * (W - m.l - m.r);
@@ -57,13 +57,13 @@ function curvaVentana(c, P, dia, puedo) {
     const y = m.t + k * (H - m.t - m.b) / 4;
     svg.append(s('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, class: 'pl-rejilla' }));
     const val = (V.dvMin ?? 1) * (maxF - k * (maxF - 1) / 4);
-    svg.append(s('text', { x: m.l - 4, y: y + 3, class: 'pl-eje', 'text-anchor': 'end' }, document.createTextNode(val.toFixed(1))));
+    svg.append(s('text', { x: m.l - 4, y: y + 4, class: 'pl-eje', 'text-anchor': 'end' }, document.createTextNode(val.toFixed(1))));
   }
   for (let k = 0; k <= V.dias; k += Math.max(5, Math.round(V.dias / 6 / 5) * 5)) {
-    svg.append(s('text', { x: X(k), y: H - 6, class: 'pl-eje', 'text-anchor': 'middle' }, document.createTextNode(String(k))));
+    svg.append(s('text', { x: X(k), y: H - 7, class: 'pl-eje', 'text-anchor': 'middle' }, document.createTextNode(String(k))));
   }
   svg.append(s('path', { d, class: 'pl-linea' }));
-  svg.append(s('text', { x: X(V.optimo), y: m.t + 10, class: 'pl-opt', 'text-anchor': 'middle' }, document.createTextNode(T.optimo)));
+  svg.append(s('text', { x: X(V.optimo), y: m.t + 13, class: 'pl-opt', 'text-anchor': 'middle' }, document.createTextNode(T.optimo)));
   if (dia != null) {
     svg.append(s('line', { x1: X(dia), x2: X(dia), y1: m.t, y2: H - m.b, class: 'pl-dia' }));
     svg.append(s('circle', { cx: X(dia), cy: Y(f(dia)), r: 5, class: 'pl-punto' }));
@@ -92,15 +92,14 @@ function panelVentana(c, P, res) {
   });
   const tieneRuta = !!c.e?.porRol?.vuelo?.ruta;
   return h('section', { class: 'mc-panel' },
-    h('h3', {}, T.ventana),
+    h('h3', { title: tx(V.nota) }, T.ventana),
     curvaVentana(c, P, dia, puedo),
     h('div', { class: 'pl-rng' }, rng, h('span', { class: 'pl-rng-val' }, dia == null ? T.sinDia : T.dia(dia, V.dias))),
-    h('dl', { class: 'mc-datos' },
+    dia == null ? null : h('dl', { class: 'mc-datos' }, // ΔV y propelente solo cuando hay día: antes serían guiones
       h('dt', {}, T.dv), h('dd', {}, f == null ? '-' : `${((V.dvMin ?? 1) * f).toFixed(2)} km/s (${T.factor(f.toFixed(2))})`),
       h('dt', {}, T.extra), h('dd', { class: (res?.plan?.extraKg ?? 0) > 1 ? 'mal' : 'ok' }, tieneRuta ? `${redondear(res?.plan?.extraKg ?? 0, 0)} kg` : '-')),
     !tieneRuta ? h('p', { class: 'mc-nota aviso' }, T.sinRuta) : null,
     res?.plan?.optimo ? h('p', { class: 'mc-nota ok' }, T.bono(2)) : dia != null ? h('p', { class: 'mc-nota' }, T.fuera) : null,
-    h('p', { class: 'mc-nota tenue' }, tx(V.nota)),
     puedo ? null : h('p', { class: 'mc-nota tenue' }, T.soloVuelo));
 }
 
@@ -112,12 +111,12 @@ function panelRutas(c) {
     h('div', { class: 'pl-rutas' }, rutas.map((r) => {
       const fase = lista(c.mision.fases).find((f) => f.id === r.efecto?.fase);
       const es = r.id === elegida;
+      const tip = [r.efecto ? `${tx(fase?.nombre) || r.efecto.fase}: ${r.efecto.dp > 0 ? '+' : ''}${Math.round(r.efecto.dp * 100)} %` : '', `${T.precio}: ${valor(c, r.precio, 'M USD')}`].filter(Boolean).join(' · ');
       return h('button', {
-        class: 'pl-ruta' + (es ? ' elegida' : ''), type: 'button', disabled: !puedo || es,
+        class: 'pl-ruta' + (es ? ' elegida' : ''), type: 'button', disabled: !puedo || es, title: tip,
         onclick: () => c.enviar('elegirRuta', { id: r.id }),
       }, h('b', {}, tx(r.nombre) || r.id),
-      h('span', {}, valor(c, r.dias, T.dias), ' · ', T.propelente, ' ', valor(c, r.masa, 'kg'), ' · ', valor(c, r.precio, 'M USD')),
-      r.efecto ? h('small', {}, `${tx(fase?.nombre) || r.efecto.fase}: ${r.efecto.dp > 0 ? '+' : ''}${Math.round(r.efecto.dp * 100)} %`) : null);
+      h('span', {}, valor(c, r.dias, T.dias), ' · ', T.propelente, ' ', valor(c, r.masa, 'kg')));
     })));
 }
 
@@ -180,6 +179,9 @@ function mapa(c, P, u) {
       g.append(s('circle', { cx: p.x * 1000, cy: p.y * 1000, r: 16, class: 'pl-marca' }));
       g.append(s('circle', { cx: p.x * 1000, cy: p.y * 1000, r: 4, class: 'pl-centro' }));
     }
+    const ttl = s('title', {}); ttl.textContent = tx(sitio.nombre); g.append(ttl);
+    g.addEventListener('mouseenter', () => escenario.querySelector(`.pl-etq[data-id="${sitio.id}"]`)?.classList.add('hover'));
+    g.addEventListener('mouseleave', () => escenario.querySelector(`.pl-etq[data-id="${sitio.id}"]`)?.classList.remove('hover'));
     g.addEventListener('click', (ev) => { ev.stopPropagation(); u.verSitio = sitio.id; c.repintar(); });
     svg.append(g);
   }
@@ -188,10 +190,10 @@ function mapa(c, P, u) {
   for (const sitio of lista(P.sitios)) {
     if (sitio.inc != null) continue;
     const p = proyectar(sitio, figura);
-    escenario.append(h('span', { class: 'pl-etq' + (sitio.id === elegido ? ' elegido' : ''), style: `left:${p.x * 100}%;top:${p.y * 100}%` }, tx(sitio.nombre)));
+    escenario.append(h('span', { class: 'pl-etq' + (sitio.id === elegido ? ' elegido' : '') + (sitio.id === u.verSitio ? ' visto' : '') + (p.x > 0.55 ? ' izq' : ''), 'data-id': sitio.id, style: `left:${p.x * 100}%;top:${p.y * 100}%` }, tx(sitio.nombre)));
   }
   // Lectura de capas bajo el ratón (sin repintar: se escribe directamente en la ficha).
-  const ficha = h('div', { class: 'pl-lectura' }, T.sinSitio);
+  const ficha = h('div', { class: 'pl-lectura' });
   escenario.addEventListener('mousemove', (ev) => {
     const r = escenario.getBoundingClientRect();
     const x = (ev.clientX - r.left) / r.width, y = (ev.clientY - r.top) / r.height;
@@ -206,30 +208,31 @@ function mapa(c, P, u) {
   });
   escenario.addEventListener('click', () => { u.verSitio = null; c.repintar(); });
 
-  const botones = h('div', { class: 'pl-capas' }, h('span', { class: 'mc-etq' }, T.capas), lista(P.capas).map((capa) => {
+  const botones = h('div', { class: 'pl-capas' }, lista(P.capas).map((capa) => {
     const on = u.capas.includes(capa.id);
     return h('button', {
-      class: 'pl-capa-btn' + (on ? ' on' : ''), type: 'button', title: tx(capa.nota),
+      class: 'boton texto' + (on ? ' on' : ''), type: 'button', title: [tx(capa.nombre), capa.real ? T.real : /juego|game/i.test(tx(capa.nombre)) ? T.juego : T.calculada, tx(capa.nota)].filter(Boolean).join(' · '),
       onclick: () => {
         if (capa.id === 'color') return;
         u.capas = on ? u.capas.filter((x) => x !== capa.id) : [...u.capas.filter((x) => x === 'color'), capa.id];
         u.foco = on ? null : capa.id;
         c.repintar();
       },
-    }, tx(capa.nombre), h('small', {}, capa.real ? T.real : /juego|game/i.test(tx(capa.nombre)) ? T.juego : T.calculada));
+    }, tx(capa.nombre).replace(/\s*\(.*?\)/g, '').replace(/ (de la|en|of|in) .*$/, ''));
   }));
   const foco = lista(P.capas).find((x) => x.id === u.foco && x.calculo);
   const leyenda = foco ? h('div', { class: 'pl-leyenda' }, h('span', {}, T.bajo),
     h('i', { style: `background:linear-gradient(90deg,${[0, 0.2, 0.4, 0.6, 0.8, 1].map((t) => `rgb(${color(t).join(',')})`).join(',')})` }),
     h('span', {}, T.alto), h('small', {}, tx(foco.nota))) : null;
-  return h('section', { class: 'mc-panel pl-centro-col' }, h('h3', {}, T.mapa, base ? h('small', {}, ' · ', tx(base.nombre)) : null),
+  return h('section', { class: 'mc-panel pl-centro-col' }, h('h3', {}, T.mapa),
     botones, escenario, ficha, leyenda, puedoSitio ? null : h('p', { class: 'mc-nota tenue' }, T.soloSitio));
 }
 
 function fichaSitio(c, P, u, res) {
   const id = u.verSitio ?? c.e?.ruta?.sitio;
   const sitio = lista(P.sitios).find((s) => s.id === id);
-  const caja = h('section', { class: 'mc-panel pl-ficha' }, h('h3', {}, T.efectos));
+  const caja = h('section', { class: 'mc-panel pl-ficha' }, h('h3', {}, T.sitio));
+  const tarjeta = [];
   if (sitio) {
     const ef = sitio.efectos ?? {};
     const elegido = sitio.id === c.e?.ruta?.sitio;
@@ -244,24 +247,28 @@ function fichaSitio(c, P, u, res) {
       filas.push(h('li', { class: k >= 1 ? 'ok' : 'mal' }, `${tx(o?.nombre) || oid}: ${T.factor(k)}`));
     }
     if (ef.horasSombra != null) filas.push(h('li', {}, `${T.sombra}: ${ef.horasSombra} h`));
-    caja.append(h('div', { class: 'pl-sitio-card' + (elegido ? ' elegido' : '') },
+    tarjeta.push(h('div', { class: 'pl-sitio-card' + (elegido ? ' elegido' : '') },
       h('b', {}, tx(sitio.nombre)), sitio.inc != null ? h('small', {}, T.inc(sitio.inc)) : sitio.lat != null ? h('small', {}, `${sitio.lat}°, ${sitio.lon}°`) : null,
       h('p', {}, tx(sitio.nota)), filas.length ? h('ul', { class: 'mc-lista' }, filas) : h('p', { class: 'tenue' }, T.sinEfectos),
-      sitio.src ? h('small', { class: 'tenue' }, `${T.fuente}: ${sitio.src}`) : null,
-      h('button', { class: 'mc-btn primario', type: 'button', disabled: !puedo || elegido, onclick: () => c.enviar('planificarRuta', { sitio: sitio.id }) }, elegido ? T.elegido : T.elegir)));
-  } else caja.append(h('p', { class: 'mc-nota tenue' }, T.sinSitio));
-  // Lista rápida de sitios.
-  caja.append(h('div', { class: 'pl-lista-sitios' }, lista(P.sitios).map((s) => h('button', {
-    class: 'pl-mini' + (s.id === c.e?.ruta?.sitio ? ' elegido' : '') + (s.id === id ? ' visto' : ''), type: 'button',
+      // Elegido: el borde verde de la tarjeta ya lo dice; no hace falta un botón apagado.
+      elegido ? null : h('button', { class: 'boton primario ancho', type: 'button', disabled: !puedo, onclick: () => c.enviar('planificarRuta', { sitio: sitio.id }) }, T.elegir)));
+  }
+  const chips = h('div', { class: 'pl-lista-sitios' }, lista(P.sitios).map((s) => h('button', {
+    class: 'boton texto' + (s.id === id ? ' on' : ''), type: 'button',
     onclick: () => { u.verSitio = s.id; c.repintar(); },
-  }, tx(s.nombre)))));
-  // Probabilidades y cobertura con el diseño actual.
-  caja.append(h('h4', {}, T.fasesTit), h('ul', { class: 'mc-barras' }, lista(res?.fases).map((f) => h('li', {},
+  }, tx(s.nombre))));
+  // Con un sitio ya elegido (y sin previsualizar otro), la lista se pliega: deja sitio a la tarjeta y a los efectos.
+  const elegidoYa = c.e?.ruta?.sitio && id === c.e.ruta.sitio;
+  if (elegidoYa) caja.append(...tarjeta, h('details', { class: 'pl-cambiar' }, h('summary', { class: 'boton texto' }, T.cambiarSitio), chips));
+  else caja.append(chips, ...tarjeta);
+  // Probabilidad por fase con el diseño actual: solo cuando ya hay sitio elegido (antes no responde a nada que hagas aquí;
+  // al previsualizar un sitio, su tarjeta ya muestra cuánto cambia cada fase).
+  if (c.e?.ruta?.sitio) caja.append(h('h3', { class: 'pl-sep' }, T.efectos), h('h4', {}, T.fasesTit), h('ul', { class: 'mc-barras' }, lista(res?.fases).map((f) => h('li', {},
     h('span', {}, tx(f.nombre) || f.id), h('i', {}, h('b', { style: `width:${Math.round(f.p * 100)}%` })), h('em', {}, pct(f.p))))));
-  caja.append(h('h4', {}, T.ciencia), h('ul', { class: 'mc-barras' }, lista(res?.ciencia?.objetivos).map((o) => h('li', {},
-    h('span', {}, tx(o.nombre) || o.id), h('i', {}, h('b', { class: 'cien', style: `width:${Math.round(o.cobertura * 100)}%` })), h('em', {}, pct(o.cobertura))))));
+  // La cobertura de objetivos ya se ve en el Constructor (CIENCIA): aquí solo lo que cambia el sitio.
   const listo = res?.plan && res.plan.dia != null && res.plan.sitio;
-  caja.append(h('p', { class: 'mc-nota ' + (listo ? 'ok' : 'aviso') }, listo ? T.ok : T.falta));
+  const sinDia = res?.plan?.dia == null, sinSitio = !res?.plan?.sitio;
+  caja.append(h('p', { class: 'mc-nota ' + (listo ? 'ok' : 'aviso') }, listo ? T.ok : sinDia && sinSitio ? T.falta : sinDia ? T.faltaDia : T.faltaSitio));
   return caja;
 }
 

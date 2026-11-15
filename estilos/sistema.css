@@ -1,0 +1,74 @@
+/* Sistema visual común: escala de texto, espaciado y un único componente de botón con tres pieles.
+   Todas las pantallas (sala, portátil, sala de control) usan estos tokens; nada de tamaños sueltos.
+   Tamaños en px lógicos: el portátil (1024×640) y la pared (1280×640) se escalan ≈1,0–1,3× en pantallas de 1366–1920 px.
+
+   Reglas:
+   - Texto corrido nunca por debajo de --t-meta (14px). Cuerpo normal: --t-cuerpo (16px).
+   - La fuente pixel ('Press Start 2P') solo para títulos de panel, botones y cifras grandes, y nunca por debajo de --tp-etq (12px).
+     Nunca para frases largas ni texto en minúsculas de más de 3 palabras.
+   - Un solo botón: .boton (+ .primario | .peligro | .chico | .ancho | .on). La piel la pone el contenedor. */
+
+:root {
+  /* Texto (Space Grotesk) */
+  --t-meta: 14px;      /* etiquetas secundarias, unidades, pies */
+  --t-cuerpo: 16px;    /* texto normal */
+  --t-enfasis: 18px;   /* cifra o línea que importa */
+  --t-titulo: 22px;    /* título de bloque */
+  --t-grande: 28px;    /* título de pantalla, veredicto */
+  /* Texto pixel (Press Start 2P) */
+  --tp-etq: 12px;      /* título de panel, botón chico */
+  --tp-titulo: 16px;   /* botón normal, título de app */
+  --tp-grande: 24px;   /* botón principal de la fase (LANZAR, PEDIR REVISIÓN) */
+  /* Espaciado */
+  --e-1: 4px; --e-2: 8px; --e-3: 12px; --e-4: 16px; --e-5: 24px; --e-6: 32px;
+  --toque: 40px;       /* alto mínimo de cualquier control */
+
+  /* Piel por defecto del botón (sala, lobby, diálogos): la del cartel de inicio */
+  --b-fondo: #4f6b8f; --b-borde: #2f4664; --b-sombra: #22344b; --b-tinta: #f1e6cf;
+  --b-p-fondo: #f0b53c; --b-p-borde: #a8741a; --b-p-sombra: #8a5c12; --b-p-tinta: #1a1a1a;
+  --b-x-fondo: #b8402f; --b-x-borde: #7a2216; --b-x-sombra: #5a170e; --b-x-tinta: #fff;
+  --b-foco: #fff;
+}
+
+/* Piel del portátil: crema, tinta marino, primario azul de agencia */
+.laptop-so {
+  --b-fondo: var(--lp-panel); --b-borde: var(--lp-borde); --b-sombra: rgba(0, 0, 0, 0.28); --b-tinta: var(--lp-tinta);
+  --b-p-fondo: var(--lp-acento); --b-p-borde: #1b4a66; --b-p-sombra: #123448; --b-p-tinta: #fff;
+  --b-x-fondo: var(--lp-mal); --b-x-borde: #7a2216; --b-x-sombra: #5a170e; --b-x-tinta: #fff;
+  --b-foco: var(--lp-acento);
+}
+/* Piel de la sala de control: marino, verde fósforo. La pared se ve a ≈0,97× en 1280 px: la etiqueta pixel sube a 13 px para no bajar de 12. */
+.mc {
+  --tp-etq: 13px;
+  --b-fondo: #12294a; --b-borde: #2c4a6e; --b-sombra: #050d1a; --b-tinta: #d8e6f4;
+  --b-p-fondo: #1d6b3c; --b-p-borde: #5fe08a; --b-p-sombra: #0b3019; --b-p-tinta: #eafff0;
+  --b-x-fondo: #8a1f14; --b-x-borde: #ef5b4a; --b-x-sombra: #3d0c07; --b-x-tinta: #fff;
+  --b-foco: #62c6ff;
+}
+
+.boton {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--e-2);
+  min-height: var(--toque); padding: 10px 18px; margin: 0;
+  font: var(--tp-etq)/1.3 var(--pixel, 'Press Start 2P', monospace); letter-spacing: 0.5px; text-transform: uppercase; text-align: center;
+  color: var(--b-tinta); background: var(--b-fondo); border: 3px solid var(--b-borde); border-radius: 4px;
+  box-shadow: 0 4px 0 var(--b-sombra); cursor: pointer; position: relative; white-space: nowrap;
+  transition: transform 0.08s, filter 0.15s, box-shadow 0.08s;
+}
+.boton:hover:not(:disabled) { filter: brightness(1.1); }
+.boton:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--b-sombra); }
+.boton:focus-visible { outline: 3px solid var(--b-foco); outline-offset: 3px; }
+.boton:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: translateY(3px); }
+.boton.primario { color: var(--b-p-tinta); background: var(--b-p-fondo); border-color: var(--b-p-borde); box-shadow: 0 4px 0 var(--b-p-sombra); }
+.boton.primario:active:not(:disabled) { box-shadow: 0 1px 0 var(--b-p-sombra); }
+.boton.peligro { color: var(--b-x-tinta); background: var(--b-x-fondo); border-color: var(--b-x-borde); box-shadow: 0 4px 0 var(--b-x-sombra); }
+.boton.on { color: var(--b-p-tinta); background: var(--b-p-fondo); border-color: var(--b-p-borde); box-shadow: 0 1px 0 var(--b-p-sombra); transform: translateY(3px); }
+.boton.grande { font-size: var(--tp-titulo); min-height: 56px; padding: 14px 24px; }
+.boton.enorme { font-size: var(--tp-grande); min-height: 88px; padding: 18px 28px; }
+.boton.ancho { display: flex; width: 100%; }
+/* Texto normal (para nombres de pieza, opciones con frase): misma forma, fuente de lectura */
+.boton.texto { font: 600 var(--t-cuerpo)/1.3 var(--ui, 'Space Grotesk', sans-serif); text-transform: none; letter-spacing: 0; white-space: normal; }
+.boton .tecla { font: var(--t-meta) var(--ui, sans-serif); opacity: 0.75; text-transform: none; letter-spacing: 0; }
+@media (prefers-reduced-motion: reduce) { .boton { transition: none; } }
+
+/* Título de panel común (pixel, corto) */
+.titulo-panel { font: var(--tp-etq)/1.4 var(--pixel, monospace); letter-spacing: 0.5px; text-transform: uppercase; margin: 0 0 var(--e-3); }

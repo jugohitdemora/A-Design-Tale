@@ -11,8 +11,8 @@ import { h, lista, valor, puedoPor, rolesQuePuedo, conRol, piezasMontadas, resum
 const T = textos({
   es: {
     piezas: 'PIEZAS', todas: 'Todas', actuarComo: 'Actúas como', vacante: 'vacante', soloLectura: 'solo lectura',
-    sinPiezas: 'Sin piezas para este departamento.', montada: 'MONTADA', apagada: 'APAGADA', montadasN: (n, t) => `${n}/${t} montadas`,
-    plano: 'PLANO DE LA NAVE', planoVacio: 'Monta piezas. Los nodos punteados esperan una pieza.',
+    sinPiezas: 'Sin piezas para este departamento.', montada: 'MONTADA', apagada: 'APAGADA', montadasN: (n, t) => `${n}/${t}`,
+    plano: 'PLANO', planoVacio: 'Monta piezas. Los nodos punteados esperan una pieza.',
     nodoLibre: 'Nodo libre', cajetin: { mision: 'MISIÓN', rev: 'REV', escala: 'ESCALA', esc: 'S/E', dib: 'DIBUJÓ' },
     montadasTit: 'MONTADO POR DEPARTAMENTO', ninguna: 'nada montado',
     ficha: 'FICHA DE LA PIEZA', cerrar: 'Cerrar ficha', categoria: 'Categoría', departamento: 'Departamento',
@@ -23,13 +23,13 @@ const T = textos({
     uso: 'USO', siempre: 'Siempre encendida (24 h/día)', hDia: 'h/día', montar: 'MONTAR', quitar: 'QUITAR',
     soloDe: (d) => `Solo ${d} puede cambiarla.`,
     restrNo: 'No se añaden piezas. Quita, baja el uso o cambia de opción.',
-    recursos: 'RECURSOS DEL EQUIPO',
+    recursos: 'RECURSOS',
     barras: { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Datos', presupuesto: 'Presupuesto', volumen: 'Volumen' },
     sinLimite: { masa: 'Sin cohete: elígelo en la cámara de lanzamiento', potencia: 'Sin paneles', bateria: 'Sin batería',
       datos: 'Sin antena', presupuesto: 'Sin presupuesto', volumen: 'Sin estructura' },
     est: { ok: 'OK', tolerancia: 'TOL', exceso: 'EXC' }, marcas: '▮ 100 %   ▯ 120 % (tolerancia)',
-    ciencia: 'CIENCIA COMPROMETIDA', sinObjetivos: 'Sin objetivos marcados.',
-    pedir: 'PEDIR REVISIÓN', revisiones: (n) => `Revisiones pedidas: ${n}`, revHint: 'Una revisión puede sacar un evento.',
+    ciencia: 'CIENCIA', sinObjetivos: 'Sin objetivos marcados.',
+    pedir: 'PEDIR REVISIÓN', revisiones: (n) => `Revisiones: ${n}`, revHint: 'Una revisión puede sacar un evento.',
     ultima: { dentro: 'Última revisión: todo dentro.', tolerancia: (b) => `Última revisión: tolerancia en ${b}.`, fuera: (b) => `Última revisión: fuera en ${b}.`, evento: (n) => `Salió un evento de diseño: ${n}.` },
     nivel: { dentro: 'DENTRO DE LÍMITES', tolerancia: 'EN TOLERANCIA', fuera: 'FUERA DE LÍMITES' },
     restrTit: 'RESTRICCIONES', restrTxt: 'Recorta hasta cumplir todos los límites. No se añaden piezas.', restrOk: 'Todo dentro: pide revisión.',
@@ -40,8 +40,8 @@ const T = textos({
   },
   en: {
     piezas: 'PARTS', todas: 'All', actuarComo: 'Acting as', vacante: 'vacant', soloLectura: 'read only',
-    sinPiezas: 'No parts for this department.', montada: 'MOUNTED', apagada: 'OFF', montadasN: (n, t) => `${n}/${t} mounted`,
-    plano: 'SPACECRAFT BLUEPRINT', planoVacio: 'Mount parts. Dashed nodes wait for a part.',
+    sinPiezas: 'No parts for this department.', montada: 'MOUNTED', apagada: 'OFF', montadasN: (n, t) => `${n}/${t}`,
+    plano: 'BLUEPRINT', planoVacio: 'Mount parts. Dashed nodes wait for a part.',
     nodoLibre: 'Free node', cajetin: { mision: 'MISSION', rev: 'REV', escala: 'SCALE', esc: 'NTS', dib: 'DRAWN' },
     montadasTit: 'MOUNTED BY DEPARTMENT', ninguna: 'nothing mounted',
     ficha: 'PART SHEET', cerrar: 'Close sheet', categoria: 'Category', departamento: 'Department',
@@ -52,13 +52,13 @@ const T = textos({
     uso: 'USAGE', siempre: 'Always on (24 h/day)', hDia: 'h/day', montar: 'MOUNT', quitar: 'REMOVE',
     soloDe: (d) => `Only ${d} can change it.`,
     restrNo: 'Do not add parts. Remove, lower usage or change option.',
-    recursos: 'TEAM RESOURCES',
+    recursos: 'RESOURCES',
     barras: { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data', presupuesto: 'Budget', volumen: 'Volume' },
     sinLimite: { masa: 'No rocket: choose one in the launch camera', potencia: 'No panels', bateria: 'No battery',
       datos: 'No antenna', presupuesto: 'No budget', volumen: 'No structure' },
     est: { ok: 'OK', tolerancia: 'TOL', exceso: 'OVER' }, marcas: '▮ 100 %   ▯ 120 % (tolerance)',
-    ciencia: 'COMMITTED SCIENCE', sinObjetivos: 'No goals ticked.',
-    pedir: 'REQUEST REVIEW', revisiones: (n) => `Reviews requested: ${n}`, revHint: 'A review can draw an event.',
+    ciencia: 'SCIENCE', sinObjetivos: 'No goals ticked.',
+    pedir: 'REQUEST REVIEW', revisiones: (n) => `Reviews: ${n}`, revHint: 'A review can draw an event.',
     ultima: { dentro: 'Last review: all within limits.', tolerancia: (b) => `Last review: tolerance on ${b}.`, fuera: (b) => `Last review: over on ${b}.`, evento: (n) => `A design event came up: ${n}.` },
     nivel: { dentro: 'WITHIN LIMITS', tolerancia: 'IN TOLERANCE', fuera: 'OVER LIMITS' },
     restrTit: 'CONSTRAINTS', restrTxt: 'Cut until all limits are met. Do not add parts.', restrOk: 'All within limits: request review.',
@@ -300,17 +300,17 @@ function paleta(c, u, rol, todas) {
 
   const selector = puedo.length > 1
     ? h('div', { class: 'kb-deptos', role: 'tablist', 'aria-label': T.actuarComo }, puedo.map((r) => h('button', {
-      class: 'kb-depto' + (r === rol ? ' activo' : ''), type: 'button', role: 'tab', 'aria-selected': String(r === rol), style: `--rol:${colorRol(r)}`,
-      title: depto(r, 'largo'), onclick: () => { u.rol = r; u.cat = null; c.repintar(); },
-    }, h('i', { class: 'kb-cuadro' }), depto(r, 'sigla'), r !== c.rol ? h('small', {}, T.vacante) : null)))
-    : h('div', { class: 'kb-deptos solo' }, h('span', { class: 'kb-depto activo', style: `--rol:${colorRol(rol)}` }, h('i', { class: 'kb-cuadro' }), depto(rol)),
+      class: 'boton kb-depto' + (r === rol ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': String(r === rol),
+      title: depto(r, 'largo') + (r !== c.rol ? ` (${T.vacante})` : ''), onclick: () => { u.rol = r; u.cat = null; c.repintar(); },
+    }, depto(r, 'sigla'))))
+    : h('div', { class: 'kb-deptos solo' }, h('span', { class: 'kb-depto-solo', style: `--rol:${colorRol(rol)}` }, h('i', { class: 'kb-cuadro' }), depto(rol)),
       editable ? null : h('small', { class: 'kb-tenue' }, T.soloLectura));
 
   const pestanas = h('nav', { class: 'kb-cats', role: 'tablist', 'data-scroll': 'kb-cats' },
-    h('button', { class: 'kb-cat' + (!u.cat ? ' activa' : ''), type: 'button', role: 'tab', title: T.todas, 'aria-label': T.todas, onclick: () => { u.cat = null; c.repintar(); } },
-      h('span', { class: 'kb-cat-todas' }, '∗')),
+    h('button', { class: 'boton kb-cat' + (!u.cat ? ' on' : ''), type: 'button', role: 'tab', title: T.todas, 'aria-label': T.todas, onclick: () => { u.cat = null; c.repintar(); } },
+      '∗'),
     cats.map((k) => h('button', {
-      class: 'kb-cat' + (u.cat === k ? ' activa' : ''), type: 'button', role: 'tab', title: T.cats[k] ?? k, 'aria-label': T.cats[k] ?? k,
+      class: 'boton kb-cat' + (u.cat === k ? ' on' : ''), type: 'button', role: 'tab', title: T.cats[k] ?? k, 'aria-label': T.cats[k] ?? k,
       onclick: () => { u.cat = k; c.repintar(); },
     }, iconoPieza(k, colorRol(rol), 22))));
 
@@ -323,16 +323,15 @@ function paleta(c, u, rol, todas) {
       class: 'kb-tile' + (m ? ' montada' : '') + (u.sel === p.id ? ' sel' : ''), type: 'button', title: tx(p.desc) || tx(p.nombre),
       style: `--rol:${colorRol(rol)}`, 'aria-pressed': String(u.sel === p.id),
       onclick: () => { u.sel = u.sel === p.id ? null : p.id; c.repintar(); },
-    }, h('span', { class: 'kb-tile-ico' }, iconoPieza(p.categoria, colorRol(rol), 32)),
+    }, h('span', { class: 'kb-tile-ico' }, iconoPieza(p.categoria, colorRol(rol), 28)),
     h('span', { class: 'kb-tile-nom' }, tx(p.nombre) || p.id),
-    m ? h('span', { class: 'kb-tile-marca' + (off ? ' off' : '') }, off ? T.apagada : '✓ ' + T.montada) : null));
+    m ? h('span', { class: 'kb-tile-marca' + (off ? ' off' : ''), title: off ? T.apagada : T.montada }, off ? '○' : '✓') : null));
   }
   const n = delRol.filter((p) => montadas[p.id]).length;
   return h('section', { class: 'kb-col kb-izq' },
     h('header', { class: 'kb-cab' }, h('h3', {}, T.piezas), h('span', { class: 'kb-cuenta' }, T.montadasN(n, delRol.length))),
     selector,
-    h('div', { class: 'kb-paleta' }, pestanas, h('div', { class: 'kb-rejilla-marco' },
-      h('div', { class: 'kb-rejilla-tit' }, u.cat ? (T.cats[u.cat] ?? u.cat) : T.todas), rejilla)));
+    h('div', { class: 'kb-paleta' }, pestanas, h('div', { class: 'kb-rejilla-marco' }, rejilla)));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -394,9 +393,9 @@ function ficha(c, u, p, restr) {
 
   const acciones = h('div', { class: 'kb-acciones' },
     m
-      ? h('button', { class: 'kb-btn peligro', type: 'button', disabled: !editable, onclick: () => c.enviar('quitar', conRol(c, rol, { pieza: p.id })) }, T.quitar)
+      ? h('button', { class: 'boton peligro ancho', type: 'button', disabled: !editable, onclick: () => c.enviar('quitar', conRol(c, rol, { pieza: p.id })) }, T.quitar)
       : h('button', {
-        class: 'kb-btn primario', type: 'button', disabled: !editable || restr || !opSel, title: restr ? T.restrNo : undefined,
+        class: 'boton primario ancho', type: 'button', disabled: !editable || restr || !opSel, title: restr ? T.restrNo : undefined,
         onclick: () => {
           const payload = { pieza: p.id, op: opSel.id };
           if (p.uso && typeof p.uso === 'object') payload.uso = numUso(u.uso[p.id], numUso(p.uso.def, numUso(p.uso.max, 24)));
@@ -406,13 +405,12 @@ function ficha(c, u, p, restr) {
 
   return h('aside', { class: 'kb-ficha', style: `--rol:${colorRol(rol)}`, 'data-scroll': 'kb-ficha-' + p.id, 'aria-label': T.ficha },
     h('header', { class: 'kb-ficha-cab' }, h('span', {}, T.ficha),
-      h('button', { class: 'kb-x', type: 'button', 'aria-label': T.cerrar, title: T.cerrar, onclick: () => { u.sel = null; c.repintar(); } }, '✕')),
+      h('button', { class: 'boton kb-x', type: 'button', 'aria-label': T.cerrar, title: T.cerrar, onclick: () => { u.sel = null; c.repintar(); } }, '✕')),
     h('div', { class: 'kb-ficha-id' },
-      h('div', { class: 'kb-ficha-dib' }, iconoPieza(p.categoria, colorRol(rol), 64)),
+      h('div', { class: 'kb-ficha-dib' }, iconoPieza(p.categoria, colorRol(rol), 48)),
       h('div', {},
         h('h4', {}, tx(p.nombre) || p.id),
-        h('p', { class: 'kb-meta' }, h('span', {}, `${T.categoria}: ${T.cats[p.categoria] ?? p.categoria ?? '-'}`), h('br'),
-          h('span', {}, `${T.departamento}: `, h('b', { class: 'kb-rol' }, depto(rol))), h('br'), h('code', {}, p.id)),
+        h('p', { class: 'kb-meta' }, `${T.cats[p.categoria] ?? p.categoria ?? '-'} · `, h('b', { class: 'kb-rol' }, depto(rol))),
         m ? h('span', { class: 'kb-sello' }, T.montada) : null)),
     tx(p.desc) ? h('p', { class: 'kb-desc' }, tx(p.desc)) : null,
     h('h5', {}, T.sirve), sirve,
@@ -446,31 +444,19 @@ function centro(c, u, todas, restr) {
     c.repintar();
   };
   const lienzo = h('div', { class: 'kb-plano-svg', onclick: actuar, onkeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); actuar(ev); } } }, svg);
-  const mid = c.mision?.id ?? '-';
+  // Qué hay montado por departamento: solo como ayuda al pasar el ratón por la leyenda (el plano ya lo muestra).
+  const resumenDepto = (r) => {
+    const nombres = Object.keys(piezasMontadas(c, r)).map((id) => tx(c.D?.PIEZAS?.[id]?.nombre) || id);
+    return `${depto(r)}: ${nombres.length ? nombres.join(', ') : T.ninguna}`;
+  };
   const plano = h('div', { class: 'kb-plano' },
-    h('div', { class: 'kb-plano-cab' }, h('span', {}, T.plano), h('span', {}, mid)),
+    h('div', { class: 'kb-plano-cab' }, T.plano),
     lienzo,
     hay ? null : h('p', { class: 'kb-plano-vacio' }, T.planoVacio),
-    h('div', { class: 'kb-leyenda' }, ROLES_IDS.map((r) => h('span', { style: `--rol:${colorRol(r)}` }, h('i', {}), depto(r, 'sigla')))),
-    h('table', { class: 'kb-cajetin' }, h('tbody', {},
-      h('tr', {}, h('th', {}, T.cajetin.mision), h('td', {}, mid), h('th', {}, T.cajetin.rev), h('td', {}, String(c.e?.diseno?.revisiones ?? 0))),
-      h('tr', {}, h('th', {}, T.cajetin.escala), h('td', {}, T.cajetin.esc), h('th', {}, T.cajetin.dib), h('td', {}, (c.nick ?? '-').slice(0, 10))))));
-
-  const lotes = h('div', { class: 'kb-montadas', 'data-scroll': 'kb-montadas' }, h('h4', {}, T.montadasTit),
-    ROLES_IDS.map((r) => {
-      const ids = Object.keys(piezasMontadas(c, r));
-      const vac = r !== c.rol && puedoPor(c, r);
-      return h('div', { class: 'kb-lote' + (r === u.rolActivo ? ' activo' : ''), style: `--rol:${colorRol(r)}` },
-        h('span', { class: 'kb-lote-rol' }, h('i', { class: 'kb-cuadro' }), depto(r), vac ? h('small', {}, ` · ${T.vacante}`) : !puedoPor(c, r) ? h('small', {}, ` · ${T.soloLectura}`) : null),
-        h('span', { class: 'kb-lote-piezas' }, ids.length ? ids.map((id) => {
-          const p = c.D?.PIEZAS?.[id];
-          return h('button', { class: 'kb-chip' + (u.sel === id ? ' sel' : ''), type: 'button', onclick: () => elegir(id) },
-            iconoPieza(p?.categoria, colorRol(r), 14), tx(p?.nombre) || id);
-        }) : h('em', { class: 'kb-tenue' }, T.ninguna)));
-    }));
+    h('div', { class: 'kb-leyenda' }, ROLES_IDS.map((r) => h('span', { style: `--rol:${colorRol(r)}`, title: resumenDepto(r) }, h('i', {}), depto(r, 'sigla')))));
 
   const p = u.sel ? c.D?.PIEZAS?.[u.sel] : null;
-  return h('section', { class: 'kb-col kb-centro' + (p ? ' con-ficha' : '') }, plano, lotes, p ? ficha(c, u, p, restr) : null);
+  return h('section', { class: 'kb-col kb-centro' + (p ? ' con-ficha' : '') }, plano, p ? ficha(c, u, p, restr) : null);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -487,57 +473,59 @@ function barra(c, id, b, restr) {
   const segs = ROLES_IDS.filter((r) => porRol[r] > 0).map((r) => {
     const w = Math.min(resto, (porRol[r] / escala) * 100);
     resto -= w;
-    return h('i', { class: 'kb-seg', style: `width:${w}%;background:${colorRol(r)}` });
+    return h('i', { class: 'kb-seg ' + est, style: `width:${w}%;opacity:${0.55 + 0.15 * ROLES_IDS.indexOf(r)}` });
   });
   const detalle = ROLES_IDS.filter((r) => porRol[r] > 0).map((r) => `${depto(r)}: ${fmt(porRol[r])} ${UNIDAD[id]}`).join('\n');
-  return h('div', { class: `kb-barra ${est}` + (restr && est !== 'ok' ? ' alerta' : ''), title: detalle ? `${T.porDepto}\n${detalle}` : undefined },
+  const pct = limite > 0 ? ` · ${fmt(ratio * 100, 0)} %` : '';
+  const tit = [`${T.barras[id]}${pct}`, detalle ? `${T.porDepto}\n${detalle}` : '', T.marcas].filter(Boolean).join('\n');
+  return h('div', { class: `kb-barra ${est}` + (restr && est !== 'ok' ? ' alerta' : ''), title: tit },
     h('div', { class: 'kb-barra-cab' },
       h('span', { class: 'kb-barra-nom' }, T.barras[id]),
-      h('span', { class: 'kb-barra-est' }, T.est[est] ?? est)),
+      h('span', { class: 'kb-barra-num' }, `${fmt(usado)} / ${limite > 0 ? fmt(limite) : '—'} ${UNIDAD[id]}`)),
     h('div', { class: 'kb-pista' }, segs, limite > 0 ? [h('i', { class: 'kb-marca m100' }), h('i', { class: 'kb-marca m120' })] : null),
-    h('div', { class: 'kb-barra-num' },
-      h('span', {}, `${fmt(usado)} / ${limite > 0 ? fmt(limite) : '—'} ${UNIDAD[id]}`),
-      h('b', {}, limite > 0 ? `${fmt(ratio * 100, 0)} %` : '')),
     limite <= 0 && (usado > 0 || id !== 'presupuesto') ? h('small', { class: 'kb-sinlim' }, T.sinLimite[id]) : null);
 }
 
 function recursos(c, res, restr) {
-  const caja = h('aside', { class: 'kb-col kb-der', 'data-scroll': 'kb-recursos' }, h('header', { class: 'kb-cab' }, h('h3', {}, T.recursos)));
+  const caja = h('aside', { class: 'kb-col kb-der' }, h('header', { class: 'kb-cab' }, h('h3', {}, T.recursos)));
+  const cuerpo = h('div', { class: 'kb-der-cuerpo', 'data-scroll': 'kb-recursos' });
   let nivel = null;
   try { nivel = res && c.motor?.cumple ? c.motor.cumple(res)?.nivel : null; } catch { nivel = null; }
-  if (nivel) caja.append(h('div', { class: 'kb-nivel ' + nivel }, T.nivel[nivel] ?? nivel));
-  caja.append(h('div', { class: 'kb-barras' }, BARRAS.map((id) => barra(c, id, res?.barras?.[id], restr))), h('p', { class: 'kb-marcas' }, T.marcas));
+  if (nivel && nivel !== 'dentro') cuerpo.append(h('div', { class: 'kb-nivel ' + nivel }, T.nivel[nivel] ?? nivel));
+  cuerpo.append(h('div', { class: 'kb-barras' }, BARRAS.map((id) => barra(c, id, res?.barras?.[id], restr))));
 
-  caja.append(h('h4', {}, T.ciencia));
+  cuerpo.append(h('h4', {}, T.ciencia));
   const objs = lista(res?.ciencia?.objetivos);
-  if (!objs.length) caja.append(h('p', { class: 'kb-tenue' }, T.sinObjetivos));
+  if (!objs.length) cuerpo.append(h('p', { class: 'kb-tenue' }, T.sinObjetivos));
   for (const o of objs) {
     const mo = lista(c.mision?.objetivos).find((x) => x?.id === o.id);
     const v = Math.max(0, Math.min(1, Number(o.cobertura) || 0));
     const clase = v >= 0.999 ? 'ok' : v >= 0.5 ? 'tolerancia' : 'exceso';
-    caja.append(h('div', { class: 'kb-obj' + (o.prioridad ? ' prio' : '') },
+    cuerpo.append(h('div', { class: 'kb-obj' + (o.prioridad ? ' prio' : '') },
       h('div', { class: 'kb-obj-cab' }, o.prioridad ? h('b', { class: 'kb-etq prio' }, '★') : null, h('span', {}, tx(mo?.nombre ?? o.nombre) || o.id), h('b', {}, `${fmt(v * 100, 0)} %`)),
       h('div', { class: 'kb-pista fina' }, h('i', { class: 'kb-seg ' + clase, style: `width:${v * 100}%` }))));
   }
 
-  const rev = c.e?.diseno?.revisiones ?? 0;
-  caja.append(h('button', { class: 'kb-btn primario ancho', type: 'button', onclick: () => { if (unaVez()) c.enviar('pedirRevision', { revision: rev }); } }, T.pedir),
-    h('p', { class: 'kb-tenue' }, T.revisiones(rev), ' · ', T.revHint));
   const ul = c.e?.diseno?.ultima;
   if (ul?.tipo === 'revision') {
     const nombres = lista(ul.barras).map((b) => T.barras[b] ?? b).join(', ');
     const f = T.ultima[ul.nivel];
-    caja.append(h('p', { class: 'kb-ultima ' + (ul.nivel ?? '') }, typeof f === 'function' ? f(nombres) : f ?? ''));
+    cuerpo.append(h('p', { class: 'kb-ultima ' + (ul.nivel ?? '') }, typeof f === 'function' ? f(nombres) : f ?? ''));
   } else if (ul?.tipo === 'evento') {
-    caja.append(h('p', { class: 'kb-ultima evento' }, T.ultima.evento(tx(c.D?.EVENTOS_DISENO?.[ul.id]?.nombre) || ul.id || '?')));
+    cuerpo.append(h('p', { class: 'kb-ultima evento' }, T.ultima.evento(tx(c.D?.EVENTOS_DISENO?.[ul.id]?.nombre) || ul.id || '?')));
   }
+
+  const rev = c.e?.diseno?.revisiones ?? 0;
+  caja.append(cuerpo, h('footer', { class: 'kb-der-pie' },
+    h('button', { class: 'boton primario grande ancho', type: 'button', title: T.revHint, onclick: () => { if (unaVez()) c.enviar('pedirRevision', { revision: rev }); } }, T.pedir),
+    h('p', { class: 'kb-tenue' }, T.revisiones(rev))));
   return caja;
 }
 
 function bannerRestr(res) {
   const mal = BARRAS.filter((id) => res?.barras?.[id] && res.barras[id].estado !== 'ok');
-  return h('div', { class: 'kb-banner', role: 'status' },
-    h('b', { class: 'kb-banner-tit' }, '⚠ ', T.restrTit), h('span', {}, T.restrTxt),
+  return h('div', { class: 'kb-banner', role: 'status', title: T.restrTxt },
+    h('b', { class: 'kb-banner-tit' }, '⚠ ', T.restrTit),
     h('span', { class: 'kb-banner-chips' }, mal.length ? mal.map((id) => {
       const b = res.barras[id];
       const pct = b.limite > 0 ? `+${fmt((b.usado / b.limite - 1) * 100, 0)} %` : '∞';

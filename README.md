@@ -44,10 +44,20 @@ Todo el juego ocurre en el entorno 3D; las interfaces se proyectan sobre objetos
 - **Guía (sin barra superior):** cada jugador ve una sola línea "Siguiente ›" calculada del estado (qué le falta a él, no un texto fijo por fase) y la fase como puntos. Va en la barra del portátil, en la cabecera de la sala de control y, mirando la sala, en una tarjeta abajo a la izquierda con atajos y "Salir al lobby". Una flecha ámbar flota sobre el objeto que toca usar (tu portátil o la puerta). Los avisos de reglas salen abajo al centro (`src/pantallas/index.js`, `estilos/guia.css`).
 - **Portátil de cada asiento** (clic en el portátil o botón "Portátil"; Esc para levantar la vista): AGENCIA·OS con Constructor tipo KSP (`src/laptop/constructor.js`), Cámara de lanzamiento (`camara-lanzamiento.js`), Contingencias por departamento (`contingencias.js`), Estado, Expediente y Manual SOP (`manual.js`). El icono "Sala de control" del dock lleva directamente allí.
 - **Manual SOP** de cada departamento: en el portátil o clic en la carpeta de anillas de la mesa.
-- **Expediente siempre visible:** pestaña abajo a la derecha (se despliega al pasar el ratón; clic para abrirlo entero).
-- **Sala de control de misión** (puerta de la sala, icono del dock o botón "Sala de control"; desde allí "Portátil" vuelve directo al portátil): en diseño, planificación de ruta (`src/control/planificador.js`): ruta, ventana de lanzamiento (curva de ΔV; fuera del óptimo hay más propelente) y sitio/órbita sobre mapas reales (LROC, LOLA, MESSENGER, OSIRIS) con capas de datos (algunas calculadas, otras aproximadas y marcadas "≈ juego"). En misión, consola de operaciones estilo GMAT (`src/control/operaciones.js`) con propagador RK4 de dos cuerpos (`src/control/propagador.js`), secuencia de misión, script, telemetría y activación de contingencias por el departamento dueño.
+- **Expediente:** mirando la sala, pestaña abajo a la derecha (se despliega al pasar el ratón; clic para abrirlo entero). En el portátil es una app; en la pared no se muestra.
+- **Sala de control de misión** (puerta de la sala, icono del dock o botón "Sala de control"; desde allí "Portátil" vuelve directo al portátil): en diseño, planificación de ruta (`src/control/planificador.js`): ruta, ventana de lanzamiento (curva de ΔV; fuera del óptimo hay más propelente) y sitio/órbita sobre mapas reales (LROC, LOLA, MESSENGER, OSIRIS) con capas de datos (algunas calculadas, otras aproximadas y marcadas "≈ juego"). En verificación, la consulta GO / NO-GO (`src/control/gonogo.js`). En misión, consola de operaciones (`src/control/operaciones.js`) con propagador RK4 de dos cuerpos (`src/control/propagador.js`), secuencia de misión, telemetría y activación de contingencias por el departamento dueño. Al final, el informe de vuelo (`src/control/debrief.js`).
 - **Idioma:** Ajustes → Idioma / Language (ES/EN), local de cada jugador (`src/i18n.js`).
 - **Jugar en solitario sin red:** `http://localhost:8770/?local=1` usa las reglas y datos reales con un transporte en memoria (los departamentos vacantes los opera el jugador).
+
+## Interfaz: reglas visuales
+
+Las pantallas se proyectan sobre objetos 3D: el portátil mide 1024 × 640 px lógicos y la pared de control 1280 × 640 (`LOGICO` en `src/pantallas/index.js`); `main.js` las escala al tamaño real (≈1,15× y ≈1,03× en una ventana de 1366 px).
+
+- **`estilos/sistema.css`** define la escala de texto (`--t-meta` 14 px, `--t-cuerpo` 16, `--t-enfasis` 18, `--t-titulo` 22, `--t-grande` 28), la de la fuente pixel (`--tp-etq` 12, `--tp-titulo` 16, `--tp-grande` 24), el espaciado y **un único botón** `.boton` (`.primario`, `.peligro`, `.on`, `.grande`, `.enorme`, `.ancho`, `.texto`). La piel la pone el contenedor: cartel azul en la sala y el lobby, crema en el portátil (`.laptop-so`), marino y verde en la pared (`.mc`). `.btn-plano` (pantallas antiguas) se ve igual.
+- Ningún texto corrido por debajo de 14 px lógicos; la fuente pixel solo para títulos cortos, botones y cifras.
+- Cada pantalla cabe en su marco sin desplazarse; solo las listas largas tienen scroll propio. Lo que no hace falta para actuar en esa fase va a un `title`, a un `<details>` o al manual.
+- "Press Start 2P" no trae mayúsculas acentuadas; `estilos.css` incluye Á É Í Ó Ú Ñ Ü pixel generadas con `herramientas/acentos-pixel.py`.
+- `estilos/escritorio.css`: escritorio del portátil (barra, dock, ventana) y la carpeta del expediente.
 
 ## Archivos
 

@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos/sistema.css">
   <link rel="stylesheet" href="estilos.css">
   <link rel="stylesheet" href="estilos/laptop.css">
   <link rel="stylesheet" href="estilos/constructor.css">
@@ -14,6 +15,7 @@
   <link rel="stylesheet" href="estilos/manual.css">
   <link rel="stylesheet" href="estilos/control.css">
   <link rel="stylesheet" href="estilos/pantallas3d.css">
+  <link rel="stylesheet" href="estilos/escritorio.css">
   <link rel="stylesheet" href="estilos/consola-final.css">
   <link rel="stylesheet" href="estilos/guia.css">
   <script type="importmap">
@@ -64,8 +66,8 @@
       </label>
       <p class="tenue pequeno" data-t="comparte">Comparte el mismo código con tu equipo para entrar en la misma sala.</p>
       <div class="acciones">
-        <button type="button" class="btn-plano" id="cancelar-unirse" data-t="cancelar">Cancelar</button>
-        <button type="submit" class="btn-plano primario" data-t="entrar">Entrar</button>
+        <button type="button" class="boton" id="cancelar-unirse" data-t="cancelar">Cancelar</button>
+        <button type="submit" class="boton primario" data-t="entrar">Entrar</button>
       </div>
     </form>
   </dialog>
@@ -90,7 +92,7 @@
           <option value="en">English</option>
         </select>
       </label>
-      <div class="acciones"><button class="btn-plano primario" data-t="listo">Listo</button></div>
+      <div class="acciones"><button class="boton primario" data-t="listo">Listo</button></div>
     </form>
   </dialog>
 
@@ -99,7 +101,7 @@
     <header class="lobby-cabecera">
       <div>
         <p class="tenue pequeno" data-t="sala">SALA</p>
-        <p class="codigo"><strong id="codigo-sala"></strong> <button id="copiar" class="btn-plano" type="button" data-t="copiar">Copiar enlace</button></p>
+        <p class="codigo"><strong id="codigo-sala"></strong> <button id="copiar" class="boton" type="button" data-t="copiar">Copiar enlace</button></p>
       </div>
       <p id="contador" class="contador"></p>
     </header>
@@ -109,8 +111,8 @@
     <div id="roles" class="roles"></div>
     <p id="aviso" class="aviso"></p>
     <div class="acciones">
-      <button id="salir-lobby" class="btn-plano" type="button" data-t="salir">Salir</button>
-      <button id="iniciar" class="btn-plano primario" type="button">Iniciar misión</button>
+      <button id="salir-lobby" class="boton" type="button" data-t="salir">Salir</button>
+      <button id="iniciar" class="boton primario" type="button">Iniciar misión</button>
     </div>
   </section>
 
@@ -123,7 +125,7 @@
   <!-- Elección de escenario en el proyector (main.js): indicación y confirmación -->
   <div id="proyector-ui" class="oculto">
     <p id="proyector-txt"></p>
-    <button id="confirmar-escenario" class="btn-plano primario" type="button" disabled></button>
+    <button id="confirmar-escenario" class="boton primario" type="button" disabled></button>
   </div>
   <div id="fundido" aria-hidden="true"></div>
 

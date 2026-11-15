@@ -1,8 +1,8 @@
-/* App "Cohete" del portátil: cámara de seguridad + carpeta de ficha. Solo usa los tokens --lp-* de laptop.css. */
+/* App "Cohete" del portátil: cámara de seguridad + carpeta de ficha. Solo usa los tokens --lp-* de laptop.css y los de sistema.css. */
 .cam-app {
-  box-sizing: border-box; width: 100%; height: 100%; min-height: 0; padding: 10px; gap: 10px; overflow: hidden;
-  display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 34%, 400px); grid-template-rows: minmax(0, 1fr) auto;
-  background: var(--lp-escritorio); color: var(--lp-tinta); font-family: var(--lp-ui); outline: none;
+  box-sizing: border-box; width: 100%; height: 100%; min-height: 0; padding: var(--e-2); gap: var(--e-2); overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1fr) 296px; grid-template-rows: minmax(0, 1fr) auto;
+  background: var(--lp-escritorio); color: var(--lp-tinta); font-family: var(--lp-ui); font-size: var(--t-cuerpo); outline: none;
 }
 .cam-app:focus-visible { box-shadow: inset 0 0 0 3px var(--lp-acento); }
 .cam-app .cam-vacio { grid-column: 1 / -1; align-self: center; text-align: center; font-weight: 600; }
@@ -28,42 +28,36 @@
 }
 @keyframes cam-ruido { 0% { transform: translate(0, 0); } 25% { transform: translate(-6%, 4%); } 50% { transform: translate(5%, -5%); } 75% { transform: translate(-3%, -6%); } 100% { transform: translate(0, 0); } }
 
-.cam-feed [class^='cam-sup'], .cam-feed [class^='cam-inf'], .cam-feed .cam-sim {
+.cam-feed [class^='cam-sup'] {
   position: absolute; z-index: 2; pointer-events: none; color: var(--lp-plano-tinta);
-  font-family: var(--lp-pixel); font-size: 10px; line-height: 1.3; letter-spacing: 0.04em; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
+  font-family: var(--lp-pixel); font-size: var(--tp-etq); line-height: 1.3; letter-spacing: 0.04em; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
 }
-.cam-sup { top: 10px; } .cam-inf { bottom: 10px; }
-.izq { left: 12px; } .der { right: 12px; }
-.cam-sup.der { display: flex; align-items: center; gap: 6px; }
+.cam-sup { top: var(--e-3); }
+.izq { left: var(--e-3); } .der { right: var(--e-3); }
+.cam-sup.der { display: flex; align-items: center; gap: var(--e-2); }
 .rec-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--lp-mal); animation: cam-rec 1.1s steps(1) infinite; }
 @keyframes cam-rec { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
-.cam-feed .cam-sim { top: 34px; left: 12px; font-size: 8px; opacity: 0.75; }
 .cam-feed .cam-cambio {
-  position: absolute; z-index: 2; left: 50%; top: 14%; transform: translateX(-50%); padding: 3px 8px; opacity: 0; pointer-events: none;
-  font-family: var(--lp-pixel); font-size: 9px; color: var(--lp-aviso); background: rgba(0, 0, 0, 0.55);
+  position: absolute; z-index: 2; left: 50%; top: 14%; transform: translateX(-50%); padding: var(--e-1) var(--e-2); opacity: 0; pointer-events: none;
+  font-family: var(--lp-pixel); font-size: var(--tp-etq); color: var(--lp-aviso); background: rgba(0, 0, 0, 0.55);
 }
 .cam-feed.cambio .cam-cambio { animation: cam-aviso 1.3s steps(1) 1; }
 @keyframes cam-aviso { 0%, 40%, 80% { opacity: 1; } 20%, 60%, 100% { opacity: 0; } }
 .cam-feed.cambio .cam-canvas { animation: cam-glitch 0.4s steps(3) 1; }
 @keyframes cam-glitch { 0% { transform: translateX(0); } 33% { transform: translateX(-4px); } 66% { transform: translateX(3px); } 100% { transform: translateX(0); } }
 
-.cam-flecha {
-  position: absolute; z-index: 3; top: 50%; transform: translateY(-50%); width: 38px; height: 56px; cursor: pointer;
-  font: 18px var(--lp-pixel); color: var(--lp-tinta); background: var(--lp-panel); border: 2px solid var(--lp-borde); border-radius: var(--lp-radio); box-shadow: var(--lp-sombra); opacity: 0.88;
-}
-.cam-flecha:hover, .cam-flecha:focus-visible { opacity: 1; background: var(--lp-sel); }
-.cam-flecha:active { transform: translateY(calc(-50% + 2px)); box-shadow: none; }
-.cam-flecha.izq { left: 8px; } .cam-flecha.der { right: 8px; }
+/* flechas de la pantalla: botones .boton, solo se colocan */
+.cam-flecha { position: absolute; z-index: 3; top: 50%; margin-top: -24px; }
+.cam-flecha.izq { left: var(--e-2); } .cam-flecha.der { right: var(--e-2); }
 
 /* ---- panel de masa y presupuesto ---- */
 .cam-panel {
-  grid-column: 1; grid-row: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 8px 10px;
+  grid-column: 1; grid-row: 2; display: grid; grid-template-columns: 1fr 1fr; gap: var(--e-3); padding: var(--e-2) var(--e-3);
   background: var(--lp-panel); border: 2px solid var(--lp-borde); box-shadow: var(--lp-sombra);
 }
-.cam-bloque h4 { margin: 0 0 5px; font: 9px var(--lp-pixel); text-transform: uppercase; letter-spacing: 0.03em; }
-.cam-bloque p { margin: 3px 0 0; font-size: 12px; line-height: 1.3; }
-.cam-bloque .cifras { font-weight: 700; font-size: 13px; }
-.cam-bloque .pie { color: var(--lp-tenue); font-size: 11px; }
+.cam-bloque h4 { margin: 0 0 var(--e-1); font: var(--tp-etq) var(--lp-pixel); text-transform: uppercase; letter-spacing: 0.03em; }
+.cam-bloque p { margin: 2px 0 0; font-size: var(--t-meta); line-height: 1.25; }
+.cam-bloque .cifras { font-weight: 700; font-size: var(--t-cuerpo); }
 .cam-bloque .ok, .cam-bloque b.ok { color: var(--lp-ok); }
 .cam-bloque .tolerancia, .cam-bloque b.tolerancia { color: var(--lp-aviso); }
 .cam-bloque .exceso, .cam-bloque b.exceso { color: var(--lp-mal); }
@@ -81,46 +75,25 @@
 .cam-medidor .m100 { left: 71.43%; } .cam-medidor .m120 { left: 85.71%; opacity: 0.45; }
 
 /* ---- carpeta ---- */
-.cam-carpeta { grid-column: 2; grid-row: 1 / 3; display: flex; flex-direction: column; min-height: 0; padding-top: 22px; position: relative; }
+.cam-carpeta { grid-column: 2; grid-row: 1 / 3; display: flex; flex-direction: column; gap: var(--e-3); min-height: 0; padding-top: 26px; position: relative; }
 .cam-carpeta .solapa {
-  position: absolute; top: 0; right: 14px; padding: 4px 12px 3px; font: 9px var(--lp-pixel); background: var(--lp-aviso);
+  position: absolute; top: 0; right: var(--e-4); padding: 2px var(--e-3); font: var(--tp-etq) var(--lp-pixel); background: var(--lp-aviso);
   border: 2px solid var(--lp-borde); border-bottom: 0; border-radius: var(--lp-radio) var(--lp-radio) 0 0;
 }
 .cam-carpeta .hoja {
-  position: relative; flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; background: var(--lp-aviso); background-image: linear-gradient(var(--lp-panel), var(--lp-panel));
-  background-clip: content-box; border: 2px solid var(--lp-borde); box-shadow: var(--lp-sombra); outline: 10px solid var(--lp-aviso); outline-offset: -10px;
+  position: relative; flex: 1; min-height: 0; overflow: auto; padding: var(--e-4); background: var(--lp-panel);
+  border: 3px solid var(--lp-borde); box-shadow: inset 0 0 0 5px var(--lp-aviso), var(--lp-sombra);
 }
-.cam-carpeta .hoja { background: var(--lp-panel); outline: none; border-width: 3px; border-color: var(--lp-borde); box-shadow: inset 0 0 0 6px var(--lp-aviso), var(--lp-sombra); padding: 20px 20px; }
-.cam-carpeta .etq { margin: 0; font: 8px var(--lp-pixel); color: var(--lp-tenue); }
-.cam-carpeta h3 { margin: 6px 0 10px; font: 700 clamp(20px, 3.2vw, 30px) var(--lp-ui); line-height: 1.05; }
-.cam-carpeta dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 13px; }
+.cam-carpeta h3 { margin: var(--e-1) 0 var(--e-3); font: 700 var(--t-grande) var(--lp-ui); line-height: 1.05; }
+.cam-carpeta dl { margin: 0; display: grid; grid-template-columns: 1fr; gap: 2px; font-size: var(--t-meta); }
 .cam-carpeta dt { color: var(--lp-tenue); font-weight: 600; }
-.cam-carpeta dd { margin: 0; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+.cam-carpeta dd { margin: 0 0 var(--e-2); font-weight: 700; font-size: var(--t-cuerpo); text-align: left; overflow-wrap: anywhere; }
 .cam-carpeta .val.juego { color: var(--lp-tenue); }
-.cam-carpeta sup.src { margin-left: 2px; font-size: 9px; color: var(--lp-acento); }
-.cam-carpeta .nota { margin: 12px 0 0; padding: 7px 8px; font-size: 12px; line-height: 1.35; background: var(--lp-panel-2); border-left: 3px solid var(--lp-acento); }
-.cam-carpeta .acciones { margin-top: 14px; }
-.cam-carpeta .btn-elegir {
-  width: 100%; padding: 10px 8px; cursor: pointer; font: 11px var(--lp-pixel); color: var(--lp-acento-txt); background: var(--lp-acento);
-  border: 2px solid var(--lp-borde); border-radius: var(--lp-radio); box-shadow: var(--lp-sombra);
-}
-.cam-carpeta .btn-elegir:hover:not(:disabled) { filter: brightness(1.12); }
-.cam-carpeta .btn-elegir:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: none; }
-.cam-carpeta .btn-elegir:disabled { cursor: default; background: var(--lp-panel-2); color: var(--lp-tenue); box-shadow: none; }
-.cam-carpeta .aviso { margin: 8px 0 0; font-size: 12px; color: var(--lp-tenue); }
-.cam-carpeta .teclas { margin: 10px 0 0; font-size: 11px; color: var(--lp-tenue); text-align: center; }
+.cam-carpeta sup.src { margin-left: 2px; font-size: var(--t-meta); color: var(--lp-acento); }
+.cam-carpeta .nota { margin: var(--e-3) 0 0; padding: var(--e-2); font-size: var(--t-meta); line-height: 1.35; background: var(--lp-panel-2); border-left: 3px solid var(--lp-acento); }
+.cam-carpeta .acciones { flex: none; }
+.cam-carpeta .aviso { margin: var(--e-2) 0 0; font-size: var(--t-meta); color: var(--lp-tenue); }
 .cam-carpeta .sello {
-  position: absolute; top: 40px; right: 14px; padding: 3px 8px; font: 10px var(--lp-pixel); color: var(--lp-ok); border: 3px solid var(--lp-ok);
-  border-radius: var(--lp-radio); transform: rotate(-10deg); opacity: 0.9; background: var(--lp-panel);
-}
-.cam-carpeta .nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
-.cam-carpeta .nav span { flex: 1; text-align: center; font: 700 15px var(--lp-ui); }
-.cam-carpeta .nav button {
-  width: 42px; height: 38px; cursor: pointer; font: 14px var(--lp-pixel); color: var(--lp-tinta); background: var(--lp-panel); border: 2px solid var(--lp-borde); border-radius: var(--lp-radio); box-shadow: var(--lp-sombra);
-}
-.cam-carpeta .nav button:hover { background: var(--lp-sel); }
-
-@media (max-width: 1000px) {
-  .cam-panel { grid-template-columns: 1fr; }
-  .cam-feed [class^='cam-sup'], .cam-feed [class^='cam-inf'] { font-size: 8px; }
+  display: inline-block; margin: 0 0 var(--e-2); padding: 0 var(--e-2); font: var(--tp-etq) var(--lp-pixel); color: var(--lp-ok); border: 3px solid var(--lp-ok);
+  border-radius: var(--lp-radio); background: var(--lp-panel);
 }

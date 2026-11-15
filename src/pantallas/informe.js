@@ -81,8 +81,8 @@ export function pantallaInforme(c) {
   } else fu.append(h('p', { class: 'tenue vacio' }, T.noSources));
 
   const botones = h('div', { class: 'acciones' },
-    h('button', { class: 'btn-plano', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'lobby' }) }, T.newMission),
-    h('button', { class: 'btn-plano primario', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'diseno' }) }, T.redesign));
+    h('button', { class: 'boton', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'lobby' }) }, T.newMission),
+    h('button', { class: 'boton primario', type: 'button', onclick: () => c.enviar('cambiarFase', { fase: 'diseno' }) }, T.redesign));
 
   return h('div', { class: 'taller' },
     h('div', { class: 'cuerpo-taller una' }, h('div', { class: 'pila' }, raiz, real, fu, botones), h('div', { class: 'pila' }, h('h4', {}, T.finalBars), panelGlobal(c, res))));

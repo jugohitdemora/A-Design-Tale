@@ -69,10 +69,10 @@ export function expedienteCompleto(c, id, { cerrar }) {
 
   const acciones = h('div', { class: 'exp-acciones' });
   if (enBriefing && !m.jugable) acciones.append(h('p', { class: 'exp-aviso' }, T.preparacionTxt));
-  else if (enBriefing && !asignada) acciones.append(h('button', { class: 'btn-exp primario', type: 'button', onclick: () => c.enviar('elegirMision', { id }) }, T.elegir));
+  else if (enBriefing && !asignada) acciones.append(h('button', { class: 'boton primario', type: 'button', onclick: () => c.enviar('elegirMision', { id }) }, T.elegir));
   else if (enBriefing && asignada) {
     acciones.append(
-      h('button', { class: 'btn-exp ' + (yoListo ? '' : 'primario'), type: 'button', onclick: () => c.enviar('listo', { on: !yoListo }) }, yoListo ? T.noListo : T.listo),
+      h('button', { class: 'boton ' + (yoListo ? '' : 'primario'), type: 'button', onclick: () => c.enviar('listo', { on: !yoListo }) }, yoListo ? T.noListo : T.listo),
       h('span', { class: 'exp-listos' }, T.listos(nListos, listos.length)),
       h('small', { class: 'exp-espera' }, T.espera));
   }
@@ -81,20 +81,18 @@ export function expedienteCompleto(c, id, { cerrar }) {
     h('article', { class: 'expediente', role: 'dialog', 'aria-modal': 'true', 'aria-label': T.clasificado },
       h('div', { class: 'exp-pestana' }, m.id),
       h('div', { class: 'exp-clip', 'aria-hidden': 'true' }),
-      h('button', { class: 'exp-cerrar', type: 'button', onclick: cerrar, 'aria-label': T.cerrar }, '✕'),
+      h('button', { class: 'boton exp-cerrar', type: 'button', onclick: cerrar, 'aria-label': T.cerrar }, '✕'),
       h('header', {},
         h('small', { class: 'exp-kicker' }, T.clasificado),
         h('h2', {}, tx(m.nombre) || m.id),
         h('p', { class: 'exp-sub' }, `${tx(m.cuerpo)} · ${T.escenarios[m.escenario] ?? m.escenario}`)),
       !m.jugable ? h('div', { class: 'exp-sello gris' }, T.preparacion) : asignada ? h('div', { class: 'exp-sello' }, T.elegida) : null,
-      tx(m.apertura) ? h('p', { class: 'exp-apertura' }, h('b', {}, `${T.apertura}: `), tx(m.apertura)) : null,
-      tx(m.brief) ? h('p', { class: 'exp-brief' }, tx(m.brief)) : null,
+      (tx(m.brief) || tx(m.apertura)) ? h('p', { class: 'exp-brief' }, tx(m.brief) || tx(m.apertura)) : null,
       h('dl', { class: 'exp-datos' },
-        h('dt', {}, T.destino), h('dd', {}, tx(m.cuerpo) || '-'),
         h('dt', {}, T.presupuesto), h('dd', {}, valorNum(m.presupuesto) != null ? `${valorNum(m.presupuesto)} M USD` : '-'),
         h('dt', {}, T.referencia), h('dd', {}, [m.referencia?.mision, m.referencia?.agencia && `(${m.referencia.agencia})`].filter(Boolean).join(' ') || '-'),
         m.referencia?.coheteReal ? [h('dt', {}, T.coheteReal), h('dd', {}, m.referencia.coheteReal)] : null,
-        esc ? [h('dt', {}, T.regla), h('dd', {}, tx(esc.regla))] : null),
+        esc && tx(esc.regla) ? [h('dt', {}, T.regla), h('dd', {}, tx(esc.regla))] : null),
       h('h3', {}, enBriefing ? T.objetivos : T.objetivosLect),
       objs,
       dif ? h('p', { class: 'exp-ambicion' }, `${T.ambicion}: `, h('b', {}, T.niveles[dif] ?? dif), ` (${T.eventos(EVENTOS[dif] ?? 2)})`) : null,

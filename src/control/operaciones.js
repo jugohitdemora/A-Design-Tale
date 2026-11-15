@@ -1,35 +1,31 @@
-// Sala de control · consola de operaciones (fase de misión). Interfaz inspirada en GMAT (árbol de recursos, secuencia
-// de misión, vista orbital, ventana de mensajes y script), con telemetría como la pared del concepto "Misión".
-// La trayectoria la calcula src/control/propagador.js (RK4 de dos cuerpos). Las reglas del vuelo (pasos, eventos,
-// contingencias) son las del anfitrión: aquí solo se muestran y se envían 'activarContingencia' y 'avanzar'.
+// Sala de control · consola de operaciones (fase de misión): secuencia de misión, vista orbital, ventana de mensajes y
+// telemetría (pared del concepto "Misión"). La trayectoria la calcula src/control/propagador.js (RK4 de dos cuerpos).
+// Las reglas del vuelo (pasos, eventos, contingencias) son las del anfitrión: aquí solo se muestran y se envían
+// 'activarContingencia' y 'avanzar'.
 import { h, lista, redondear, puedoPor, resumenSeguro } from '../pantallas/ui.js';
 import { textos, tx, depto, idioma } from '../i18n.js';
 import { unaVez } from '../pantallas/panel-global.js';
-import { trayectoria, CUERPOS } from './propagador.js';
+import { trayectoria } from './propagador.js';
 
 const T = textos({
   es: {
-    titulo: 'OPERACIONES', recursos: 'RECURSOS', script: 'SCRIPT', secuencia: 'SECUENCIA DE MISIÓN', nave: 'Nave', propagador: 'Propagador',
-    maniobras: 'Maniobras', vista: 'VISTA ORBITAL', mensajes: 'VENTANA DE MENSAJES', energia: 'ENERGÍA', comms: 'COMUNICACIONES',
+    titulo: 'OPERACIONES', secuencia: 'SECUENCIA DE MISIÓN', vista: 'VISTA ORBITAL', mensajes: 'VENTANA DE MENSAJES', energia: 'ENERGÍA', comms: 'COMUNICACIONES',
     orientacion: 'ORIENTACIÓN', datos: 'DATOS RECIBIDOS', estado: 'ESTADO', enlace: 'ENLACE', estable: 'ESTABLE', degradado: 'DEGRADADO', perdido: 'PERDIDO',
-    siguiente: 'SIGUIENTE PASO ▶', informe: 'VER INFORME ▶', alerta: '⚠ EVENTO EN CURSO', activar: 'ACTIVAR CONTINGENCIA', activada: 'CONTINGENCIA ACTIVADA',
+    siguiente: 'SIGUIENTE PASO ▶', informe: 'VER INFORME ▶', alerta: '⚠ EVENTO EN CURSO', activar: 'ACTIVAR', activada: 'CONTINGENCIA ACTIVADA',
     responsable: 'Responsable', esperaDepto: (d) => `Esperando a ${d}. Solo ese departamento puede activarla.`, sinEvento: 'Sin eventos en este paso.',
     bueno: 'Buenas noticias', noMitigado: 'Sin contingencia que lo cubra: el equipo no compró la adecuada.', mitigado: 'Cubierto por el plan de contingencia.',
     pendiente: 'pendiente', ok: 'OK', falla: 'FALLO', omitida: 'no llegó', rover: 'ROVER', roverTxt: 'Ninguna misión actual lleva rover. El control queda listo por si alguna lo lleva.',
-    masaSeca: 'Masa', cuerpoCentral: 'Cuerpo central', paso: 'Paso', integrador: 'Integrador', dvTotal: 'ΔV de salida', vuelo: 'Tiempo de vuelo',
-    dias: 'días', sinResultado: 'Esperando el lanzamiento…', fase: 'FASE', exito: 'prob.', sol: 'Sol', tierra: 'Tierra',
+    paso: 'Paso', sinResultado: 'Esperando el lanzamiento…', fase: 'FASE', exito: 'prob.', sol: 'Sol', tierra: 'Tierra',
     nota: 'Propagador RK4 de dos cuerpos para el juego, con interfaz estilo GMAT (NASA). Órbitas aproximadas.',
   },
   en: {
-    titulo: 'OPERATIONS', recursos: 'RESOURCES', script: 'SCRIPT', secuencia: 'MISSION SEQUENCE', nave: 'Spacecraft', propagador: 'Propagator',
-    maniobras: 'Burns', vista: 'ORBIT VIEW', mensajes: 'MESSAGE WINDOW', energia: 'POWER', comms: 'COMMUNICATIONS',
+    titulo: 'OPERATIONS', secuencia: 'MISSION SEQUENCE', vista: 'ORBIT VIEW', mensajes: 'MESSAGE WINDOW', energia: 'POWER', comms: 'COMMUNICATIONS',
     orientacion: 'ATTITUDE', datos: 'DATA RECEIVED', estado: 'STATUS', enlace: 'LINK', estable: 'STABLE', degradado: 'DEGRADED', perdido: 'LOST',
-    siguiente: 'NEXT STEP ▶', informe: 'VIEW REPORT ▶', alerta: '⚠ EVENT IN PROGRESS', activar: 'ACTIVATE CONTINGENCY', activada: 'CONTINGENCY ACTIVATED',
+    siguiente: 'NEXT STEP ▶', informe: 'VIEW REPORT ▶', alerta: '⚠ EVENT IN PROGRESS', activar: 'ACTIVATE', activada: 'CONTINGENCY ACTIVATED',
     responsable: 'Owner', esperaDepto: (d) => `Waiting for ${d}. Only that department can activate it.`, sinEvento: 'No events in this step.',
     bueno: 'Good news', noMitigado: 'No contingency covers it: the team did not buy the right one.', mitigado: 'Covered by the contingency plan.',
     pendiente: 'pending', ok: 'OK', falla: 'FAIL', omitida: 'not reached', rover: 'ROVER', roverTxt: 'No current mission has a rover. The control is ready if one does.',
-    masaSeca: 'Mass', cuerpoCentral: 'Central body', paso: 'Step', integrador: 'Integrator', dvTotal: 'Departure ΔV', vuelo: 'Flight time',
-    dias: 'days', sinResultado: 'Waiting for launch…', fase: 'PHASE', exito: 'prob.', sol: 'Sun', tierra: 'Earth',
+    paso: 'Step', sinResultado: 'Waiting for launch…', fase: 'PHASE', exito: 'prob.', sol: 'Sun', tierra: 'Earth',
     nota: 'Two-body RK4 propagator for the game, with a GMAT-style (NASA) interface. Approximate orbits.',
   },
 });
@@ -70,7 +66,7 @@ function dibujarOrbita() {
   // Cuerpo central
   g.fillStyle = tray.central === 'sol' ? '#ffd35a' : '#3f7fd8';
   g.beginPath(); g.arc(cx, cy, tray.central === 'sol' ? 7 : 9, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#9fb3c8'; g.font = '11px monospace';
+  g.fillStyle = '#9fb3c8'; g.font = '14px monospace';
   g.fillText(tray.central === 'sol' ? T.sol : T.tierra, cx + 10, cy - 10);
   for (const o of tray.orbitas) {
     linea(o.puntos, o.color, 1, true);
@@ -111,34 +107,10 @@ function barrasLed(n, total, clase = '') {
   return h('div', { class: 'op-led ' + clase }, Array.from({ length: total }, (_, i) => h('i', { class: i < n ? 'on' : '' })));
 }
 
-function scriptGmat(c, res, tray, plan) {
-  const id = (c.mision?.id ?? 'SC').replace(/-/g, '');
-  const masa = Math.round(res?.barras?.masa?.usado ?? 0);
-  const central = tray.central === 'sol' ? 'Sun' : 'Earth';
-  const fases = lista(c.mision?.fases);
-  return [
-    `%% ${idioma() === 'es' ? 'Script estilo GMAT del juego (no es GMAT real)' : 'GMAT-style script from the game (not real GMAT)'}`,
-    `Create Spacecraft SC_${id};`,
-    `SC_${id}.DryMass = ${masa};            % kg`,
-    `SC_${id}.Epoch = 'L+${plan?.dia ?? 0}';`,
-    `Create ForceModel FM;`,
-    `FM.CentralBody = ${central}; FM.PointMasses = {${central}};`,
-    `Create Propagator Prop;`,
-    `Prop.FM = FM; Prop.Type = RungeKutta4; Prop.InitialStepSize = ${tray.central === 'sol' ? '86400' : '60'};`,
-    `Create ImpulsiveBurn Departure;`,
-    `Departure.Element1 = ${tray.dvKms.toFixed(3)};     % km/s`,
-    `Create OrbitView View; View.Add = {SC_${id}, ${central}};`,
-    `BeginMissionSequence;`,
-    `Maneuver Departure(SC_${id});`,
-    ...fases.map((f) => `Propagate Prop(SC_${id}) {SC_${id}.ElapsedDays = ${Math.round(tray.diasVuelo / Math.max(1, fases.length))}};   % ${tx(f.nombre) || f.id}`),
-  ].join('\n');
-}
-
 // ---------- Pantalla ----------
 export function pantallaOperaciones(c) {
   const r = c.e?.resultado;
   const res = resumenSeguro(c);
-  const u = (c.ui.ops ??= { pestana: 'recursos' });
   if (!r || !Array.isArray(r.pasos)) return h('div', { class: 'mc-vacio' }, h('p', {}, T.sinResultado));
   const paso = Number.isFinite(c.e?.vista?.paso) ? c.e.vista.paso : 0;
   const total = r.pasos.length;
@@ -161,21 +133,13 @@ export function pantallaOperaciones(c) {
   ov.orbitando = !perdido && paso >= total - 2;
   if (!ov.corriendo) { ov.corriendo = true; requestAnimationFrame(bucle); }
 
-  // ---- izquierda: árbol de recursos / script ----
-  const C = CUERPOS[c.mision?.destino];
-  const arbol = h('ul', { class: 'op-arbol' },
-    h('li', {}, '📁 ', T.nave, h('ul', {}, h('li', {}, `🛰 SC_${(c.mision?.id ?? '').replace(/-/g, '')}`), h('li', { class: 'tenue' }, `${T.masaSeca}: ${redondear(res?.barras?.masa?.usado ?? 0, 0)} kg`))),
-    h('li', {}, '📁 ', T.propagador, h('ul', {}, h('li', {}, `⚙ Prop · ${T.integrador}: RK4`), h('li', { class: 'tenue' }, `${T.cuerpoCentral}: ${ov.tray.central === 'sol' ? T.sol : T.tierra}`))),
-    h('li', {}, '📁 ', T.maniobras, h('ul', {}, h('li', {}, `🔥 Departure · ${ov.tray.dvKms.toFixed(2)} km/s`), h('li', { class: 'tenue' }, `${T.vuelo}: ${redondear(ov.tray.diasVuelo, 0)} ${T.dias}`), C ? h('li', { class: 'tenue' }, `→ ${tx(C.nombre)}`) : null)));
+  // ---- izquierda: secuencia de misión ----
   const secuencia = h('ol', { class: 'op-secuencia' }, r.pasos.map((p, i) => {
     const estado = i > paso ? 'pendiente' : p.omitida ? 'omitida' : p.ok ? 'ok' : 'falla';
     const icono = { pendiente: '⧗', omitida: '—', ok: '✔', falla: '✖' }[estado];
-    return h('li', { class: `${estado}${i === paso ? ' actual' : ''}` }, h('span', { class: 'op-ico' }, icono), h('span', {}, nombreFase(p.fase)), h('em', {}, i > paso ? '' : `${T.exito} ${pct(p.p)}`));
+    return h('li', { class: `${estado}${i === paso ? ' actual' : ''}` }, h('span', { class: 'op-ico' }, icono), h('span', {}, nombreFase(p.fase)), h('em', { title: T.exito }, i > paso ? '' : pct(p.p)));
   }));
-  const izq = h('section', { class: 'mc-panel op-izq' },
-    h('nav', { class: 'op-pestanas' }, ['recursos', 'script'].map((k) => h('button', { type: 'button', class: u.pestana === k ? 'on' : '', onclick: () => { u.pestana = k; c.repintar(); } }, T[k]))),
-    u.pestana === 'script' ? h('pre', { class: 'op-script', 'data-scroll': 'op-script' }, scriptGmat(c, res, ov.tray, plan)) : arbol,
-    h('h3', {}, T.secuencia), secuencia);
+  const izq = h('section', { class: 'mc-panel op-izq' }, h('h3', {}, T.secuencia), secuencia);
 
   // ---- centro: vista orbital + mensajes ----
   const log = [];
@@ -192,10 +156,9 @@ export function pantallaOperaciones(c) {
   });
   const centro = h('section', { class: 'mc-panel op-centro' },
     h('h3', {}, T.vista, h('small', {}, ' · ', T.fase, ' ', paso + 1, '/', total, ': ', nombreFase(actual.fase))),
-    h('div', { class: 'op-vista' }, ov.canvas),
+    h('div', { class: 'op-vista', title: T.nota }, ov.canvas),
     h('h3', {}, T.mensajes),
-    h('pre', { class: 'op-log', 'data-scroll': 'op-log' }, log.map((l) => h('span', { class: l.c }, l.t + '\n'))),
-    h('p', { class: 'mc-nota tenue' }, T.nota));
+    h('pre', { class: 'op-log', 'data-scroll': 'op-log' }, log.map((l) => h('span', { class: l.c }, l.t + '\n'))));
   requestAnimationFrame(() => { const el = document.querySelector('.op-log'); if (el) el.scrollTop = el.scrollHeight; });
 
   // ---- derecha: telemetría, alerta de contingencia, rover y avance ----
@@ -220,22 +183,25 @@ export function pantallaOperaciones(c) {
       h('p', { class: 'op-ev' }, tx(ev.nombre) || ev.id), tx(ev.texto) ? h('p', {}, tx(ev.texto)) : null,
       ct ? [h('p', {}, h('b', {}, tx(k?.nombre) || ct), ` · ${T.responsable}: `, h('span', { style: `color:var(--lp-rol-${rolCt})` }, depto(rolCt))),
         activada ? h('p', { class: 'ok' }, '✔ ', T.activada)
-          : h('button', { class: 'mc-btn alerta', type: 'button', disabled: !puedo, onclick: () => c.enviar('activarContingencia', { id: ct }) }, T.activar),
+          : h('button', { class: 'boton peligro grande ancho op-latido', type: 'button', disabled: !puedo, onclick: () => c.enviar('activarContingencia', { id: ct }) }, T.activar),
         !activada && !puedo ? h('small', {}, T.esperaDepto(depto(rolCt))) : null]
         : ev.signo === '+' ? null : h('p', { class: 'tenue' }, actual.mitigado ? T.mitigado : T.noMitigado));
   }
   const pendiente = actual.mitigador && !lista(c.e?.vista?.activadas).includes(actual.mitigador);
+  const tele = (titulo, ...cuerpo) => h('div', { class: 'op-tele' }, h('h4', {}, titulo), ...cuerpo);
   const der = h('section', { class: 'mc-panel op-der' },
-    h('div', { class: 'op-tele' }, h('h4', {}, T.energia), barrasLed(Math.round(energia * 8), 8, energia < 0.5 ? 'aviso' : '')),
-    h('div', { class: 'op-tele' }, h('h4', {}, T.comms), h('div', { class: 'op-senal' }, [1, 2, 3, 4, 5].map((i) => h('i', { class: i <= Math.round(enlace * 5) ? 'on' : '', style: `height:${i * 20}%` })))),
-    h('div', { class: 'op-tele' }, h('h4', {}, T.orientacion), h('p', { class: fallos ? 'aviso' : 'ok' }, fallos ? `(-✛-) ${T.degradado}` : `( ✛ ) ${T.estable}`)),
-    h('div', { class: 'op-tele' }, h('h4', {}, T.datos), barrasLed(Math.round(((paso + 1) / total) * 12), 12), h('p', {}, `${redondear(recibidos, 0)} MB`)),
-    h('div', { class: 'op-tele' }, h('h4', {}, T.enlace), h('p', { class: perdido ? 'mal' : fallos ? 'aviso' : 'ok' }, `📡 ${estadoEnlace}`)),
-    alerta ?? h('p', { class: 'mc-nota tenue' }, T.sinEvento),
+    alerta,
+    h('div', { class: 'op-teles' },
+      tele(T.energia, barrasLed(Math.round(energia * 8), 8, energia < 0.5 ? 'aviso' : '')),
+      tele(T.comms, h('div', { class: 'op-senal' }, [1, 2, 3, 4, 5].map((i) => h('i', { class: i <= Math.round(enlace * 5) ? 'on' : '', style: `height:${i * 20}%` })))),
+      tele(T.orientacion, h('p', { class: fallos ? 'aviso' : 'ok' }, fallos ? T.degradado : T.estable)),
+      tele(T.enlace, h('p', { class: perdido ? 'mal' : fallos ? 'aviso' : 'ok' }, estadoEnlace)),
+      tele(T.datos, barrasLed(Math.round(((paso + 1) / total) * 12), 12), h('span', { class: 'op-mb' }, `${redondear(recibidos, 0)} MB`))),
+    alerta ? null : h('p', { class: 'mc-nota tenue' }, T.sinEvento),
     h('details', { class: 'op-rover' }, h('summary', {}, T.rover), h('p', {}, T.roverTxt),
-      h('div', { class: 'op-dpad' }, ['▲', '◀', '■', '▶', '▼'].map((x) => h('button', { type: 'button', disabled: true }, x)))),
+      h('div', { class: 'op-dpad' }, ['▲', '◀', '■', '▶', '▼'].map((x) => h('button', { class: 'boton op-flecha', type: 'button', disabled: true }, x)))),
     c.e.fase === 'mision' ? h('button', {
-      class: 'mc-btn primario op-avanzar', type: 'button', disabled: !!pendiente,
+      class: 'boton primario grande ancho op-avanzar', type: 'button', disabled: !!pendiente,
       onclick: () => { if (unaVez('paso', 700)) c.enviar('avanzar', { paso }); },
     }, final ? T.informe : T.siguiente) : null);
 
