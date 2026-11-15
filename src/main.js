@@ -7,6 +7,8 @@ import { crearCentroDeControl } from './inicio.js';
 import { crearSesion } from './red/sesion.js';
 import { crearTransporteMqtt } from './red/transporte-mqtt.js';
 import { MAX_JUGADORES, conectados, duenoDeRol } from './red/protocolo.js';
+import { T } from './textos.js';
+import { crearPantallas } from './pantallas/index.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -77,6 +79,12 @@ let transporte = null;
 let codigo = '';
 let lobbyForzado = false;
 let versionAjena = false;
+// ?simulado=1: pantallas con datos y reglas falsas, sin red (ver src/pantallas/_simulado.js)
+const params = new URLSearchParams(location.search);
+const SIMULADO = params.get('simulado') === '1';
+let moduloSimulado = null;
+const ui = crearPantallas({ raiz: $('pantalla'), franja: $('franja'), modal: $('modal-evento'), simulado: SIMULADO });
+const enBriefing = () => estado()?.fase === 'briefing';
 
 const indiceRol = (id) => ROLES.findIndex((r) => r.id === id);
 const estado = () => sesion?.estado ?? null;
@@ -129,8 +137,13 @@ function entrarEnSala(cod) {
   lobbyForzado = false;
   versionAjena = false;
   poses.clear();
-  transporte = crearTransporteMqtt(JUEGO.APP_ID, codigo, { brokers: RED.BROKERS, conectar: (url, o) => mqtt.connect(url, o) });
-  sesion = crearSesion({ transporte, jugadorId, nick });
+  if (moduloSimulado) {
+    transporte = { enLinea: () => ({ listos: 1 }) };
+    sesion = moduloSimulado.crearSesionSimulada({ jugadorId, nick, params });
+  } else {
+    transporte = crearTransporteMqtt(JUEGO.APP_ID, codigo, { brokers: RED.BROKERS, conectar: (url, o) => mqtt.connect(url, o) });
+    sesion = crearSesion({ transporte, jugadorId, nick });
+  }
   sesion.on('estado', () => { pintarMesa(); actualizarTodo(); });
   sesion.on('aviso', (motivo) => { avisar(motivo); actualizarTodo(); });
   sesion.on('version', () => { versionAjena = true; actualizarTodo(); });
@@ -184,7 +197,6 @@ $('copiar').addEventListener('click', async (e) => {
   setTimeout(() => { e.target.textContent = 'Copiar enlace'; }, 2000);
 });
 $('salir-lobby').addEventListener('click', salirDeSala);
-$('volver-lobby').addEventListener('click', () => { lobbyForzado = true; pantalla = 'lobby'; actualizarTodo(); });
 $('iniciar').addEventListener('click', () => {
   lobbyForzado = false;
   avisar('');
@@ -192,7 +204,7 @@ $('iniciar').addEventListener('click', () => {
   actualizarTodo();
 });
 
-function avisar(t) { $('aviso').textContent = t; }
+function avisar(t) { $('aviso').textContent = t; ui.aviso(t); }
 function colorCss(c) { return '#' + c.toString(16).padStart(6, '0'); }
 
 function actualizarTodo() {
@@ -202,12 +214,19 @@ function actualizarTodo() {
   // Pantalla: con la misión en marcha y un rol, se entra a la sala de briefing.
   if (pantalla === 'lobby' && e && e.fase !== 'lobby' && rol && !lobbyForzado) pantalla = 'sala';
   if (pantalla === 'sala' && !rol) pantalla = 'lobby';
+  if (pantalla === 'sala' && e && e.fase === 'lobby') pantalla = 'lobby'; // "New mission" desde el informe
 
   $('inicio').classList.toggle('oculto', pantalla !== 'inicio');
   $('lobby').classList.toggle('oculto', pantalla !== 'lobby');
-  $('hud').classList.toggle('oculto', pantalla !== 'sala');
-  document.body.classList.toggle('en-sala', pantalla === 'sala');
-  renderEtiquetas.domElement.style.display = pantalla === 'sala' ? '' : 'none';
+  const verSala = pantalla === 'sala' && e?.fase === 'briefing';
+  document.body.classList.toggle('en-sala', verSala);
+  renderEtiquetas.domElement.style.display = verSala ? '' : 'none';
+  ui.pintar({
+    estado: e, rol, jugadorId, nick, activo: pantalla === 'sala',
+    enLinea: e ? T.online(conectados(e).length, MAX_JUGADORES) : '',
+    intentar: (tipo, payload) => sesion?.intentar(tipo, payload),
+    volverAlLobby: () => { lobbyForzado = true; pantalla = 'lobby'; actualizarTodo(); },
+  });
   if (pantalla === 'inicio') return;
 
   const ul = $('tripulacion');
@@ -270,10 +289,6 @@ function actualizarTodo() {
   else if (sesion.yo() && $('aviso').textContent === 'Entrando en la sala…') avisar('');
   if (versionAjena) avisar('Alguien en la sala tiene otra versión del juego. Recargad la página (Ctrl+F5) todos.');
 
-  // HUD
-  if (rol) $('mi-rol').textContent = `${nick} · ${ROLES[indiceRol(rol)].nombre}`;
-  $('hud-red').textContent = e ? `${conectados(e).length} en la sala` : '';
-
   actualizarAvatares();
 }
 
@@ -309,20 +324,22 @@ actualizarTodo();
 // El aviso de "sin conexión" no depende de ningún mensaje: se repasa cada 2 s mientras se ve el lobby.
 let enLineaAntes = true;
 setInterval(() => {
-  const ok = !sesion || transporte.enLinea().listos > 0;
+  const ok = !sesion || !transporte || transporte.enLinea().listos > 0;
   if (ok !== enLineaAntes && pantalla === 'lobby') actualizarTodo();
   enLineaAntes = ok;
 }, 2000);
 window.__depurar = { sesion: () => sesion, transporte: () => transporte, mirada, camara: camaraSala, clicables: sala.clicables, THREE };
 
 // Si el enlace trae código de sala, abrimos directamente el diálogo de unirse.
-if (/^#[A-Za-z0-9]{4,8}$/.test(location.hash)) $('btn-unirse').click();
+if (SIMULADO) {
+  import('./pantallas/_simulado.js').then((m) => { moduloSimulado = m; nick = nick || 'Tester'; entrarEnSala('SIM01'); });
+} else if (/^#[A-Za-z0-9]{4,8}$/.test(location.hash)) $('btn-unirse').click();
 
 // ---------- Mirar (arrastrar) y clic, solo en la sala ----------
 let arrastre = null;
 const raycaster = new THREE.Raycaster();
 contenedor.addEventListener('pointerdown', (e) => {
-  if (pantalla !== 'sala') return;
+  if (pantalla !== 'sala' || !enBriefing()) return;
   arrastre = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY };
   contenedor.setPointerCapture(e.pointerId);
 });
@@ -337,7 +354,7 @@ contenedor.addEventListener('pointermove', (e) => {
 contenedor.addEventListener('pointerup', (e) => {
   const fueClic = arrastre && Math.hypot(e.clientX - arrastre.x0, e.clientY - arrastre.y0) < 6;
   arrastre = null;
-  if (fueClic && pantalla === 'sala') clic(e);
+  if (fueClic && pantalla === 'sala' && enBriefing()) clic(e);
 });
 
 function clic(e) {
@@ -357,7 +374,7 @@ let tFondo = 0;
 function bucle() {
   const dt = reloj.getDelta();
   const rol = miRol();
-  if (pantalla === 'sala' && rol) {
+  if (pantalla === 'sala' && rol && enBriefing()) {
     const i = indiceRol(rol);
     sala.avatares[i].cabeza.getWorldPosition(posCabeza);
     camaraSala.position.copy(posCabeza);

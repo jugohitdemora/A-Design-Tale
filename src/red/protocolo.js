@@ -1,24 +1,88 @@
 // Protocolo de juego: estado replicado y acciones validadas por el anfitrión.
 // Este archivo es puro (sin red, sin Three.js) para poder probarlo con un transporte simulado.
-// Ver PROTOCOLO.md para el diseño completo.
+// Ver PROTOCOLO.md para el diseño completo y mecanicas-del-juego.md §9 para las acciones de juego.
+import {
+  resumen, cumple, verificar, motivoRestriccion, aplicarCambio, misionDe, piezaEnMision, siguienteEventoDiseno,
+  DIFICULTADES, MAX_CONTINGENCIAS,
+} from '../reglas/motor.js';
+import { simular } from '../reglas/despliegue.js';
 
-export const VERSION_PROTOCOLO = 1;
+export const VERSION_PROTOCOLO = 2;
 export const MAX_JUGADORES = 4;
 export const ROLES_IDS = ['vuelo', 'ciencia', 'potencia', 'comms'];
 // Si su dueño se desconecta, un rol queda reservado este tiempo (así una recarga no lo pierde).
 export const GRACIA_DESCONEXION_MS = { lobby: 20_000, partida: 90_000 };
 const gracia = (e) => (e.fase === 'lobby' ? GRACIA_DESCONEXION_MS.lobby : GRACIA_DESCONEXION_MS.partida);
 
-// Fases de la partida (flujo-del-juego.md). Solo lobby → briefing tiene contenido por ahora.
-export const FASES = ['lobby', 'briefing', 'diseno', 'verificacion', 'mision', 'informe'];
+// ---------- Datos del juego ----------
+// Por defecto, los de src/datos/index.js. Si ese archivo aún no existe (o falla), el protocolo carga igual:
+// las acciones que necesitan datos se rechazan con 'Game data not loaded'. Las pruebas inyectan los suyos.
+let datosPorDefecto = null;
+try {
+  ({ DATOS: datosPorDefecto = null } = await import('../datos/index.js'));
+} catch (err) {
+  console.warn('protocolo: no se pudieron cargar los datos (src/datos/index.js)', err?.message ?? err);
+}
+let datosInyectados = null;
+export function usarDatos(d) { datosInyectados = d ?? null; }
+export const datosActivos = () => datosInyectados ?? datosPorDefecto;
+const datosDe = (ctx) => ctx?.datos ?? datosActivos();
+
+// Fases de la partida (flujo-del-juego.md, mecanicas-del-juego.md §9). El orden importa: pesoDe usa el índice.
+export const FASES = ['lobby', 'briefing', 'diseno', 'restricciones', 'verificacion', 'mision', 'informe'];
+// Grafo completo de fases. Algunos pasos solo se dan con su acción (SOLO_POR_ACCION), no con cambiarFase.
 export const TRANSICIONES = {
   lobby: ['briefing'],
-  briefing: ['diseno'],
-  diseno: ['verificacion'],
-  verificacion: ['diseno', 'mision'],   // si no pasa, se vuelve a diseño
-  mision: ['informe'],
-  informe: ['diseno', 'lobby'],         // rediseñar (R-06) o nueva partida
+  briefing: ['diseno'],                         // exige misión jugable y dificultad
+  diseno: ['restricciones', 'verificacion'],    // pedirRevision (MEC-11)
+  restricciones: ['verificacion', 'diseno'],    // pedirRevision (MEC-12)
+  verificacion: ['diseno', 'mision'],           // volver a diseño, o lanzar
+  mision: ['informe'],                          // avanzar en el último paso
+  informe: ['diseno', 'lobby'],                 // rediseñar (R-06, AN-15) o nueva partida
 };
+export const SOLO_POR_ACCION = {
+  'diseno>restricciones': 'pedirRevision', 'diseno>verificacion': 'pedirRevision',
+  'restricciones>verificacion': 'pedirRevision', 'restricciones>diseno': 'pedirRevision',
+  'verificacion>mision': 'lanzar', 'mision>informe': 'avanzar',
+};
+const MOTIVO_SOLO_POR_ACCION = { pedirRevision: 'Request a design review instead', lanzar: 'Use Launch instead', avanzar: 'Use Next instead' };
+
+// Talleres: solo ids, opción y uso; nunca totales (§6). Otras claves son notas libres de editarPropio.
+const CLAVES_RESERVADAS = ['piezas', 'cohete', 'ruta', 'contingencias'];
+export function tallerInicial(rol) {
+  if (rol === 'vuelo') return { piezas: {}, cohete: null, ruta: null };
+  if (rol === 'comms') return { piezas: {}, contingencias: [] };
+  return { piezas: {} };
+}
+export function tallerVacio(t) {
+  if (!t || typeof t !== 'object') return true;
+  if (Object.keys(t).some((k) => !CLAVES_RESERVADAS.includes(k))) return false;
+  const piezas = t.piezas && typeof t.piezas === 'object' ? Object.keys(t.piezas).length : 0;
+  return !piezas && t.cohete == null && t.ruta == null && !(Array.isArray(t.contingencias) && t.contingencias.length);
+}
+// Limpia un taller que llega de fuera (fusión de anfitriones): forma correcta y nada raro dentro.
+export function normalizarTaller(rol, t) {
+  const r = tallerInicial(rol);
+  if (!t || typeof t !== 'object' || Array.isArray(t)) return r;
+  for (const [k, v] of Object.entries(t)) if (!CLAVES_RESERVADAS.includes(k)) r[k] = v;
+  if (t.piezas && typeof t.piezas === 'object' && !Array.isArray(t.piezas)) {
+    for (const [id, s] of Object.entries(t.piezas)) {
+      if (!esTexto(id, 64)) continue;
+      r.piezas[id] = { op: typeof s?.op === 'string' ? s.op.slice(0, 32) : null, uso: Number.isFinite(s?.uso) ? s.uso : null };
+    }
+  }
+  if (rol === 'vuelo') {
+    r.cohete = esTexto(t.cohete, 64) ? t.cohete : null;
+    r.ruta = esTexto(t.ruta, 64) ? t.ruta : null;
+  }
+  if (rol === 'comms' && Array.isArray(t.contingencias)) {
+    r.contingencias = [...new Set(t.contingencias.filter((x) => esTexto(x, 64)))].slice(0, MAX_CONTINGENCIAS);
+  }
+  return r;
+}
+const talleresIniciales = () => Object.fromEntries(ROLES_IDS.map((r) => [r, tallerInicial(r)]));
+const disenoInicial = () => ({ revisiones: 0, eventos: [], ultima: null });
+const firmasIniciales = () => Object.fromEntries(ROLES_IDS.map((r) => [r, false]));
 
 export function estadoInicial() {
   return {
@@ -27,7 +91,12 @@ export function estadoInicial() {
     siguienteOrden: 1,
     semilla: null,          // la sortea el anfitrión al empezar; los eventos aleatorios salen de aquí
     briefing: { objetivos: true, tareas: false, riesgos: false, carpetas: {} },
-    porRol: Object.fromEntries(ROLES_IDS.map((r) => [r, {}])), // datos privados de cada rol: solo su dueño los escribe
+    mision: null,           // { escenario, id, dificultad }: null hasta elegir
+    porRol: talleresIniciales(), // talleres: solo su dueño (o cualquiera si el rol está vacante) los escribe
+    diseno: disenoInicial(), // { revisiones, eventos: [{ id }], ultima }: eventos de diseño ya salidos
+    firmas: firmasIniciales(),
+    resultado: null,        // lo que devuelve simular() al lanzar
+    vista: { paso: 0 },     // pasos del vuelo ya revelados
     registro: [],           // eventos que el anfitrión ya resolvió (fases futuras)
   };
 }
@@ -41,15 +110,98 @@ export function rolLibre(e, rol, ahora, para) {
   const [, j] = d;
   return !j.conectado && ahora - j.desconectadoEn > gracia(e);
 }
+// MEC-03: un rol sin dueño conectado lo puede editar y firmar cualquiera.
+export const rolVacante = (e, rol) => !Object.values(e.jugadores).some((j) => j.rol === rol && j.conectado);
 
 // ---------- Validación de entrada ----------
 const esTexto = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
 const limpiarNick = (v) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16);
 const tamano = (v) => { try { return JSON.stringify(v).length; } catch { return Infinity; } };
+const NOMBRE_ROL = { vuelo: 'Flight', ciencia: 'Science', potencia: 'Power', comms: 'Comms & Ops' };
+const sinDatos = 'Game data not loaded';
+
+// ¿Puede el jugador actuar por `pedido` (o por su rol si no pide ninguno)? → [rol, motivo]
+function rolParaActuar(e, id, pedido) {
+  const mio = e.jugadores[id]?.rol;
+  if (!mio) return [null, 'You need a role'];
+  const rol = pedido ?? mio;
+  if (!ROLES_IDS.includes(rol)) return [null, 'Unknown role'];
+  if (rol !== mio && !rolVacante(e, rol)) return [null, `${NOMBRE_ROL[rol]} has a player: only they can do that`];
+  return [rol, null];
+}
+// Acciones de un rol fijo (cohete y ruta: vuelo; contingencias: comms).
+function puedeComoRol(e, id, rol) {
+  const mio = e.jugadores[id]?.rol;
+  if (!mio) return 'You need a role';
+  if (mio !== rol && !rolVacante(e, rol)) return `Only ${NOMBRE_ROL[rol]} can do that`;
+  return null;
+}
+const taller = (e, rol) => {
+  if (!e.porRol[rol] || typeof e.porRol[rol] !== 'object') e.porRol[rol] = tallerInicial(rol);
+  return e.porRol[rol];
+};
+const borrarFirmas = (e) => { e.firmas = firmasIniciales(); };
+// En Restricciones (MEC-12) un cambio solo vale si no sube ninguna barra.
+const enRestricciones = (e, cambio, D) => (e.fase === 'restricciones' ? motivoRestriccion(e, cambio, D) : null);
+const tallerLleno = (e, rol, extra = 120) => tamano(e.porRol[rol]) + extra > 32_000;
+
+// Opción y uso de una pieza, normalizados. → [{ op, uso }, motivo]
+function seleccion(pieza, p) {
+  const ops = Array.isArray(pieza.opciones) ? pieza.opciones : [];
+  const op = p.op ?? ops[0]?.id ?? null;
+  if (ops.length && !ops.some((o) => o?.id === op)) return [null, 'Unknown option for that part'];
+  if (!pieza.uso || typeof pieza.uso !== 'object') return [{ op, uso: null }, null];
+  const n = (x, d) => (typeof x === 'number' ? x : typeof x?.v === 'number' ? x.v : typeof x?.juego === 'number' ? x.juego : d);
+  const min = n(pieza.uso.min, 0), max = n(pieza.uso.max, 24), def = n(pieza.uso.def, max);
+  // Se acepta un número, una cadena numérica (de un <input>) o un dato {v, juego}.
+  const crudo = p.uso == null || p.uso === '' ? def : n(p.uso, typeof p.uso === 'string' ? Number(p.uso) : NaN);
+  const uso = typeof crudo === 'number' ? crudo : NaN;
+  if (!Number.isFinite(uso)) return [null, 'Usage must be a number of hours per day'];
+  if (uso < min || uso > max) return [null, `Usage must be between ${min} and ${max} h/day`];
+  return [{ op, uso }, null];
+}
+
+// Calcula la misión que queda tras elegirMision. → [mision, motivo]
+function nuevaMision(e, p, D) {
+  const actual = e.mision ?? {};
+  let escenario = p.escenario !== undefined ? p.escenario : actual.escenario ?? null;
+  let id = p.id !== undefined ? p.id : actual.id ?? null;
+  if (p.escenario !== undefined && p.escenario !== actual.escenario && p.id === undefined) id = null; // otro escenario
+  const M = D.MISIONES && typeof D.MISIONES === 'object' ? D.MISIONES : {};
+  if (escenario != null) {
+    const E = D.ESCENARIOS;
+    const existe = (Array.isArray(E) ? E.some((x) => x === escenario || x?.id === escenario) : !!(E && E[escenario]))
+      || Object.values(M).some((m) => m?.escenario === escenario);
+    if (!esTexto(escenario, 64) || !existe) return [null, 'Unknown scenario'];
+  }
+  if (id != null) {
+    const m = M[id];
+    if (!esTexto(id, 64) || !m) return [null, 'Unknown mission'];
+    if (escenario != null && m.escenario !== escenario) return [null, 'That mission belongs to another scenario'];
+    escenario = m.escenario ?? escenario;
+  }
+  const dificultad = p.dificultad !== undefined ? p.dificultad : actual.dificultad ?? 'normal';
+  if (!DIFICULTADES.includes(dificultad)) return [null, 'Unknown difficulty'];
+  return [{ escenario, id, dificultad }, null];
+}
+
+// Vacía lo que depende de la misión. Las notas libres de cada taller se conservan.
+function reiniciarDiseno(e) {
+  const nuevo = talleresIniciales();
+  for (const rol of ROLES_IDS) {
+    for (const [k, v] of Object.entries(e.porRol?.[rol] ?? {})) if (!CLAVES_RESERVADAS.includes(k)) nuevo[rol][k] = v;
+  }
+  e.porRol = nuevo;
+  e.diseno = disenoInicial();
+  e.firmas = firmasIniciales();
+  e.resultado = null;
+  e.vista = { paso: 0 };
+}
 
 // ---------- Acciones ----------
 // Cada acción: fases en las que vale (null = todas), validar → motivo de rechazo o null, aplicar → muta el estado.
-// ctx = { ahora, aleatorio } lo pone el anfitrión: los clientes nunca ejecutan esto.
+// ctx = { ahora, aleatorio, datos? } lo pone el anfitrión: los clientes nunca ejecutan esto.
+// Los motivos nuevos (fases de juego) van en inglés porque se muestran al jugador tal cual.
 export const ACCIONES = {
   // Entrar o volver a entrar (recarga, cambio de anfitrión). Idempotente.
   unirse: {
@@ -69,14 +221,15 @@ export const ACCIONES = {
       j.desconectadoEn = 0;
       // Al fusionar dos anfitriones, el jugador trae su rol y sus datos de rol: se recuperan si no chocan.
       if (!j.rol && ROLES_IDS.includes(p.rol) && rolLibre(e, p.rol, ctx.ahora, id)) asignarRol(e, id, p.rol);
-      if (j.rol && p.propio && j.rol === p.rol && Object.keys(e.porRol[j.rol]).length === 0 && tamano(p.propio) <= 16_000) {
-        e.porRol[j.rol] = p.propio;
+      if (j.rol && p.propio && j.rol === p.rol && tallerVacio(e.porRol[j.rol]) && tamano(p.propio) <= 16_000) {
+        e.porRol[j.rol] = normalizarTaller(j.rol, p.propio);
       }
     },
   },
 
   elegirRol: {
-    fases: ['lobby', 'briefing'],
+    // En cualquier fase: quien llega tarde a una partida en curso puede tomar un rol vacante (MEC-03).
+    fases: null,
     validar(e, id, p, ctx) {
       if (!e.jugadores[id]) return 'No estás en la sala';
       if (p.rol === null) return null;
@@ -84,7 +237,12 @@ export const ACCIONES = {
       if (!rolLibre(e, p.rol, ctx.ahora, id)) return `Ese rol ya lo tiene ${duenoDeRol(e, p.rol)[1].nick}`;
       return null;
     },
-    aplicar(e, id, p) { asignarRol(e, id, p.rol); },
+    aplicar(e, id, p) {
+      // La firma es de quien lleva el rol: si el rol cambia de manos, hay que volver a firmar.
+      const antes = e.jugadores[id]?.rol;
+      asignarRol(e, id, p.rol);
+      if (e.firmas) for (const r of [antes, p.rol]) if (r && r in e.firmas) e.firmas[r] = false;
+    },
   },
 
   iniciarMision: {
@@ -113,33 +271,265 @@ export const ACCIONES = {
     aplicar(e, id, p) { e.briefing.carpetas[p.rol] = !e.briefing.carpetas[p.rol]; },
   },
 
-  // Genérica para la fase de Diseño: cada rol solo escribe en su propia parte (su taller).
+  // Notas libres del taller propio. Las claves de las piezas, cohete, ruta y contingencias son del motor.
   editarPropio: {
-    fases: ['briefing', 'diseno'],
+    fases: ['briefing', 'diseno', 'restricciones'],
     validar(e, id, p) {
       const rol = e.jugadores[id]?.rol;
       if (!rol) return 'Necesitas un rol';
       if (!esTexto(p.clave, 32)) return 'Clave inválida';
+      if (CLAVES_RESERVADAS.includes(p.clave)) return 'Reserved key: use the workshop actions';
       if (tamano(p.valor) > 8_000) return 'Dato demasiado grande';
       if (tamano(e.porRol[rol]) + tamano(p.valor) > 32_000) return 'Tu taller está lleno';
       return null;
     },
     aplicar(e, id, p) {
       const rol = e.jugadores[id].rol;
-      if (p.valor === null) delete e.porRol[rol][p.clave];
-      else e.porRol[rol][p.clave] = p.valor;
+      if (p.valor === null) delete taller(e, rol)[p.clave];
+      else taller(e, rol)[p.clave] = p.valor;
     },
   },
 
-  // Cambio de fase genérico, limitado a TRANSICIONES. Las fases futuras añadirán sus propias condiciones.
-  cambiarFase: {
-    fases: null,
-    validar(e, id, p) {
-      if (!e.jugadores[id]?.rol) return 'Necesitas un rol';
-      if (!(TRANSICIONES[e.fase] || []).includes(p.fase)) return `No se puede pasar de ${e.fase} a ${p.fase}`;
+  // MEC-02. { escenario?, id?, dificultad? }. Cambiar de misión vacía talleres, eventos de diseño y firmas.
+  elegirMision: {
+    fases: ['briefing'],
+    validar(e, id, p, ctx) {
+      if (!e.jugadores[id]?.rol) return 'You need a role';
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      return nuevaMision(e, p, D)[1];
+    },
+    aplicar(e, id, p, ctx) {
+      const [m] = nuevaMision(e, p, datosDe(ctx));
+      const cambia = (e.mision?.id ?? null) !== m.id;
+      e.mision = m;
+      if (cambia) reiniciarDiseno(e);
+    },
+  },
+
+  // MEC-04. { rol?, pieza, op?, uso? }
+  montar: {
+    fases: ['diseno', 'restricciones'],
+    validar(e, id, p, ctx) {
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      const [rol, motivo] = rolParaActuar(e, id, p.rol);
+      if (motivo) return motivo;
+      const m = misionDe(e, D);
+      if (!m) return 'Choose a mission first';
+      const pieza = esTexto(p.pieza, 64) ? D.PIEZAS?.[p.pieza] : null;
+      if (!pieza) return 'Unknown part';
+      if (pieza.rol !== rol) return `That part belongs to ${NOMBRE_ROL[pieza.rol] ?? 'another role'}`;
+      if (!piezaEnMision(m, p.pieza, pieza)) return 'That part is not available for this mission';
+      const [s, mal] = seleccion(pieza, p);
+      if (mal) return mal;
+      if (tallerLleno(e, rol)) return 'Workshop is full';
+      return enRestricciones(e, { tipo: 'montar', rol, pieza: p.pieza, ...s }, D);
+    },
+    aplicar(e, id, p, ctx) {
+      const D = datosDe(ctx);
+      const [rol] = rolParaActuar(e, id, p.rol);
+      const [s] = seleccion(D.PIEZAS[p.pieza], p);
+      taller(e, rol);
+      aplicarCambio(e.porRol, { tipo: 'montar', rol, pieza: p.pieza, ...s });
+      borrarFirmas(e);
+    },
+  },
+
+  // { rol?, pieza }
+  quitar: {
+    fases: ['diseno', 'restricciones'],
+    validar(e, id, p, ctx) {
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      const [rol, motivo] = rolParaActuar(e, id, p.rol);
+      if (motivo) return motivo;
+      if (!esTexto(p.pieza, 64) || !e.porRol[rol]?.piezas?.[p.pieza]) return 'That part is not mounted';
+      return enRestricciones(e, { tipo: 'quitar', rol, pieza: p.pieza }, D);
+    },
+    aplicar(e, id, p) {
+      const [rol] = rolParaActuar(e, id, p.rol);
+      aplicarCambio(e.porRol, { tipo: 'quitar', rol, pieza: p.pieza });
+      borrarFirmas(e);
+    },
+  },
+
+  // MEC-05. { id } (null lo quita)
+  elegirCohete: {
+    fases: ['diseno', 'restricciones'],
+    validar(e, id, p, ctx) {
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      const motivo = puedeComoRol(e, id, 'vuelo');
+      if (motivo) return motivo;
+      const m = misionDe(e, D);
+      if (!m) return 'Choose a mission first';
+      if (p.id != null) {
+        const c = esTexto(p.id, 64) ? D.COHETES?.[p.id] : null;
+        if (!c || !(m.cohetes || []).includes(p.id)) return 'That launch vehicle is not offered for this mission';
+        if (c.cumpleDEC09 === false) return 'That launch vehicle is not allowed (DEC-09)';
+      }
+      return enRestricciones(e, { tipo: 'cohete', id: p.id ?? null }, D);
+    },
+    aplicar(e, id, p) { taller(e, 'vuelo'); aplicarCambio(e.porRol, { tipo: 'cohete', id: p.id ?? null }); borrarFirmas(e); },
+  },
+
+  // MEC-06. { id } (null la quita)
+  elegirRuta: {
+    fases: ['diseno', 'restricciones'],
+    validar(e, id, p, ctx) {
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      const motivo = puedeComoRol(e, id, 'vuelo');
+      if (motivo) return motivo;
+      const m = misionDe(e, D);
+      if (!m) return 'Choose a mission first';
+      if (p.id != null && !(esTexto(p.id, 64) && (m.rutas || []).some((r) => r?.id === p.id))) return 'Unknown route for this mission';
+      return enRestricciones(e, { tipo: 'ruta', id: p.id ?? null }, D);
+    },
+    aplicar(e, id, p) { taller(e, 'vuelo'); aplicarCambio(e.porRol, { tipo: 'ruta', id: p.id ?? null }); borrarFirmas(e); },
+  },
+
+  // MEC-08. { id, on }
+  contingencia: {
+    fases: ['diseno', 'restricciones'],
+    validar(e, id, p, ctx) {
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      const motivo = puedeComoRol(e, id, 'comms');
+      if (motivo) return motivo;
+      const m = misionDe(e, D);
+      if (!m) return 'Choose a mission first';
+      if (!esTexto(p.id, 64) || !D.CONTINGENCIAS?.[p.id] || !(m.contingencias || []).includes(p.id)) return 'Unknown contingency for this mission';
+      const lista = Array.isArray(e.porRol.comms?.contingencias) ? e.porRol.comms.contingencias : [];
+      if (p.on && !lista.includes(p.id) && lista.length >= MAX_CONTINGENCIAS) return `You can buy at most ${MAX_CONTINGENCIAS} contingencies`;
+      return enRestricciones(e, { tipo: 'contingencia', id: p.id, on: !!p.on }, D);
+    },
+    aplicar(e, id, p) { taller(e, 'comms'); aplicarCambio(e.porRol, { tipo: 'contingencia', id: p.id, on: !!p.on }); borrarFirmas(e); },
+  },
+
+  // MEC-10, MEC-11, MEC-12. { revision? }: si viene, tiene que ser estado.diseno.revisiones (evita dobles clics).
+  // Mientras queden eventos de diseño, sale uno en vez de la revisión. Después se evalúa y se va a la fase que toque.
+  // El resultado queda en estado.diseno.ultima = { tipo: 'evento', id } | { tipo: 'revision', nivel, barras }.
+  pedirRevision: {
+    fases: ['diseno', 'restricciones'],
+    validar(e, id, p, ctx) {
+      if (!e.jugadores[id]?.rol) return 'You need a role';
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      if (!misionDe(e, D)) return 'Choose a mission first';
+      if (p.revision != null && p.revision !== e.diseno.revisiones) return 'A review was already requested';
       return null;
     },
-    aplicar(e, id, p) { e.fase = p.fase; },
+    aplicar(e, id, p, ctx) {
+      const D = datosDe(ctx);
+      const n = ++e.diseno.revisiones;
+      if (e.fase === 'diseno') {
+        const sig = siguienteEventoDiseno(e, D);
+        if (sig) {
+          e.diseno.eventos.push({ id: sig });
+          e.diseno.ultima = { tipo: 'evento', id: sig, revision: n };
+          return;
+        }
+      }
+      const c = cumple(resumen(e, D));
+      e.diseno.ultima = { tipo: 'revision', nivel: c.nivel, barras: c.barras, revision: n };
+      if (c.nivel === 'dentro') e.fase = 'verificacion';
+      else if (c.nivel === 'tolerancia') e.fase = 'restricciones';
+      else e.fase = 'diseno';
+    },
+  },
+
+  // MEC-13. { rol?, on }
+  firmar: {
+    fases: ['verificacion'],
+    validar(e, id, p, ctx) {
+      const [, motivo] = rolParaActuar(e, id, p.rol);
+      if (motivo) return motivo;
+      if (!p.on) return null;
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      if (!verificar(e, D).pasa) return 'Some checks fail: go back to design';
+      return null;
+    },
+    aplicar(e, id, p) {
+      const [rol] = rolParaActuar(e, id, p.rol);
+      e.firmas[rol] = !!p.on;
+    },
+  },
+
+  // MEC-13, MEC-14: comprobaciones y 4 firmas; el anfitrión simula el vuelo y lo guarda.
+  lanzar: {
+    fases: ['verificacion'],
+    validar(e, id, p, ctx) {
+      if (!e.jugadores[id]?.rol) return 'You need a role';
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      if (!verificar(e, D).pasa) return 'Some checks fail: go back to design';
+      const faltan = ROLES_IDS.filter((r) => !e.firmas?.[r]);
+      if (faltan.length) return `Missing signatures: ${faltan.map((r) => NOMBRE_ROL[r]).join(', ')}`;
+      return null;
+    },
+    aplicar(e, id, p, ctx) {
+      const r = simular(e, datosDe(ctx));
+      if (tamano(r) > 24_000) r.causas = r.causas.slice(0, 10).concat(r.causas.slice(-1));
+      e.resultado = r;
+      e.vista = { paso: 0 };
+      e.fase = 'mision';
+    },
+  },
+
+  // vista.paso = índice del último paso revelado (al lanzar ya se ve el 0). Avanzar revela el siguiente;
+  // desde el último pasa al informe. { paso? }: si viene, tiene que ser vista.paso (evita dobles clics).
+  avanzar: {
+    fases: ['mision'],
+    validar(e, id, p) {
+      if (!e.jugadores[id]?.rol) return 'You need a role';
+      if (p.paso != null && p.paso !== (e.vista?.paso ?? 0)) return 'Already advanced';
+      return null;
+    },
+    aplicar(e) {
+      const total = e.resultado?.pasos?.length ?? 0;
+      const paso = e.vista?.paso ?? 0;
+      if (paso >= total - 1) e.fase = 'informe';
+      else e.vista = { paso: paso + 1 };
+    },
+  },
+
+  // Cambio de fase genérico, limitado a TRANSICIONES y sin saltarse revisión, lanzamiento ni avance.
+  cambiarFase: {
+    fases: null,
+    validar(e, id, p, ctx) {
+      if (!e.jugadores[id]?.rol) return 'Necesitas un rol';
+      if (!(TRANSICIONES[e.fase] || []).includes(p.fase)) return `No se puede pasar de ${e.fase} a ${p.fase}`;
+      const k = `${e.fase}>${p.fase}`;
+      if (SOLO_POR_ACCION[k]) return MOTIVO_SOLO_POR_ACCION[SOLO_POR_ACCION[k]];
+      if (k === 'briefing>diseno') {
+        const D = datosDe(ctx);
+        if (!D) return sinDatos;
+        const m = misionDe(e, D);
+        if (!m) return 'Choose a mission first';
+        if (!m.jugable) return 'That mission is not playable yet';
+        if (!e.mision.dificultad) return 'Choose a difficulty';
+      }
+      return null;
+    },
+    aplicar(e, id, p) {
+      const k = `${e.fase}>${p.fase}`;
+      if (k === 'informe>diseno') {
+        // Rediseñar (AN-15): se conservan diseño, semilla y eventos de diseño ya vistos.
+        e.firmas = firmasIniciales();
+        e.resultado = null;
+        e.vista = { paso: 0 };
+        e.diseno.ultima = null;
+      }
+      if (p.fase === 'lobby') {
+        e.mision = null;
+        reiniciarDiseno(e);
+        e.briefing = { objetivos: true, tareas: false, riesgos: false, carpetas: {} };
+      }
+      e.fase = p.fase;
+    },
   },
 };
 
@@ -160,6 +550,7 @@ export function reducir(e, jugadorId, intencion, ctx) {
       if (!j.conectado && ctx.ahora - j.desconectadoEn > gracia(e)) delete e.jugadores[id];
     }
   }
+  completarEstado(e);
   const accion = ACCIONES[intencion?.tipo];
   const j = e.jugadores[jugadorId];
   if (j && intencion.id <= j.ultimaIntencion) return null; // repetida: ya se aplicó (idempotencia)
@@ -171,6 +562,23 @@ export function reducir(e, jugadorId, intencion, ctx) {
   if (!motivo) accion.aplicar(e, jugadorId, intencion.payload || {}, ctx);
   if (e.jugadores[jugadorId]) e.jugadores[jugadorId].ultimaIntencion = Math.max(e.jugadores[jugadorId].ultimaIntencion, intencion.id);
   return motivo;
+}
+
+// Un estado que llega de fuera puede no traer los campos nuevos: se completan sin tocar lo que hay.
+function completarEstado(e) {
+  if (e.mision === undefined) e.mision = null;
+  if (!e.porRol || typeof e.porRol !== 'object') e.porRol = {};
+  for (const rol of ROLES_IDS) {
+    const t = e.porRol[rol];
+    if (!t || typeof t !== 'object') e.porRol[rol] = tallerInicial(rol);
+    else if (!t.piezas || typeof t.piezas !== 'object' || Array.isArray(t.piezas)) t.piezas = {};
+  }
+  if (!e.diseno || typeof e.diseno !== 'object') e.diseno = disenoInicial();
+  if (!Array.isArray(e.diseno.eventos)) e.diseno.eventos = [];
+  if (!Number.isFinite(e.diseno.revisiones)) e.diseno.revisiones = 0;
+  if (!e.firmas || typeof e.firmas !== 'object') e.firmas = firmasIniciales();
+  if (e.resultado === undefined) e.resultado = null;
+  if (!e.vista || typeof e.vista !== 'object') e.vista = { paso: 0 };
 }
 
 // Marca la salida de un jugador (lo llama el anfitrión al perder su conexión).

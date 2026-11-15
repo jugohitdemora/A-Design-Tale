@@ -26,24 +26,31 @@ Abre `http://localhost:8770/` en dos pestañas o en dos equipos con la **misma U
 
 ## Qué hace
 
-- **Inicio:** cartel con el nombre del juego sobre un centro de control low poly animado (gradas de consolas y pared de pantallas). El nombre y los textos se cambian en `src/config.js`.
-- **Join crew:** pide un nick y un código de sala. Un enlace con `#CODIGO` abre este diálogo con la sala ya puesta.
-- **Lobby:** cuántos hay en la sala (máx. 4), la tripulación con su nick y su rol, y la elección de rol (los ocupados se bloquean). "Iniciar misión" solo se activa cuando todos tienen rol, y lleva a todos a la vez a la sala de briefing.
-- **Sala de briefing:** cada jugador ve desde su asiento y mira arrastrando. Los demás ven su cabeza girar. Pizarra y carpetas compartidas.
+- **Inicio:** cartel con el nombre del juego sobre un centro de control low poly animado. El nombre y los textos de marca se cambian en `src/config.js`.
+- **Join crew / Lobby:** nick y código de sala; hasta 4 jugadores; elección de rol (los ocupados se bloquean). "Iniciar misión" lleva a todos al briefing.
+- **Briefing:** sala 3D compartida (arrastrar para mirar) con un panel: escenario, las 3 misiones del escenario como carpetas (solo la jugable se puede elegir), dificultad y ficha de la misión.
+- **Diseño y Restricciones:** taller con piezas del rol (izquierda), plano con lo montado por los cuatro roles (centro) y panel global con las seis barras, la cobertura de ciencia y las firmas (derecha). Pestañas Workshop, Rocket, Route y Risks. Un rol vacante lo puede editar cualquiera (selector de rol). Los eventos de diseño salen como tarjeta modal. Restricciones es el mismo taller con el aviso de exceso y sin poder añadir piezas.
+- **Verificación:** lista de comprobaciones, cuatro firmas y "Launch".
+- **Misión:** sala de control: fases reveladas una a una (todos ven lo mismo), eventos, datos recibidos y "Next".
+- **Informe:** veredicto, causas, ciencia, barras finales, misión real de referencia y fuentes; "Redesign and fly again" y "New mission".
 - **Ajustes:** sensibilidad de la cámara, calidad gráfica y animación del fondo (se guardan en el navegador).
+- **Revisar pantallas sin red:** `http://localhost:8770/?simulado=1` usa datos y reglas falsos (`src/pantallas/_simulado.js`) y una barra morada para saltar de fase o de rol. Parámetros: `fase` (`briefing`, `diseno`, `restricciones`, `verificacion`, `mision`, `informe`), `rol` (`vuelo`, `ciencia`, `potencia`, `comms`), `jugadores` (1 a 4; los roles sin jugador quedan vacantes).
 
 ## Archivos
 
-- `index.html`: cartel de inicio, diálogos, lobby, HUD e importmap.
+- `index.html`: cartel de inicio, diálogos, lobby, contenedores de las pantallas de juego e importmap.
 - `src/config.js`: nombre del juego y textos de marca.
+- `src/textos.js`: todos los textos de interfaz de las pantallas de juego (inglés).
 - `src/inicio.js`: centro de control del fondo.
 - `src/escena.js`: sala de briefing, avatares y NPC.
-- `src/main.js`: pantallas, lobby, cámara por asiento.
+- `src/main.js`: pantallas de inicio y lobby, cámara por asiento, y conexión de la sesión con `src/pantallas/`.
+- `src/pantallas/`: una pantalla por fase. `index.js` (franja superior, repintado por estado, modal de eventos), `briefing.js`, `taller.js` (Diseño y Restricciones, con `cohete.js`, `ruta.js`, `riesgos.js`), `panel-global.js`, `verificacion.js`, `mision.js`, `informe.js`, `ui.js` (ayudas) y `_simulado.js` (datos y reglas falsos para `?simulado=1`).
+- `src/reglas/` y `src/datos/`: motor de reglas y datos (los escriben otros; ver `mecanicas-del-juego.md`).
 - `src/red/`: protocolo multijugador (ver [PROTOCOLO.md](PROTOCOLO.md)).
-  - `protocolo.js`: estado, fases y acciones validadas. Aquí se añaden las acciones de cada fase nueva.
+  - `protocolo.js`: estado, fases y acciones validadas.
   - `sesion.js`: anfitrión, réplica del estado, relevos y fusiones.
   - `transporte-mqtt.js` (real: relé MQTT con brokers redundantes) y `transporte-memoria.js` (simulado, para pruebas).
-- `pruebas/`: 34 pruebas (16 del protocolo sobre la red simulada y 18 del transporte MQTT sobre `broker-falso.js`). Abrir `http://localhost:8770/pruebas/`; `?solo=mqtt` ejecuta solo las del transporte, `?veces=N` las repite y `?lento=K` multiplica sus tiempos por K. Detalles en [PROTOCOLO.md](PROTOCOLO.md#10-pruebas).
+- `pruebas/`: pruebas del protocolo y del transporte. Abrir `http://localhost:8770/pruebas/`. Detalles en [PROTOCOLO.md](PROTOCOLO.md#10-pruebas).
 
 ## Límites conocidos
 

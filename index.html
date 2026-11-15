@@ -100,13 +100,10 @@
     </div>
   </section>
 
-  <!-- HUD en la sala de briefing -->
-  <div id="hud" class="panel oculto">
-    <span id="mi-rol"></span>
-    <span id="hud-red" class="tenue"></span>
-    <button id="volver-lobby" class="btn-plano" type="button">Lobby</button>
-    <p class="tenue">Arrastra para mirar · clic en la pizarra o en las carpetas</p>
-  </div>
+  <!-- Pantallas de juego (src/pantallas/): franja superior, pantalla de la fase y modal de eventos -->
+  <header id="franja" class="oculto"></header>
+  <main id="pantalla" class="pantalla oculto"></main>
+  <div id="modal-evento" class="oculto"></div>
 
   <script type="module" src="src/main.js"></script>
 </body>

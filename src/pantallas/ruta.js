@@ -1,0 +1,32 @@
+// Route tab: the mission's routes as cards. Flight (or anyone if vacant) selects.
+import { T } from '../textos.js';
+import { h, en, lista, valor, panelVacio, puedoPor, nombreRol } from './ui.js';
+
+export function pestanaRuta(c) {
+  const rutas = lista(c.mision?.rutas);
+  const raiz = h('section', { class: 'caja pestana-ruta' }, h('h3', {}, T.routeTitle));
+  if (!rutas.length) { raiz.append(panelVacio(T.noRoutes)); return raiz; }
+  const elegida = c.e?.porRol?.vuelo?.ruta;
+  const puedo = puedoPor(c, 'vuelo');
+  const tarjetas = h('div', { class: 'tarjetas' });
+  for (const r of rutas) {
+    const fase = lista(c.mision.fases).find((f) => f.id === r.efecto?.fase);
+    const ef = r.efecto && typeof r.efecto.dp === 'number'
+      ? T.effectText(en(fase?.nombre) || r.efecto.fase || '?', r.efecto.dp) : T.noEffect;
+    const es = r.id === elegida;
+    tarjetas.append(h('div', { class: 'tarjeta' + (es ? ' elegida' : '') },
+      h('h4', {}, en(r.nombre) || r.id, es ? h('span', { class: 'etq ok' }, T.selected) : null),
+      h('dl', {},
+        h('dt', {}, T.days), h('dd', {}, valor(c, r.dias, T.days_unit)),
+        h('dt', {}, T.propellant), h('dd', {}, valor(c, r.masa, 'kg')),
+        h('dt', {}, T.price), h('dd', {}, valor(c, r.precio, 'M USD')),
+        h('dt', {}, T.effect), h('dd', {}, ef)),
+      h('button', {
+        class: 'btn-plano primario', type: 'button', disabled: !puedo || es,
+        title: puedo ? undefined : T.onlyRole(nombreRol('vuelo')),
+        onclick: () => c.enviar('elegirRuta', { id: r.id }),
+      }, es ? T.selected : T.select)));
+  }
+  raiz.append(tarjetas);
+  return raiz;
+}

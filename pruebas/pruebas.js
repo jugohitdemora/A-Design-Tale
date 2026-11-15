@@ -146,7 +146,7 @@ const pruebas = {
     await esperarHasta(() => ss[1].estado.fase === 'briefing');
     ss[1].intentar('editarPropio', { clave: 'bateria', valor: { wh: 120 } });
     await esperarHasta(() => ss[0].estado.porRol.potencia.bateria?.wh === 120);
-    afirmar(Object.keys(ss[0].estado.porRol.ciencia).length === 0, 'se escribió en el taller de otro rol');
+    afirmar(!('bateria' in ss[0].estado.porRol.ciencia), 'se escribió en el taller de otro rol');
     ss.forEach((s) => s.salir());
   },
 
@@ -256,11 +256,11 @@ const pruebas = {
     const t = red.unir();
     t.alRecibir(() => {}); t.alSalir(() => {});
     t.alEntrar((p) => {
-      t.enviar('hola', { v: 1, jugadorId: 'jM', nick: 'M', etiqueta: { term: 0, host: null, seq: 0 } }, p);
+      t.enviar('hola', { v: 2, jugadorId: 'jM', nick: 'M', etiqueta: { term: 0, host: null, seq: 0 } }, p);
       setTimeout(() => {
-        t.enviar('intent', { v: 1, jugadorId: 'jM' }, p);
-        t.enviar('intent', { v: 1, jugadorId: 'jM', intencion: { id: 'x', tipo: 'unirse', payload: { nick: 'M' } } }, p);
-        t.enviar('intent', { v: 1, jugadorId: 'jM', intencion: { id: 5, tipo: 'unirse', payload: 'texto' } }, p);
+        t.enviar('intent', { v: 2, jugadorId: 'jM' }, p);
+        t.enviar('intent', { v: 2, jugadorId: 'jM', intencion: { id: 'x', tipo: 'unirse', payload: { nick: 'M' } } }, p);
+        t.enviar('intent', { v: 2, jugadorId: 'jM', intencion: { id: 5, tipo: 'unirse', payload: 'texto' } }, p);
       }, 100);
     });
     await dormir(800);

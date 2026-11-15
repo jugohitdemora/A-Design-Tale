@@ -1,6 +1,6 @@
-# Protocolo multijugador (versión 1)
+# Protocolo multijugador (versión 2)
 
-Este es el protocolo que usan todas las fases del juego: lobby, briefing, diseño, verificación, misión e informe. El código está en `src/red/`.
+Este es el protocolo que usan todas las fases del juego: lobby, briefing, diseño, restricciones, verificación, misión e informe. El código está en `src/red/`.
 
 ## 1. Idea general
 
@@ -59,15 +59,28 @@ Todos llevan `v` (versión del protocolo).
 ## 6. Estado
 
 ```text
-fase             lobby | briefing | diseno | verificacion | mision | informe
+fase             lobby | briefing | diseno | restricciones | verificacion | mision | informe
 jugadores        jugadorId → { nick, rol, orden, conectado, desconectadoEn, ultimaIntencion }
-semilla          sorteada por el anfitrión al iniciar la misión
+semilla          sorteada por el anfitrión al iniciar la misión; de ella salen eventos de diseño y vuelo
 briefing         { objetivos, tareas, riesgos, carpetas }
-porRol           vuelo | ciencia | potencia | comms → datos del taller de ese rol
+mision           null | { escenario, id, dificultad: 'facil'|'normal'|'dificil' }
+porRol           vuelo    { piezas, cohete, ruta }
+                 ciencia  { piezas }
+                 potencia { piezas }
+                 comms    { piezas, contingencias: [id] }      (máximo 3)
+                 piezas = { [piezaId]: { op, uso } }           (uso null si la pieza no tiene decisión de uso)
+                 + notas libres de editarPropio (cualquier otra clave)
+diseno           { revisiones, eventos: [{ id }], ultima }     eventos de diseño ya salidos; ultima =
+                 { tipo: 'evento', id } | { tipo: 'revision', nivel, barras } (resultado de la última revisión)
+firmas           { vuelo, ciencia, potencia, comms }           booleanos
+resultado        null | lo que devolvió simular() al lanzar
+vista            { paso }                                      pasos del vuelo ya revelados
 registro         eventos ya resueltos por el anfitrión (fases futuras)
 ```
 
-- **Los valores derivados no se guardan.** El panel global (masa total, batería, volumen…) se calcula a partir de `porRol` en cada cliente.
+- **Los valores derivados no se guardan.** Las barras, la ciencia, los riesgos y los efectos de los eventos de diseño se calculan en cada cliente con `resumen(estado, DATOS)` (`src/reglas/motor.js`). En el estado solo hay ids, opción y uso. La excepción es `resultado`: lo calcula el anfitrión una vez, al lanzar, y es igual para todos.
+- **Datos.** `protocolo.js` carga `src/datos/index.js` con un `import()` protegido: si falta o falla, el protocolo carga igual y las acciones de juego se rechazan con "Game data not loaded". `usarDatos(d)` o `ctx.datos` inyectan otros datos (las pruebas lo hacen).
+- **Fusión.** `unirse` solo copia el taller que trae un jugador si el del anfitrión está vacío (`tallerVacio`), y lo normaliza (`normalizarTaller`).
 - **Información "privada" de cada rol.** El estado se replica entero a todos: lo privado solo se oculta en la interfaz. En un juego cooperativo es suficiente, pero no es secreto de verdad.
 - **Desconexiones.** El rol de quien se desconecta queda reservado 20 s en el lobby y 90 s en la partida, para que una recarga no lo pierda.
 
@@ -76,11 +89,21 @@ registro         eventos ya resueltos por el anfitrión (fases futuras)
 | Acción | Fases | Regla |
 |---|---|---|
 | `unirse` | todas | Máximo 4 conectados. Recupera el rol y los datos de rol si no chocan |
-| `elegirRol` | lobby, briefing | El rol tiene que estar libre o con la reserva vencida. `null` lo suelta |
+| `elegirRol` | todas | El rol tiene que estar libre o con la reserva vencida. `null` lo suelta. Quien llega con la partida en curso toma un rol vacante; al cambiar de manos un rol se borra su firma |
 | `iniciarMision` | lobby | Todos los conectados tienen rol. Sortea `semilla` |
 | `marcarPizarra`, `abrirCarpeta` | briefing | — |
-| `editarPropio` | briefing, diseño | Solo escribe en el taller de tu rol. Máximo 8 KB por dato y 32 KB por taller |
-| `cambiarFase` | todas | Solo las transiciones de `TRANSICIONES` |
+| `editarPropio` | briefing, diseño, restricciones | Notas libres en el taller de tu rol. Máximo 8 KB por dato y 32 KB por taller. No puede usar las claves `piezas`, `cohete`, `ruta`, `contingencias` |
+| `elegirMision` `{escenario?, id?, dificultad?}` | briefing | Valida contra los datos. Cambiar `id` vacía piezas, cohete, ruta, contingencias, eventos de diseño, firmas y resultado (las notas se conservan) |
+| `montar` `{rol?, pieza, op?, uso?}`, `quitar` `{rol?, pieza}` | diseño, restricciones | La pieza es del rol y de la misión; `op` y `uso` dentro de la ficha. `rol` ajeno solo si está vacante (nadie conectado lo tiene, MEC-03). En restricciones, MEC-12. Borra las firmas |
+| `elegirCohete` `{id}`, `elegirRuta` `{id}` | diseño, restricciones | Rol vuelo (o vacante). De la lista de la misión; cohete con `cumpleDEC09`. `null` lo quita. Borra las firmas |
+| `contingencia` `{id, on}` | diseño, restricciones | Rol comms (o vacante). Máximo 3. Borra las firmas |
+| `pedirRevision` `{revision?}` | diseño, restricciones | Mientras queden eventos de diseño (1/2/3 por dificultad), sale uno en vez de la revisión (sorteado con la semilla, sin repetir). Después: exceso → diseño, tolerancia → restricciones, todo ok → verificación (MEC-10, MEC-11). `revision` (opcional) = `diseno.revisiones` esperado, evita dobles clics |
+| `firmar` `{rol?, on}` | verificación | Tu rol, o uno vacante. Para firmar, `verificar()` tiene que pasar |
+| `lanzar` | verificación | Comprobaciones y 4 firmas. El anfitrión calcula `resultado = simular()` y pasa a misión |
+| `avanzar` `{paso?}` | misión | `vista.paso + 1`; con todos los pasos a la vista pasa a informe. `paso` (opcional) evita dobles clics |
+| `cambiarFase` | todas | Solo las transiciones de `TRANSICIONES`, salvo las que tienen acción propia (`SOLO_POR_ACCION`: revisión, lanzamiento, avance). briefing → diseño exige misión `jugable`. informe → diseño (rediseñar) conserva diseño, semilla y eventos de diseño; borra firmas y resultado. → lobby vacía la partida |
+
+Los motivos de rechazo de estas acciones van en inglés: la interfaz los muestra tal cual.
 
 **Para añadir una acción** en una fase nueva, se agrega una entrada en `ACCIONES` con `fases`, `validar` y `aplicar`. La red no cambia.
 
@@ -124,7 +147,9 @@ El transporte real es un **relé sobre MQTT por WebSocket seguro**. No hay WebRT
 
 ## 10. Pruebas
 
-`pruebas/index.html` ejecuta dos suites una tras otra, 34 pruebas en total.
+`pruebas/index.html` ejecuta tres suites una tras otra, 55 pruebas en total.
+
+**Reglas** (`pruebas-reglas.js`, 21 pruebas, nombres con prefijo `Reglas ·`; `?solo=reglas`) sobre un fixture propio de datos inventados (no reales), inyectado con `usarDatos`: DEC-10, límite = mínimo entre aporte y tope, las seis barras, eventos de diseño por dificultad, rutas de la revisión, MEC-12, firmas, roles vacantes, validación de acciones, briefing, determinismo de `simular`, G-12 con barrido de semillas, las tres reglas de puntuación, rediseño desde el informe, estado vacío o roto y fusión de talleres.
 
 **Protocolo y sesión** (`pruebas.js`, 16 pruebas) sobre la red simulada `transporte-memoria.js`, con retrasos, descubrimiento asimétrico y salidas: arranque simultáneo, conflicto de rol, anfitrión que se va con una intención en vuelo, recarga de un jugador y del anfitrión, quinto jugador, versión distinta, iniciar misión sin todos los roles, talleres por rol, fusión de dos anfitriones, recién llegado que no reinicia una partida, anfitrión que vuelve antes de que se note su salida, vuelta tras un corte largo (jugador y anfitrión), intenciones malformadas e intenciones repetidas por red lenta.
 
