@@ -17,14 +17,14 @@
   background-size: 24px 78px; background-position: 0 20px; background-repeat: repeat-y; }
 
 /* Portada + índice */
-.sop-lado { flex: 0 0 196px; overflow-y: auto; padding: 14px 14px 18px; border-right: 2px dashed var(--lp-tenue); background: var(--lp-panel); }
-.sop-portada { border: 2px solid var(--lp-borde); border-left: 8px solid var(--rc); padding: 10px 10px 12px; background: var(--lp-panel-2); position: relative; }
-.sop-depto { font-weight: 700; font-size: var(--t-enfasis); line-height: 1.25; }
+.sop-lado { flex: 0 0 212px; min-width: 0; box-sizing: border-box; overflow-x: hidden; overflow-y: auto; padding: 14px 14px 18px; border-right: 2px dashed var(--lp-tenue); background: var(--lp-panel); }
+.sop-portada { min-width: 0; overflow-wrap: anywhere; hyphens: auto; border: 2px solid var(--lp-borde); border-left: 8px solid var(--rc); padding: 10px 10px 12px; background: var(--lp-panel-2); position: relative; }
+.sop-depto { font-weight: 700; font-size: var(--t-cuerpo); line-height: 1.25; }
 .sop-mision-r { font-size: var(--t-meta); color: var(--lp-tenue); margin-top: 6px; }
 .sop-anexo { margin-top: 8px; font-size: var(--t-meta); color: var(--lp-tenue); }
-.sop-indice-t { font-family: var(--lp-pixel); font-size: var(--tp-etq); margin: 16px 0 6px; color: var(--lp-tenue); }
+.sop-indice-t { font-family: var(--lp-pixel); font-size: var(--tp-etq); line-height: 1.5; overflow-wrap: anywhere; margin: 16px 0 6px; color: var(--lp-tenue); }
 .sop-indice { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
-.sop-ind { width: 100%; text-align: left; background: none; border: 0; border-left: 4px solid transparent; padding: 6px 8px; font: 600 var(--t-cuerpo)/1.3 var(--lp-ui); color: var(--lp-tinta); cursor: pointer; }
+.sop-ind { width: 100%; text-align: left; background: none; border: 0; border-left: 4px solid transparent; padding: 6px 8px; box-sizing: border-box; font: 600 var(--t-meta)/1.3 var(--lp-ui); color: var(--lp-tinta); cursor: pointer; overflow-wrap: anywhere; hyphens: auto; }
 .sop-ind:hover { background: var(--lp-sel); }
 .sop-ind.activa { background: var(--lp-sel); border-left-color: var(--rc); font-weight: 700; }
 .sop-ind:focus-visible { outline: 2px solid var(--lp-acento); outline-offset: -2px; }
