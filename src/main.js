@@ -12,6 +12,7 @@ import { MAX_JUGADORES, conectados, duenoDeRol } from './red/protocolo.js';
 import { T } from './textos.js';
 import { traducirMotivo } from './motivos.js';
 import { crearPantallas, LOGICO } from './pantallas/index.js';
+import { musica, efecto, volumen, ponerVolumen } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -113,6 +114,7 @@ $('btn-unirse').addEventListener('click', () => {
   const deUrl = location.hash.slice(1).toUpperCase();
   $('in-sala').value = /^[A-Z0-9]{4,8}$/.test(deUrl) ? deUrl : codigoAleatorio();
   dlgUnirse.showModal();
+  efecto('abrir');
   (nick ? $('in-sala') : $('in-nick')).focus();
 });
 $('cancelar-unirse').addEventListener('click', () => dlgUnirse.close());
@@ -129,8 +131,15 @@ $('btn-ajustes').addEventListener('click', () => {
   $('in-sensibilidad').value = ajustes.sensibilidad;
   $('in-calidad').value = ajustes.calidad;
   $('in-animar').checked = ajustes.animar;
+  $('in-musica').value = volumen().musica;
+  $('in-efectos').value = volumen().efectos;
   dlgAjustes.showModal();
+  efecto('abrir');
 });
+// Volumen: se aplica al mover el deslizador (los efectos suenan para oír el nivel).
+$('in-musica').addEventListener('input', (e) => ponerVolumen({ musica: Number(e.target.value) }));
+$('in-efectos').addEventListener('input', (e) => ponerVolumen({ efectos: Number(e.target.value) }));
+$('in-efectos').addEventListener('change', () => efecto('confirmar'));
 // El idioma se aplica al momento (el resto de ajustes al cerrar el diálogo).
 $('in-idioma').addEventListener('change', (e) => ponerIdioma(e.target.value));
 dlgAjustes.addEventListener('close', () => {
@@ -169,6 +178,7 @@ function entrarEnSala(cod) {
   pantalla = 'lobby';
   faseVista = null;
   avisar('');
+  efecto('entrar');
   actualizarTodo();
 }
 
@@ -228,7 +238,7 @@ $('iniciar').addEventListener('click', () => {
   actualizarTodo();
 });
 
-function avisar(t) { t = t ? traducirMotivo(t) : ''; $('aviso').textContent = t; ui.aviso(t); }
+function avisar(t) { t = t ? traducirMotivo(t) : ''; if (t) efecto('aviso'); $('aviso').textContent = t; ui.aviso(t); }
 function colorCss(c) { return '#' + c.toString(16).padStart(6, '0'); }
 
 // ---------- Vistas: dónde está la cámara ----------
@@ -270,6 +280,27 @@ function irA(v, inmediato = false) {
   actualizarTodo();
 }
 
+// ---------- Música y efectos ----------
+// Título (inicio y lobby) → tema tranquilo; briefing, diseño y restricciones → música de diseño;
+// verificación, misión e informe → música de lanzamiento. Un cambio de fase dentro del juego suena con un acorde.
+const PISTA_DE_FASE = { briefing: 'diseno', diseno: 'diseno', restricciones: 'diseno', verificacion: 'lanzamiento', mision: 'lanzamiento', informe: 'lanzamiento' };
+let faseSonada = null;
+function sonidoDeFase() {
+  const fase = enJuego() ? estado().fase : null;
+  musica(fase ? PISTA_DE_FASE[fase] ?? 'diseno' : 'titulo');
+  if (fase && faseSonada && fase !== faseSonada) efecto('fase');
+  faseSonada = fase;
+}
+musica('titulo');
+// Clic de interfaz en cualquier botón (los que hacen algo más suenan además con su propio efecto).
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest?.('button, .boton, .btn, [role="button"]');
+  if (b && !b.disabled) efecto('clic');
+}, true);
+// Tarjeta de evento de diseño: aviso al aparecer.
+new MutationObserver(() => { if (!$('modal-evento').classList.contains('oculto')) efecto('evento'); })
+  .observe($('modal-evento'), { attributes: true, attributeFilter: ['class'] });
+
 function actualizarTodo() {
   const e = estado();
   const rol = miRol();
@@ -279,6 +310,7 @@ function actualizarTodo() {
   if (pantalla === 'sala' && e && e.fase === 'lobby') pantalla = 'lobby';
   if (enJuego()) vistaAutomatica(e.fase);
   else { faseVista = null; lugar = 'briefing'; vista = 'sala'; pantallaLista = false; }
+  sonidoDeFase();
 
   $('inicio').classList.toggle('oculto', pantalla !== 'inicio');
   $('lobby').classList.toggle('oculto', pantalla !== 'lobby');
@@ -551,7 +583,7 @@ function clic(e) {
   // Mi consola: en la votación pone o quita el GO de mi departamento; fuera de ella lleva a la pantalla central.
   if (d.tipo === 'consola' && d.asiento === indiceRol(miRol())) {
     const r = miRol();
-    if (fase === 'verificacion') sesion?.intentar('firmar', { on: !estado()?.firmas?.[r] });
+    if (fase === 'verificacion') { const on = !estado()?.firmas?.[r]; efecto(on ? 'confirmar' : 'cerrar'); sesion?.intentar('firmar', { on }); }
     else irA('control');
   }
 }

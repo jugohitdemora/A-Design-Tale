@@ -3,6 +3,8 @@
 // guarda cuándo se vio por primera vez (c.ui.cine[clave]) y el CSS resta ese tiempo con la variable --ya (segundos transcurridos).
 // El sonido se sintetiza con WebAudio (sin archivos) y suena una sola vez por clave.
 
+import { contexto, salidaEfectos } from '../audio.js';
+
 const AHORA = () => performance.now() / 1000;
 
 // Segundos desde la primera vez que esta pantalla pidió la clave (0 la primera vez).
@@ -16,17 +18,19 @@ export function terminar(c, clave, dur) { (c.ui.cine ??= {})[clave] = AHORA() - 
 
 export const sinMovimiento = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-let ctx = null;
 const sonados = new Set();
+// Mismo contexto y volumen de efectos que el resto del juego (src/audio.js).
 function audio() {
-  try { ctx ??= new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); return ctx; } catch { return null; }
+  const a = contexto();
+  if (a && a.state === 'suspended') a.resume();
+  return a;
 }
 // Una nota: tipo de onda, frecuencia inicial y final, inicio y duración (s), volumen.
 function nota(a, { onda = 'square', f0, f1 = f0, t = 0, d = 0.2, v = 0.06 }) {
   const o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime + t;
   o.type = onda; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + d);
   g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + d + 0.05);
+  o.connect(g).connect(salidaEfectos()); o.start(t0); o.stop(t0 + d + 0.05);
 }
 const SONIDOS = {
   // Alarma de evento: dos tonos alternos, tres veces.

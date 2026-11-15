@@ -24,7 +24,7 @@
 //     copiado               confirmación tras copiar
 //   Estáticos de index.html (los rellena traducirIndex() por data-t / data-t-ph):
 //     unirseTitulo, nick, nickEj (placeholder), codigoSala, comparte, cancelar, entrar,
-//     ajustesTitulo, sensibilidad, calidad, calidadAlta, calidadBaja, animar, idioma, listo,
+//     ajustesTitulo, sensibilidad, calidad, calidadAlta, calidadBaja, volMusica, volEfectos, animar, idioma, listo,
 //     sala, copiar, tripulacionTitulo, tuRolTitulo, salir
 //   Además traducirIndex() rellena #lema, #jugadores, #txt-unirse y #btn-ajustes (desde config.js) y <title>, y deja
 //   el select #in-idioma con el idioma activo. Se ejecuta al cargar y en cada evento 'idioma'.
@@ -70,6 +70,8 @@ export const TI = textos({
     calidadAlta: 'Alta',
     calidadBaja: 'Baja (equipos lentos)',
     animar: 'Animar el fondo',
+    volMusica: 'Música',
+    volEfectos: 'Efectos de sonido',
     idioma: 'Idioma / Language',
     listo: 'Listo',
     sala: 'SALA',
@@ -116,6 +118,8 @@ export const TI = textos({
     calidadAlta: 'High',
     calidadBaja: 'Low (slow computers)',
     animar: 'Animate the background',
+    volMusica: 'Music',
+    volEfectos: 'Sound effects',
     idioma: 'Idioma / Language',
     listo: 'Done',
     sala: 'ROOM',

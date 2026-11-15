@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { textos, tx, idioma, depto } from '../i18n.js';
 import { T as TU } from '../textos.js';
 import { h, dinero, puedoPor, lista, redondear } from '../pantallas/ui.js';
+import { lanzamientoSonoro } from '../audio.js';
 
 const T = textos({
   es: {
@@ -630,8 +631,9 @@ const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const NPUFF = 72, NRESTOS = 26;
 
 // Estado de módulo: qué lanzamiento se está viendo (clave) y desde cuándo. Sobrevive a los repintados del host.
-const SL = { clave: null, t0: 0, hecho: false, falla: false, hud: null, timer: null, c: null };
-export function olvidarLanzamiento() { SL.clave = null; SL.hecho = false; clearTimeout(SL.timer); }
+const SL = { clave: null, t0: 0, hecho: false, falla: false, hud: null, timer: null, c: null, callar: null };
+const callar = () => { SL.callar?.(); SL.callar = null; };
+export function olvidarLanzamiento() { SL.clave = null; SL.hecho = false; clearTimeout(SL.timer); callar(); }
 const transcurrido = () => (performance.now() - SL.t0) / 1000;
 
 let L = null;
@@ -827,6 +829,8 @@ export function lanzamiento(c, opts) {
     SL.t0 = performance.now() - (opts.reproducir ? 0 : (falla ? LZ.CARTA : LZ.TOTAL) * 1000);
     clearTimeout(SL.timer);
     if (!falla && opts.reproducir) SL.timer = setTimeout(() => { SL.hecho = true; SL.c?.repintar?.(); }, LZ.TOTAL * 1000 + 60);
+    callar();
+    if (opts.reproducir) SL.callar = lanzamientoSonoro({ ign: LZ.IGN, despegue: LZ.DESPEGUE, total: LZ.TOTAL, boom: LZ.BOOM, falla: !!falla });
   }
   if (!falla && (SL.hecho || transcurrido() >= LZ.TOTAL)) { SL.hecho = true; return null; }
 
@@ -834,6 +838,7 @@ export function lanzamiento(c, opts) {
   const hud = { reloj: h('b', { class: 'lz-reloj' }, ''), alt: h('b', {}, ''), vel: h('b', {}, ''), estado: h('span', { class: 'lz-estado' }, '') };
   const saltar = () => {
     SL.t0 = Math.min(SL.t0, performance.now() - (SL.falla ? LZ.CARTA : LZ.TOTAL) * 1000);
+    callar();
     if (!SL.falla) { SL.hecho = true; clearTimeout(SL.timer); c.repintar?.(); }
     else { if (L && !L.error && L.canvas.isConnected) cuadro(Math.min(transcurrido(), tFinal()), true); actualizarHud(); }
   };

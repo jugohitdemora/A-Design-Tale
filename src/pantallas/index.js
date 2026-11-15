@@ -13,6 +13,7 @@ import { pantallaLaptop, alCargarApps } from './laptop.js';
 import { expedienteCompleto, expedienteMini } from './expediente.js';
 import { pantallaControl } from '../control/index.js';
 import { botonDesistir, capaDesistir } from './desistir.js';
+import { efectoAccion } from '../audio.js';
 
 export const FASES_JUEGO = ['briefing', 'diseno', 'restricciones', 'verificacion', 'mision', 'informe'];
 // Tamaño lógico de cada pantalla (px CSS antes de escalar sobre el 3D).
@@ -146,7 +147,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
   const c = {
     e: null, rol: null, id: null, nick: '', motor: null, D: null, mision: null, vista: 'sala',
     ui: { tab: 'taller', rolActivo: null, op: {}, cohete: null, app: null, overlay: null },
-    enviar: (tipo, payload) => { limpiarAviso(); ultimo?.intentar?.(tipo, payload ?? {}); },
+    enviar: (tipo, payload) => { limpiarAviso(); efectoAccion(tipo); ultimo?.intentar?.(tipo, payload ?? {}); },
     repintar: () => dibujar(true),
     irA: (v) => ultimo?.irA?.(v),
   };

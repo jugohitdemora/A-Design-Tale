@@ -33,7 +33,8 @@ Abre `http://localhost:8770/` en dos pestañas o en dos equipos con la **misma U
 - **Verificación:** votación GO / NO-GO en la pared de la sala de control (`src/control/gonogo.js`): comprobaciones, el GO de cada departamento y "Lanzar".
 - **Misión:** sala de control: fases reveladas una a una (todos ven lo mismo), eventos, datos recibidos y "Next".
 - **Informe:** informe de vuelo en la sala de control (`src/control/debrief.js`): veredicto, pasos, ciencia y misión real; hallazgos, causas y fuentes plegados. "Volver a volar" y "Nueva misión".
-- **Ajustes:** sensibilidad de la cámara, calidad gráfica y animación del fondo (se guardan en el navegador).
+- **Ajustes:** sensibilidad de la cámara, calidad gráfica, volumen de música y de efectos, y animación del fondo (se guardan en el navegador).
+- **Sonido** (`src/audio.js`): tres pistas con fundido cruzado según la fase. Título (inicio y lobby): `assets/musica/tema.mp3`, la más tranquila. Diseño (briefing, diseño, restricciones) y lanzamiento (verificación, misión, informe): compuestas con WebAudio en la misma tonalidad (re menor) y pulso (64 / 128 BPM); para usar un archivo basta con poner su ruta en `PISTAS`. Efectos sintetizados: clic de botones, abrir diálogos, entrar en la sala, montar y quitar piezas, firmas GO, contingencias, avisos, eventos de diseño, cambio de fase y el rugido del despegue (con explosión si falla). La música empieza con el primer clic (los navegadores no dejan sonar antes).
 - **Revisar pantallas sin red:** `http://localhost:8770/?simulado=1` usa datos y reglas falsos (`src/pantallas/_simulado.js`) y una barra morada para saltar de fase o de rol. Parámetros: `fase` (`briefing`, `diseno`, `restricciones`, `verificacion`, `mision`, `informe`), `rol` (`vuelo`, `ciencia`, `potencia`, `comms`), `jugadores` (1 a 4; los roles sin jugador quedan vacantes).
 
 ## Flujo dentro del 3D (versión actual)
