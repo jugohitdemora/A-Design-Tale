@@ -7,7 +7,7 @@ import { textos, tx, depto } from '../i18n.js';
 const T = textos({
   es: {
     clasificado: 'EXPEDIENTE DE MISIÓN', cerrar: 'Cerrar', destino: 'Destino', escenario: 'Escenario', presupuesto: 'Presupuesto',
-    referencia: 'Misión real de referencia', coheteReal: 'Cohete real', objetivos: 'Objetivos (marca los que cumplirán)',
+    referencia: 'Misión real de referencia', objetivos: 'Objetivos (marca los que cumplirán)',
     objetivosLect: 'Objetivos comprometidos', prioritario: 'PRIORITARIO', puntos: (n) => `${n} pts`,
     ambicion: 'Ambición', eventos: (n) => `${n} evento${n === 1 ? '' : 's'} de diseño`, niveles: { facil: 'BAJA', normal: 'MEDIA', dificil: 'ALTA' },
     regla: 'Puntuación', elegir: 'Elegir esta misión', elegida: 'MISIÓN ASIGNADA', preparacion: 'EN PREPARACIÓN',
@@ -21,7 +21,7 @@ const T = textos({
   },
   en: {
     clasificado: 'MISSION DOSSIER', cerrar: 'Close', destino: 'Target', escenario: 'Scenario', presupuesto: 'Budget',
-    referencia: 'Real reference mission', coheteReal: 'Real rocket', objetivos: 'Goals (tick the ones to complete)',
+    referencia: 'Real reference mission', objetivos: 'Goals (tick the ones to complete)',
     objetivosLect: 'Committed goals', prioritario: 'PRIORITY', puntos: (n) => `${n} pts`,
     ambicion: 'Ambition', eventos: (n) => `${n} design event${n === 1 ? '' : 's'}`, niveles: { facil: 'LOW', normal: 'MEDIUM', dificil: 'HIGH' },
     regla: 'Scoring', elegir: 'Choose this mission', elegida: 'MISSION ASSIGNED', preparacion: 'IN PREPARATION',
@@ -105,7 +105,6 @@ export function expedienteCompleto(c, id, { cerrar }) {
       h('dl', { class: 'exp-datos' },
         h('dt', {}, T.presupuesto), h('dd', {}, dinero(valorNum(m.presupuesto))),
         h('dt', {}, T.referencia), h('dd', {}, [m.referencia?.mision, m.referencia?.agencia && `(${m.referencia.agencia})`].filter(Boolean).join(' ') || '-'),
-        m.referencia?.coheteReal ? [h('dt', {}, T.coheteReal), h('dd', {}, m.referencia.coheteReal)] : null,
         esc && tx(esc.regla) ? [h('dt', {}, T.regla), h('dd', {}, tx(esc.regla))] : null),
       h('h3', {}, enBriefing ? T.objetivos : T.objetivosLect),
       objs,
