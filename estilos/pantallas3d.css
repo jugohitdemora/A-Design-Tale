@@ -141,16 +141,11 @@ body.en-juego:has(#pantalla:not(.oculto)) .exp-mini { opacity: 0.92; }
 body.en-proyector #franja .f-vistas { visibility: hidden; }
 
 /* Pista de cada carpeta de misión */
-.carpeta-pista { max-width: 160px; font: 11px/1.3 var(--ui); color: #2b2210; background: #f6ecd0; border: 1px solid #c99a3a; border-radius: 4px;
+.carpeta-pista { font: 11px/1.3 var(--ui); color: #2b2210; background: #f6ecd0; border: 1px solid #c99a3a; border-radius: 4px;
   padding: 3px 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); pointer-events: none; white-space: nowrap; }
-.carpeta-pista b { display: block; font-size: 12px; }
-.carpeta-pista small { display: block; font-size: 10px; color: #6b5a30; }
-/* La pista completa aparece al pasar el puntero: así las tres etiquetas no se pisan vistas de lado. */
-.carpeta-pista span { display: none; }
-.carpeta-pista.encima { white-space: normal; width: 160px; padding: 5px 8px; border-color: #ffd76a; position: relative; z-index: 2; }
-.carpeta-pista.encima span { display: block; margin-top: 2px; }
+.carpeta-pista b { font-size: 12px; }
+.carpeta-pista.encima { border-color: #ffd76a; background: #fff6dc; }
 @media (max-width: 700px) {
   #proyector-ui { flex-direction: column; gap: 8px; bottom: 16px; text-align: center; }
-  .carpeta-pista { font-size: 10px; }
-  .carpeta-pista.encima { width: 120px; }
+  .carpeta-pista b { font-size: 11px; }
 }

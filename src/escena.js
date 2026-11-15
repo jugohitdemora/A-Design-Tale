@@ -542,7 +542,7 @@ function dibujarFoto(g, x, y, w, h, fuente, figura, variante, desfase) {
   g.restore();
 }
 
-// info: { cuerpo (dato bilingüe), cuerpoTexto, pista, sello }.
+// info: { cuerpo (dato bilingüe), cuerpoTexto, nombre, sello }.
 function vestirCarpeta(c, id, info, indice) {
   const clave = claveCuerpo(info.cuerpo);
   const variante = hash(id) % 3, desfase = hash(id + 'x') % 997;
@@ -568,11 +568,9 @@ function vestirCarpeta(c, id, info, indice) {
     c.textura.needsUpdate = true;
   };
   pintar();
-  // Siempre: nombre de la misión y destino. Al pasar el puntero: la pista completa.
+  // Solo el nombre de la misión: la descripción está en el expediente (clic en la carpeta).
   const b = document.createElement('b'); b.textContent = info.nombre ?? id;
-  const d = document.createElement('small'); d.textContent = info.cuerpoTexto ?? '';
-  const p = document.createElement('span'); p.textContent = info.pista ?? '';
-  c.pista.element.replaceChildren(b, d, p);
+  c.pista.element.replaceChildren(b);
 }
 
 // Hologramas de los tres escenarios. Material semitransparente marcado como holo.

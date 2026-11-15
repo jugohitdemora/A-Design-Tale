@@ -404,7 +404,7 @@ function vestirCarpetas() {
   sala.vestirCarpetas((id) => {
     const m = D.MISIONES?.[id];
     if (!m) return null;
-    return { cuerpo: m.cuerpo, cuerpoTexto: tx(m.cuerpo), nombre: tx(m.nombre), pista: tx(m.brief ?? m.apertura ?? ''), sello: TI.clasificado };
+    return { cuerpo: m.cuerpo, cuerpoTexto: tx(m.cuerpo), nombre: tx(m.nombre), sello: TI.clasificado };
   });
 }
 
