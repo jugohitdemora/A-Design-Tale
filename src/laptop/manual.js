@@ -185,7 +185,7 @@ const FLUJO = [
   ['tabla', [['Fase', 'Phase'], ['Qué ocurre', 'What happens'], ['Quién actúa', 'Who acts']], [
     [['1. Briefing', '1. Briefing'], ['Se lee el expediente, se marcan los objetivos (cada objetivo secundario marcado sube la dificultad) y todos pulsan "Listo".', 'Read the dossier, tick the goals (each secondary goal ticked raises difficulty) and everyone presses "Ready".'], ['Todos', 'Everyone']],
     [['2. Diseño', '2. Design'], ['Cada departamento monta las piezas de su taller. Al pedir revisión puede saltar un evento de diseño (dinero, límites o cambio de prioridad) en vez de la revisión.', 'Each department mounts the parts of its workshop. When you request a review, a design event (money, limits or a change of priority) may fire instead of the review.'], ['Cada departamento', 'Each department']],
-    [['3. Restricciones', '3. Constraints'], ['Solo si alguna barra está entre 100 % y 120 %: se puede quitar, bajar horas de uso o cambiar a algo que no suba ninguna barra. No se puede añadir ni comprar contingencias.', 'Only if some bar is between 100 % and 120 %: you may remove, lower usage hours or swap to something that raises no bar. You cannot add parts or buy contingencies.'], ['Cada departamento', 'Each department']],
+    [['3. Restricciones', '3. Constraints'], ['Solo si alguna barra está entre 100 % y 120 %: se puede quitar, bajar horas de uso o cambiar a algo que no suba ninguna barra. No se puede añadir ni comprar contingencias.', 'Only if some bar is between 100 % and 120 %: you may remove parts, lower usage hours or swap to something that raises no bar. You cannot add parts or buy contingencies.'], ['Cada departamento', 'Each department']],
     [['4. Verificación', '4. Verification'], ['Lista de comprobaciones. Cada departamento firma en la sala de control (votación GO / NO-GO). Un cambio de diseño borra las firmas. Con las cuatro firmas se lanza.', 'Checklist. Each department signs in the control room (GO / NO-GO poll). A design change clears the signatures. With all four signatures, launch.'], ['Todos firman', 'Everyone signs']],
     [['5. Misión', '5. Mission'], ['Sala de control: el vuelo se revela fase a fase. Si sale un evento que una contingencia comprada mitiga, su departamento la activa.', 'Control room: the flight is revealed phase by phase. If an event appears that a bought contingency mitigates, its department activates it.'], ['Todos (cada uno activa sus contingencias)', 'Everyone (each department activates its own contingencies)']],
     [['6. Informe', '6. Report'], ['Sala de control: veredicto (total / parcial / fallida), causas, hallazgos y datos perdidos. Se puede rediseñar y volver a lanzar.', 'Control room: verdict (full / partial / failed), causes, findings and lost data. You can redesign and launch again.'], ['Todos', 'Everyone']],
@@ -320,7 +320,7 @@ const MAN = {
     ],
     procedimiento: [
       ['h', 'A. Briefing: leer los objetivos', 'A. Briefing: reading the goals'],
-      ['paso', 'Abre el Expediente y la tabla de objetivos (sección 5): cada objetivo tiene una pregunta, un valor y un dato real de apoyo. Léelos para deducir qué hay que medir.', 'Open the Dossier and the goals table (section 5): each goal has a question, a value and a real supporting fact. Read them to work out what has to be measured.'],
+      ['paso', 'Abre el Expediente y la tabla de objetivos (sección 5): cada objetivo tiene una pregunta y un valor. Léelos para deducir qué hay que medir.', 'Open the Dossier and the goals table (section 5): each goal has a question and a value. Read them to work out what has to be measured.'],
       ['paso', 'El objetivo prioritario no se puede quitar y cuenta siempre. Cada secundario que marcas sube la dificultad (más eventos de diseño) pero también la nota posible.', 'The priority goal cannot be dropped and always counts. Each secondary goal you tick raises the difficulty (more design events) but also the possible score.'],
       ['h', 'B. Diseño: cubrir objetivos', 'B. Design: covering goals'],
       ['paso', 'Monta primero los instrumentos que respondan a la pregunta del objetivo prioritario. Un instrumento puede servir a varios objetivos a la vez: son los más rentables.', 'Mount first the instruments that answer the priority goal question. One instrument can serve several goals at once: those are the most profitable.'],
@@ -347,9 +347,9 @@ const MAN = {
       ['f', 'datosGen', 'Mismo cálculo que hace Comunicaciones: tu tasa es su problema.', 'Same calculation Comms makes: your rate is their problem.'],
       ['f', 'cienFin', 'f_S viene del vuelo (× 0,75 por fase no crítica fallada, × 0,5 por golpe crítico, factores de eventos). La fracción de datos significa que la ciencia que no cabe en el enlace se pierde.', 'f_S comes from the flight (× 0.75 per failed non-critical phase, × 0.5 per critical hit, event factors). The data fraction means science that does not fit in the link is lost.'],
       ['tabla', [['Regla de puntuación', 'Scoring rule'], ['Cómo cuenta tu ciencia', 'How your science counts']], [
-        [['datos (Órbita)', 'datos (Orbit)'], ['Ciencia × fracción de vida útil conseguida: importa cuánto dura la misión.', 'Science × fraction of useful life achieved: how long the mission lasts matters.']],
-        [['cadena (Aterrizaje)', 'cadena (Landing)'], ['Si la nave se pierde, cero. Si no, ciencia × fracción de días de superficie.', 'If the spacecraft is lost, zero. Otherwise science × fraction of surface days.']],
-        [['oculto (Exploración)', 'oculto (Exploration)'], ['(Σ valor × conseguido + valor de hallazgos) / kWh por día gastados.', '(Σ value × achieved + value of findings) / kWh per day spent.']],
+        [['Retorno de datos (órbita)', 'Data return (orbit)'], ['Ciencia × fracción de vida útil conseguida: importa cuánto dura la misión.', 'Science × fraction of useful life achieved: how long the mission lasts matters.']],
+        [['Cadena de supervivencia (aterrizaje)', 'Survival chain (landing)'], ['Si la nave se pierde, cero. Si no, ciencia × fracción de días de superficie.', 'If the spacecraft is lost, zero. Otherwise science × fraction of surface days.']],
+        [['Descubrimiento (exploración)', 'Discovery (exploration)'], ['(Σ valor × conseguido + valor de hallazgos) / kWh por día gastados.', '(Σ value × achieved + value of findings) / kWh per day spent.']],
       ]],
     ],
   },
@@ -377,7 +377,7 @@ const MAN = {
     ],
     procedimiento: [
       ['h', 'A. Leer la misión', 'A. Reading the mission'],
-      ['paso', 'Anota dos datos de la misión (sección 5): las horas de sombra por ciclo y si la misión pone un tope a la potencia. El límite real es el menor entre lo que dan tus paneles y ese tope.', 'Note two mission data (section 5): the shadow hours per cycle and whether the mission caps power. The real limit is the lower of what your panels give and that cap.'],
+      ['paso', 'Anota dos datos de la misión (sección 5): las horas de sombra por ciclo y si la misión pone un tope a la potencia. El límite real es el menor entre lo que dan tus paneles y ese tope.', 'Note two pieces of mission data (section 5): the shadow hours per cycle and whether the mission caps power. The real limit is the lower of what your panels give and that cap.'],
       ['h', 'B. Dimensionar los paneles contra la carga', 'B. Sizing the solar array against the load'],
       ['paso', 'Suma la carga: los vatios de todas las piezas encendidas (uso > 0) de los cuatro departamentos. Pide a cada uno su cifra y mira la barra de potencia en Estado.', 'Calculate the load: the watts of all switched-on parts (usage > 0) of the four departments. Ask each one for their figure and look at the power bar in Status.'],
       ['f', 'pPan', 'La barra de potencia cuenta los vatios nominales de cada pieza encendida, sin importar cuántas horas al día.', 'The power bar counts the rated watts of each switched-on part, regardless of how many hours a day.'],
@@ -386,7 +386,7 @@ const MAN = {
       ['h', 'C. Batería para la sombra (eclipse)', 'C. Battery for the shadow (eclipse)'],
       ['paso', 'En la sombra los paneles no generan. Las piezas marcadas ☾ siguen encendidas y tiran de la batería. Suma sus vatios y multiplícalos por las horas de sombra.', 'In the shadow the panels generate nothing. Parts marked ☾ stay on and draw from the battery. Add their watts and multiply by the shadow hours.'],
       ['f', 'eBatProc', 'Solo cuentan las piezas con ☾ y con uso > 0 (por ejemplo antena, control de actitud y magnetómetro). La capacidad de baterías es la suma de lo que aporta cada una.', 'Only parts with ☾ and usage > 0 count (for example antenna, attitude control and magnetometer). Battery capacity is the sum of what each one provides.'],
-      ['check', 'Ejemplo con valores de juego (≈): antena 330 W + actitud 330 W + magnetómetro 5 W = 665 W. Con 1,5 h de sombra → 665 × 1,5 ≈ 998 Wh. Una batería estándar de 1 000 Wh llega justo; con una opción más ligera de actitud (120 W) bajaría a ≈ 683 Wh.', 'Example with game values (≈): antenna 330 W + attitude 330 W + magnetometer 5 W = 665 W. With 1.5 h of shadow → 665 × 1.5 ≈ 998 Wh. A standard 1,000 Wh battery just makes it. With a lighter attitude option (120 W) it drops to ≈ 683 Wh.'],
+      ['check', 'Ejemplo genérico (no son cifras de ninguna pieza): tres equipos con ☾ de 200 W, 100 W y 5 W suman 305 W. Con 2 h de sombra: 305 × 2 = 610 Wh de batería.', 'Generic example (not the figures of any part): three ☾ units of 200 W, 100 W and 5 W add up to 305 W. With 2 h of shadow: 305 × 2 = 610 Wh of battery.'],
       ['nota', 'Más horas de sombra = más batería. Una misión lunar con 5 h de sombra necesita mucha más batería que una órbita de 1,5 h.', 'More shadow hours = more battery. A lunar mission with 5 h of shadow needs much more battery than a 1.5 h orbit.'],
       ['h', 'D. Térmica y polvo', 'D. Thermal and dust'],
       ['paso', 'Radiadores y aislamiento multicapa (MLI) consumen masa y a veces vatios, pero algunos suben la probabilidad de alguna fase.', 'Radiators and multi-layer insulation (MLI) use mass and sometimes watts, but some raise the probability of a phase.'],
@@ -431,17 +431,17 @@ const MAN = {
       ['h', 'A. Leer la misión', 'A. Reading the mission'],
       ['paso', 'Anota las horas de enlace al día y los días previstos de la misión (sección 5). El enlace solo está abierto esas horas.', 'Note the link hours per day and the planned mission days (section 5). The link is only open for those hours.'],
       ['h', 'B. Presupuesto de datos: generado contra bajada', 'B. Data budget: generated against downlink'],
-      ['paso', 'Calcula los datos generados cada día. Cada instrumento (y cada pieza con tasa) genera tasa × horas de uso × 0,45 MB.', 'Compute the data generated each day. Each instrument (and every part with a rate) generates rate × usage hours × 0.45 MB.'],
+      ['paso', 'Calcula los datos generados cada día. Cada instrumento (y cada pieza con tasa) genera tasa × horas de uso × 0,45 MB.', 'Calculate the data generated each day. Each instrument (and every part with a rate) generates rate × usage hours × 0.45 MB.'],
       ['paso', 'Calcula la capacidad de bajada: la suma de los kbps de tus antenas × horas de enlace × 0,45.', 'Compute the downlink capacity: the sum of your antennas kbps × link hours × 0.45.'],
       ['f', 'genCap', 'Las dos están en MB por día. La barra "Enlace de datos" es generado / capacidad.', 'Both are in MB per day. The "Data link" bar is generated / capacity.'],
-      ['check', 'Ejemplo (≈ valores de juego): antena de 800 kbps y 8 h de enlace → 800 × 8 × 0,45 = 2 880 MB/día. Un instrumento de cámaras a 800 kbps usado 6 h genera 800 × 6 × 0,45 = 2 160 MB/día: solo con él ya usas el 75 % del enlace.', 'Example (≈ game values): an 800 kbps antenna and 8 h of link → 800 × 8 × 0.45 = 2,880 MB/day. A camera instrument at 800 kbps used 6 h generates 800 × 6 × 0.45 = 2,160 MB/day: by itself it uses 75 % of the link.'],
+      ['check', 'Ejemplo genérico (no son cifras de ninguna pieza): una antena de 400 kbps y 8 h de enlace → 400 × 8 × 0,45 = 1 440 MB/día. Un instrumento de 300 kbps usado 6 h genera 300 × 6 × 0,45 = 810 MB/día: solo con él ya usas el 56 % del enlace.', 'Generic example (not the figures of any part): a 400 kbps antenna and 8 h of link → 400 × 8 × 0.45 = 1,440 MB/day. A 300 kbps instrument used 6 h generates 300 × 6 × 0.45 = 810 MB/day: on its own it already uses 56 % of the link.'],
       ['h', 'C. Qué pasa con los datos que no caben', 'C. What happens to data that does not fit'],
       ['paso', 'En el diseño: si generado > capacidad, la barra pasa de 100 %. Hasta 120 % pasa a Restricciones; por encima, vuelves a Diseño. Para firmar tiene que quedar en ≤ 100 %.', 'In design: if generated > capacity, the bar goes above 100 %. Up to 120 % goes to Constraints. Above that, you return to Design. To sign it must be at ≤ 100 %.'],
       ['paso', 'En el vuelo: la ciencia se multiplica por min(1, capacidad / generado). Lo que no cabe en el enlace se pierde y el informe lo cuenta en MB.', 'In flight: science is multiplied by min(1, capacity / generated). What does not fit in the link is lost and the report counts it in MB.'],
       ['cuidado', 'Aunque la tolerancia de 20 % te deje pasar la revisión, con ratio 1,2 solo bajarías el 83 % de los datos (1 / 1,2): perderías el 17 % de la ciencia.', 'Even if the 20 % tolerance lets you pass the review, with ratio 1.2 you would only send 83 % of the data (1 / 1.2): you would lose 17 % of the science.'],
       ['h', 'D. Elegir la antena, el computador y el resto', 'D. Choosing the antenna, computer and the rest'],
-      ['paso', 'Compara las opciones de antena: kbps de bajada contra masa, vatios y precio. La antena tiene ☾: sus vatios entran en el cálculo de batería de Energía.', 'Compare antenna options: downlink kbps against mass, watts and price. The antenna has ☾: its watts enter Power battery calculation.'],
-      ['paso', 'El computador de a bordo suele subir la probabilidad de la fase de puesta en marcha; el almacenamiento, la navegación y el segmento de tierra aparecen en la ficha técnica si tu misión los ofrece.', 'The onboard computer usually raises the probability of the commissioning phase. Storage, navigation and the ground segment appear in the datasheet if your mission offers them.'],
+      ['paso', 'Compara las opciones de antena: kbps de bajada contra masa, vatios y precio. La antena tiene ☾: sus vatios entran en el cálculo de batería de Energía.', 'Compare antenna options: downlink kbps against mass, watts and price. The antenna has ☾: its watts enter the battery calculation of Power.'],
+      ['paso', 'El computador de a bordo y el almacenamiento, la navegación y el segmento de tierra aparecen en la ficha técnica si tu misión los ofrece.', 'The onboard computer and storage, navigation and the ground segment appear in the datasheet if your mission offers them.'],
       ['paso', 'Negocia con Ciencia: sus horas por encima de lo que pide el objetivo no suman ciencia pero sí datos. Pídeles que las bajen antes de comprar una antena mayor.', 'Negotiate with Science: their hours above what the goal asks for add no science but do add data. Ask them to lower those before buying a bigger antenna.'],
       ['h', 'E. Contingencias y verificación', 'E. Contingencies and verification'],
       ['nota', 'Las contingencias compradas de todo el equipo (máx. 3) quedan guardadas en un único registro, el tuyo. Cada departamento compra y activa las suyas; tú coordinas que el equipo no pase de 3.', 'The contingencies bought by the whole team (max. 3) are stored in one single record, yours. Each department buys and activates its own. You make sure the team does not exceed 3.'],
@@ -485,7 +485,7 @@ const GLOSARIO = [
   ['Tolerancia', 'Tolerance', 'Hasta un 20 % por encima del límite: pasa la revisión, pero obliga a recortar en Restricciones.', 'Up to 20 % above the limit: passes the review but forces cuts in Constraints.', null],
   ['Contingencia', 'Contingency', 'Seguro comprado en el diseño que anula un evento negativo concreto durante la misión.', 'Insurance bought in design that cancels one specific negative event during the mission.', null],
   ['Margen', 'Margin', 'Diferencia entre el límite y lo usado. Los ingenieros reales dejan margen para lo que aún no saben.', 'Difference between the limit and what is used. Real engineers keep margin for what they do not yet know.', null],
-  ['Valor de juego (≈)', 'Game value (≈)', 'Cifra que el equipo ha estimado porque no hay dato real. Los datos reales muestran su fuente.', 'A figure the team estimated because there is no real data. Real data shows its source.', null],
+  ['Valor de juego (≈)', 'Game value (≈)', 'Cifra estimada porque no hay dato público. Si viene de una ecuación, pasa el cursor sobre ella para ver el cálculo; los datos reales muestran su fuente.', 'A figure estimated because there is no public data. If it comes from an equation, hover over it to see the calculation; real data shows its source.', null],
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -703,8 +703,7 @@ function extrasCiencia(c, m) {
   if (objs.length) {
     out.push(h('h3', { class: 'sop-h2' }, T.objetivos));
     out.push(tabla(T.cabObj, objs.map((o) => [
-      h('span', {}, h('b', {}, tx(o.nombre)), sel && !o.prioridad && !sel.includes(o.id) ? h('span', { class: 'sop-cero' }, ' (✕)') : null,
-        tx(o.datoReal ?? o.pista) ? h('div', { class: 'sop-dato' }, tx(o.datoReal ?? o.pista)) : null),
+      h('span', {}, h('b', {}, tx(o.nombre)), sel && !o.prioridad && !sel.includes(o.id) ? h('span', { class: 'sop-cero' }, ' (✕)') : null),
       o.prioridad ? T.si : T.no, redondear(numero(c, o.valor ?? 1), 0),
     ])));
   }

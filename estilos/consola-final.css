@@ -49,7 +49,9 @@
 .dbf-pasos li.mal i { background: var(--f-rojo); }
 .dbf-pasos li.omitida i { background: var(--f-tenue); }
 .dbf-pasos small { color: var(--f-ambar); font-size: var(--t-meta); }
-.dbf-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--e-3); }
+.dbf-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--e-3); }
+.dbf-col { min-height: 0; display: flex; flex-direction: column; gap: var(--e-3); overflow: auto; }
+.dbf-col > .dbf-grupo { flex: none; }
 .dbf-cols .dbf-grupo { overflow: auto; }
 .dbf-objetivos, .dbf-reales, .dbf-fuentes, .dbf-causas { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e-2); font-size: var(--t-cuerpo); flex: none; }
 .dbf-causas, .dbf-reales { list-style: disc; padding-left: 18px; }
@@ -68,3 +70,20 @@
 .dbf-det ul, .dbf-det ol { max-height: 150px; overflow: auto; }
 .dbf-fuentes a { color: var(--f-cian); }
 .dbf-botones { flex: none; display: flex; justify-content: flex-end; align-items: center; gap: var(--e-4); }
+
+/* Por qué ha pasado: un punto por línea (causa, y debajo decisión → qué lo evitaba), con etiqueta de mala suerte o decisión.
+   Sin colores de bueno/malo: la suerte va en cian (dato) y la decisión en ámbar (algo que cambiar). */
+.dbf-porque { overflow: auto; }
+.dbf-puntos { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--e-2); font-size: var(--t-cuerpo); }
+.dbf-punto { display: grid; grid-template-columns: 146px 1fr; column-gap: var(--e-3); padding: var(--e-2) var(--e-3); background: #0a1a2e; border-left: 4px solid var(--f-tenue); border-radius: 3px; line-height: 1.35; }
+.dbf-punto.suerte { border-left-color: var(--f-cian); } .dbf-punto.decision { border-left-color: var(--f-ambar); }
+.dbf-punto.info { grid-template-columns: 1fr; color: var(--f-tenue); font-size: var(--t-meta); }
+.dbf-etq { font: var(--tp-etq)/1.5 var(--lp-pixel); text-transform: uppercase; align-self: start; padding-top: 3px; }
+.dbf-punto.suerte .dbf-etq { color: var(--f-cian); } .dbf-punto.decision .dbf-etq { color: var(--f-ambar); }
+.dbf-causa { grid-column: 2; } .dbf-punto.info .dbf-causa { grid-column: 1; }
+.dbf-punto small { grid-column: 2; color: var(--f-tenue); font-size: var(--t-meta); line-height: 1.3; }
+/* La línea de pasos va en una sola fila bajo el veredicto: deja el alto a los puntos de "por qué ha pasado". */
+.dbf-tiempo { flex: none; flex-direction: row; align-items: center; gap: var(--e-4); padding: var(--e-2) var(--e-4); }
+.dbf-tiempo h3 { flex: none; }
+.dbf-tiempo .dbf-pasos { flex: 1; min-width: 0; padding-bottom: 0; }
+.dbf-punto { padding: var(--e-1) var(--e-3); }

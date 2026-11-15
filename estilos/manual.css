@@ -62,7 +62,7 @@
 .sop-f { margin: 10px 0 10px 46px; padding: 8px 12px; background: var(--lp-panel-2); border: 2px dashed var(--lp-borde); max-width: 84ch; }
 .sop-f code { display: block; white-space: pre-wrap; font: 700 var(--t-meta)/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace; color: var(--lp-tinta); margin-bottom: 4px; overflow-wrap: anywhere; }
 .sop-f .sop-f-t { display: block; font-size: var(--t-meta); color: var(--lp-tenue); }
-.sop-tex.blq { display: block; margin: 2px 0 6px; overflow-x: auto; overflow-y: hidden; padding: 2px 0; font-size: 1.1em; color: var(--lp-tinta); }
+.sop-tex.blq { display: block; margin: 2px 0 6px; overflow-x: auto; overflow-y: hidden; padding: 2px 0; font-size: 1em; color: var(--lp-tinta); }
 .sop-tex.blq .katex-display { margin: 0.2em 0; }
 .sop-tex .katex { font-size: 1.1em; }
 .sop-tex code { font: 700 var(--t-meta)/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }

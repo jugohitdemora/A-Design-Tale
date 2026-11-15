@@ -5,8 +5,6 @@
 // lanzamiento: el mes se elige en meses desde el inicio del diseño (misión.reloj.inicio), de 0 a mesMax. Las condiciones de cada
 //   mes (clima del sitio de lanzamiento, clima espacial, conjunción, ΔV) salen de src/datos/calendario.js (contrato-reloj.md §2).
 //   dvMin: ΔV de la mejor geometría (km/s); faseEspacio: fase que sufre el clima espacial.
-// ventana: COMPATIBILIDAD con la interfaz anterior (planificador.js lee P.ventana.dias/optimo/anchura/k/maxFactor/dvMin).
-//   Curva plana (k = 0) con `dias` = mesMax. Se quita cuando la interfaz use `lanzamiento` (lote 2).
 // sitios: { id, nombre, lat, lon (grados) | x, y (fracción de la figura), inc (órbitas: inclinación en grados),
 //   efectos: { fases: [{ fase, dp }], ciencia: { objetivoId: factor }, horasSombra }, hechos, nota, src }.
 //   hechos: datos físicos para la tarjeta del sitio (sin efectos numéricos):
@@ -17,34 +15,33 @@
 // capas: capas de datos del mapa. `real: true` = imagen de archivo de una fuente oficial (src/datos/mapas.js);
 //   `calculo` = se calcula en el navegador (geometría real o aproximación marcada como JUEGO).
 const N = (es, en) => ({ es, en });
-// Lanzamiento + shim de la ventana antigua.
+// Lanzamiento: mes máximo, ΔV de la mejor geometría y fases afectadas.
 const lanz = (mesMax, dvMin, fase, faseEspacio, nota) => ({
   lanzamiento: { mesMax, dvMin, fase, faseEspacio, nota },
-  ventana: { dias: mesMax, optimo: 0, anchura: 1, k: 0, maxFactor: 1.6, dvMin, fase, nota },
 });
 
 export const PLANIFICACION = {
   'MER-3': {
     tipo: 'orbita',
     ...lanz(36, 4.1, 'cruise', 'cruise',
-      N('El ΔV para ir a Mercurio cambia con la posición de la Tierra y Mercurio (periodo sinódico de 115,88 días). BepiColombo despegó el 20 de octubre de 2018.',
-        'The ΔV to reach Mercury changes with where Earth and Mercury are (synodic period 115.88 days). BepiColombo lifted off on 20 October 2018.')),
+      N('El ΔV para ir a Mercurio cambia con la posición de la Tierra y Mercurio (periodo sinódico de 115,88 días).',
+        'The ΔV to reach Mercury changes with where Earth and Mercury are (synodic period 115.88 days).')),
     mapa: { base: 'mercurio-color', proyeccion: 'equirectangular' },
     capas: [
       { id: 'color', nombre: N('Color (MESSENGER MDIS)', 'Colour (MESSENGER MDIS)'), real: true, mapa: 'mercurio-color' },
       { id: 'elevacion', nombre: N('Elevación (MESSENGER DEM)', 'Elevation (MESSENGER DEM)'), real: true, mapa: 'mercurio-elevacion' },
       { id: 'azufre', nombre: N('Índice de azufre (≈ juego)', 'Sulfur index (≈ game)'), calculo: 'azufre', unidad: '% S',
-        nota: N('MESSENGER (XRS) midió más azufre del esperado, hasta ~4 % en peso. Este mapa es una APROXIMACIÓN de juego, no el mapa real.',
-          'MESSENGER (XRS) measured more sulfur than expected, up to ~4 wt%. This map is a GAME APPROXIMATION, not the real map.') },
-      { id: 'hielo', nombre: N('Hielo en cráteres polares (≈ juego)', 'Ice in polar craters (≈ game)'), calculo: 'hielo',
-        nota: N('El radar de Arecibo y MESSENGER vieron hielo en cráteres en sombra de los polos. Ubicación aproximada.',
-          'Arecibo radar and MESSENGER saw ice in shadowed polar craters. Approximate location.') },
+        nota: N('Estimación de juego del azufre en superficie (cifra de referencia: hasta ~4 % en peso, espectrómetro de rayos X de MESSENGER). No es el mapa real.',
+          'Game estimate of surface sulfur (reference figure: up to ~4 wt%, MESSENGER X-ray spectrometer). It is not the real map.') },
+      { id: 'hielo', nombre: N('Sombra permanente en cráteres polares (≈ juego)', 'Permanent shadow in polar craters (≈ game)'), calculo: 'hielo',
+        nota: N('Zonas de cráteres polares que no reciben luz solar directa (datos de radar de Arecibo y de MESSENGER). Ubicación aproximada.',
+          'Polar crater areas that get no direct sunlight (Arecibo radar and MESSENGER data). Approximate location.') },
     ],
     sitios: [
-      { id: 'MER-ORB-POL', inc: 90, nombre: N('Polar 480 × 1500 km (como MPO)', 'Polar 480 × 1,500 km (like MPO)'),
+      { id: 'MER-ORB-POL', inc: 90, nombre: N('Polar 480 × 1500 km', 'Polar 480 × 1,500 km'),
         efectos: { fases: [], ciencia: {}, horasSombra: 1.5 }, hechos: { periapsis: 480, apoapsis: 1500 },
-        nota: N('Inclinación 90°: pasa sobre los dos polos en cada vuelta. Es la órbita del MPO de BepiColombo.', 'Inclination 90°: it passes over both poles on every orbit. It is the BepiColombo MPO orbit.'), src: 'BC-01' },
-      { id: 'MER-ORB-ELI', inc: 82.5, nombre: N('Muy elíptica 200 × 15 000 km (como MESSENGER)', 'Highly elliptical 200 × 15,000 km (like MESSENGER)'),
+        nota: N('Inclinación 90°: pasa sobre los dos polos en cada vuelta.', 'Inclination 90°: it passes over both poles on every orbit.'), src: 'BC-01' },
+      { id: 'MER-ORB-ELI', inc: 82.5, nombre: N('Muy elíptica 200 × 15 000 km', 'Highly elliptical 200 × 15,000 km'),
         efectos: { fases: [{ fase: 'science', dp: 0.03 }], ciencia: { 'MER-3-O1': 0.8, 'MER-3-O3': 0.85 }, horasSombra: 1 }, hechos: { periapsis: 200, apoapsis: 15000 },
         nota: N('Periapsis a 200 km sobre el hemisferio norte; la mayor parte de la órbita está a miles de km del planeta caliente.', 'Periapsis 200 km above the northern hemisphere; most of the orbit is thousands of km from the hot planet.') },
       { id: 'MER-ORB-ECU', inc: 8, nombre: N('Ecuatorial baja 400 km', 'Low equatorial 400 km'),
@@ -56,8 +53,8 @@ export const PLANIFICACION = {
   'LUN-3': {
     tipo: 'aterrizaje',
     ...lanz(24, 3.9, 'transit', 'transit',
-      N('Un lugar de la Luna tiene un amanecer cada 29,5 días; después hay unos 14 días de luz. Blue Ghost 1 despegó el 15 de enero de 2025 y se posó el 2 de marzo.',
-        'A place on the Moon gets a sunrise every 29.5 days, then about 14 days of daylight. Blue Ghost 1 lifted off on 15 January 2025 and landed on 2 March.')),
+      N('Un lugar de la Luna tiene un amanecer cada 29,5 días; después hay unos 14 días de luz.',
+        'A place on the Moon gets a sunrise every 29.5 days, then about 14 days of daylight.')),
     mapa: { base: 'luna-color', proyeccion: 'equirectangular' },
     capas: [
       { id: 'color', nombre: N('Color (LROC WAC)', 'Colour (LROC WAC)'), real: true, mapa: 'luna-color' },
@@ -70,12 +67,12 @@ export const PLANIFICACION = {
           'Height change between neighbouring pixels of the LOLA map.') },
     ],
     sitios: [
-      { id: 'LUN-S-CRI', lat: 18.56, lon: 61.81, nombre: N('Mare Crisium (Blue Ghost)', 'Mare Crisium (Blue Ghost)'),
+      { id: 'LUN-S-CRI', lat: 18.56, lon: 61.81, nombre: N('Mare Crisium', 'Mare Crisium'),
         efectos: { fases: [{ fase: 'landing', dp: 0.03 }], ciencia: {} }, hechos: { elevTierra: 26.6, pendiente: 2 },
-        nota: N('Llanura de lava en la cara visible. Blue Ghost 1 se posó aquí en 2025.', 'Lava plain on the near side. Blue Ghost 1 landed here in 2025.'), src: 'BG-02' },
+        nota: N('Llanura de lava en la cara visible, a 18,6° N.', 'Lava plain on the near side, at 18.6° N.'), src: 'BG-02' },
       { id: 'LUN-S-TRA', lat: 8.5, lon: 31.4, nombre: N('Mare Tranquillitatis', 'Mare Tranquillitatis'),
         efectos: { fases: [{ fase: 'landing', dp: 0.03 }], ciencia: { 'LUN-3-OX': 0.9 } }, hechos: { elevTierra: 57.6, pendiente: 2 },
-        nota: N('Llanura de lava en la cara visible, cerca del sitio del Apolo 11.', 'Lava plain on the near side, near the Apollo 11 site.') },
+        nota: N('Llanura de lava en la cara visible, a 8,5° N.', 'Lava plain on the near side, at 8.5° N.') },
       { id: 'LUN-S-TYC', lat: -43.3, lon: -11.2, nombre: N('Cráter Tycho', 'Tycho crater'),
         efectos: { fases: [{ fase: 'landing', dp: -0.08 }], ciencia: { 'LUN-3-O1': 0.9 } }, hechos: { elevTierra: 45.6, pendiente: 15 },
         nota: N('Cráter de ~108 millones de años y 85 km de diámetro, con bloques y paredes en terrazas.', 'Crater about 108 million years old and 85 km wide, with boulders and terraced walls.') },
@@ -91,26 +88,26 @@ export const PLANIFICACION = {
   'COM-1': {
     tipo: 'region',
     ...lanz(48, 3.4, 'cruise', 'cruise',
-      N('Rosetta despegó el 2 de marzo de 2004 y llegó el 6 de agosto de 2014, un año antes del perihelio del 13 de agosto de 2015. El próximo perihelio de 67P es el 10 de abril de 2028; el periodo es de 6,44 años.',
-        'Rosetta lifted off on 2 March 2004 and arrived on 6 August 2014, a year before the perihelion of 13 August 2015. The next 67P perihelion is on 10 April 2028; the period is 6.44 years.')),
+      N('El cometa 67P pasó por el perihelio el 13 de agosto de 2015; el próximo es el 10 de abril de 2028. El periodo es de 6,44 años y la actividad del cometa cambia con la distancia al Sol.',
+        'Comet 67P passed perihelion on 13 August 2015; the next one is on 10 April 2028. The period is 6.44 years and the activity of the comet changes with its distance from the Sun.')),
     mapa: { base: 'cometa-67p', proyeccion: 'figura' },
     capas: [
       { id: 'color', nombre: N('Imagen OSIRIS (29/07/2014)', 'OSIRIS image (29 Jul 2014)'), real: true, mapa: 'cometa-67p' },
       { id: 'gas', nombre: N('Actividad de gas (≈ juego)', 'Gas activity (≈ game)'), calculo: 'gas',
-        nota: N('Rosetta vio los primeros chorros en el "cuello" (región Hapi). Mapa aproximado de juego.',
-          'Rosetta saw the first jets at the "neck" (Hapi region). Approximate game map.') },
+        nota: N('Modelo aproximado de juego de la actividad de gas por región del núcleo.',
+          'Approximate game model of gas activity by region of the nucleus.') },
       { id: 'polvo', nombre: N('Riesgo de polvo (≈ juego)', 'Dust hazard (≈ game)'), calculo: 'polvo' },
     ],
     sitios: [
       { id: 'COM-R-HAP', x: 0.52, y: 0.33, nombre: N('Hapi (cuello), órbita de 10 km', 'Hapi (neck), 10 km orbit'),
         efectos: { fases: [{ fase: 'coma', dp: -0.05 }], ciencia: {} }, hechos: { distancia: 10 },
-        nota: N('Rosetta vio aquí los primeros chorros de gas y polvo en 2014.', 'Rosetta saw the first jets of gas and dust here in 2014.'), src: 'CM-01' },
+        nota: N('Región del cuello, donde se unen los dos lóbulos.', 'Region of the neck, where the two lobes join.'), src: 'CM-01' },
       { id: 'COM-R-IMH', x: 0.68, y: 0.56, nombre: N('Imhotep (cuerpo), órbita de 30 km', 'Imhotep (body), 30 km orbit'),
         efectos: { fases: [{ fase: 'coma', dp: 0.02 }], ciencia: { 'COM-1-O1': 0.85, 'COM-1-O3': 0.8 } }, hechos: { distancia: 30 },
         nota: N('Llanura grande y lisa en el lóbulo mayor.', 'Large, smooth plain on the big lobe.') },
       { id: 'COM-R-MAA', x: 0.37, y: 0.31, nombre: N("Ma'at (cabeza), órbita de 20 km", "Ma'at (head), 20 km orbit"),
         efectos: { fases: [], ciencia: { 'COM-1-O1': 0.95, 'COM-1-O2': 0.9 } }, hechos: { distancia: 20 },
-        nota: N('Región del lóbulo menor, cerca del sitio elegido para Philae (Agilkia).', 'Region on the small lobe, near the site chosen for Philae (Agilkia).') },
+        nota: N('Región del lóbulo menor (la cabeza).', 'Region on the small lobe (the head).') },
     ],
   },
 };

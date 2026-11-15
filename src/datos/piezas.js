@@ -124,7 +124,7 @@ const LISTA = [
     ['MER-3'], { uso: USO(10) },
     [opc('A', ['Modelo de vuelo', 'Flight model'], { referencia: true, masa: A(10.8, 'BC-14'), potencia: A(24, 'BC-14'), volumen: VOL(10.8, 47), tasa: J(5, 'GAP-P14'), precio: I(5.4, 'PRECIO') },
       P(['Mapas de elementos más finos', 'Finer element maps'], ['Detector muy sensible', 'Very sensitive detector']),
-      P(['Solo ve la capa superficial', 'Sees only the surface skin'], ['Depende del brillo del Sol', 'Depends on solar activity']))]),
+      P(['Solo ve la capa superficial', 'Sees only the surface skin'], ['Depende del brillo del Sol', 'Depends on how bright the Sun is']))]),
   pz('ME-16', 'ciencia', 'instrumento', ['MERTIS', 'MERTIS'],
     ['Instrumento infrarrojo térmico para rocas y calor.', 'Thermal infrared instrument for rocks and heat.'],
     ['Mide el calor infrarrojo (7-14 µm) que emiten las rocas: sus bandas dicen qué minerales son y su brillo, qué temperatura tienen. Responde: ¿de qué minerales está hecha la superficie y cuánto calor guarda?',

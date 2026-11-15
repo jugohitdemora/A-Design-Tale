@@ -27,7 +27,7 @@ export const EVENTOS_DISENO = {
   'ED-MER-OBJ': ed('ED-MER-OBJ', '±', 'Ice becomes the top goal', 'The science board now wants water ice in polar craters first.', { prioridad: 'MER-3-O3' },
     'ESA lists the ice in polar craters as science question 7 for BepiColombo; MESSENGER saw water ice under dark material there.', 'BC-04'),
   'ED-MER-LIM': ed('ED-MER-LIM', '-', 'Hotter panels', 'The panels must stay cooler, so less power is allowed. Requalifying them takes 2 months.', { limite: { recurso: 'potencia', factor: 0.9 }, meses: 2 },
-    'The MPO panels are kept below 180 degrees C, with 30% GaAs cells and 70% mirrors.', 'BC-02'),
+    'The MPO solar panels are kept below 180 degrees C so the cells keep working.', 'BC-02'),
 
   // ---------------- LUN-3 (presupuesto de ~185 M USD) ----------------
   'ED-LUN-IN': ed('ED-LUN-IN', '+', 'An investor joins', 'A company adds money to the lunar mission.', { presupuesto: 20 },
@@ -139,7 +139,7 @@ const ES_ED = {
   'ED-MER-IN': ['Entra un inversionista', 'Una agencia socia aporta dinero a la misión.', 'Evento genérico del juego (F-06b). Paralelo real: BepiColombo es una misión conjunta de la ESA y la JAXA, con dos orbitadores lanzados juntos.'],
   'ED-MER-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce. Buscar otro socio lleva 1 mes.', VIPER],
   'ED-MER-OBJ': ['El hielo pasa a ser la meta principal', 'Ahora el comité científico quiere primero el hielo de agua en los cráteres polares.', 'La ESA incluye el hielo en los cráteres polares como la pregunta científica 7 de BepiColombo; MESSENGER vio hielo de agua bajo material oscuro allí.'],
-  'ED-MER-LIM': ['Paneles más calientes', 'Los paneles deben mantenerse más fríos, así que se permite menos potencia. Volver a calificarlos lleva 2 meses.', 'Los paneles del MPO se mantienen por debajo de 180 grados C, con 30 % de celdas de GaAs y 70 % de espejos.'],
+  'ED-MER-LIM': ['Paneles más calientes', 'Los paneles deben mantenerse más fríos, así que se permite menos potencia. Volver a calificarlos lleva 2 meses.', 'Los paneles solares del MPO se mantienen por debajo de 180 grados C para que las celdas sigan funcionando.'],
   'ED-LUN-IN': ['Entra un inversionista', 'Una empresa aporta dinero a la misión lunar.', 'Evento genérico del juego (F-06b). Paralelo real: la NASA pagó cerca de 44 M USD por las 10 cargas de Blue Ghost, además del envío.'],
   'ED-LUN-OUT': ['Se va un inversionista', 'Un socio se retira y el presupuesto se reduce. Buscar otro socio lleva 1 mes.', VIPER],
   'ED-LUN-OBJ': ['Primero la exosfera', 'Ahora los científicos quieren medir primero la atmósfera tenue de la Luna.', 'LEXI midió perfiles de densidad de la exosfera lunar con el mismo resplandor de rayos X que usó para la magnetosfera.'],

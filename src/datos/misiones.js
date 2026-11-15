@@ -64,7 +64,7 @@ const MER_3 = {
   piezas: ['ME-05', 'ME-02', 'JG-MER-ACT', 'ME-13', 'ME-14', 'ME-15', 'ME-16', 'ME-17', 'ME-18', 'ME-20', 'ME-21', 'ME-23', 'ME-24', 'ME-25', 'ME-28', 'JG-MER-OBC'],
   cohetes: ['falconheavy', 'vulcan', 'atlasv'],
   rutas: [
-    { id: 'MER-3-R1', nombre: E('Nine flybys (like BepiColombo)'), dias: V(2557, 'BC-01'), masa: V(1400, 'BC-01'), precio: J(60), efecto: { fase: 'cruise', dp: -0.02 } },
+    { id: 'MER-3-R1', nombre: E('Nine flybys'), dias: V(2557, 'BC-01'), masa: V(1400, 'BC-01'), precio: J(60), efecto: { fase: 'cruise', dp: -0.02 } },
     { id: 'MER-3-R2', nombre: E('Fewer flybys, more fuel'), dias: I(1800), masa: J(1900), precio: J(25), efecto: { fase: 'cruise', dp: 0.03 } },
   ],
   fases: [
@@ -112,7 +112,7 @@ const LUN_3 = {
   piezas: ['LE-04', 'LE-05', 'JG-LUN-GNC', 'LE-10', 'LE-11', 'LE-12', 'LE-13', 'LE-14', 'LE-15', 'LE-16', 'LE-17', 'LE-18'],
   cohetes: ['falcon9', 'falconheavy', 'vulcan'],
   rutas: [
-    { id: 'LUN-3-R1', nombre: E('Phasing orbits (45 days, like Blue Ghost)'), dias: V(45, 'BG-01'), masa: J(900), precio: I(0), efecto: { fase: 'transit', dp: 0.03 } },
+    { id: 'LUN-3-R1', nombre: E('Phasing orbits (45 days)'), dias: V(45, 'BG-01'), masa: J(900), precio: I(0), efecto: { fase: 'transit', dp: 0.03 } },
     { id: 'LUN-3-R2', nombre: E('Direct flight (a few days)'), dias: J(5), masa: J(1300), precio: I(0), efecto: { fase: 'landing', dp: -0.03 } },
   ],
   fases: [
@@ -158,7 +158,7 @@ const COM_1 = {
   piezas: ['CE-04', 'CE-05', 'CE-06', 'JG-COM-ACT', 'CE-08', 'CE-09', 'CE-10', 'CE-11', 'CE-16', 'CE-12', 'CE-14', 'CE-24', 'CE-26', 'CE-28', 'JG-COM-MLI', 'CE-29', 'CE-31', 'JG-COM-OBC'],
   cohetes: ['falconheavy', 'vulcan', 'atlasv'],
   rutas: [
-    { id: 'COM-1-R1', nombre: E('Four gravity assists (like Rosetta, 10 years)'), dias: V(3652, 'CM-01'), masa: V(1670, 'CM-01'), precio: J(70), efecto: { fase: 'cruise', dp: -0.02 } },
+    { id: 'COM-1-R1', nombre: E('Four gravity assists (10 years)'), dias: V(3652, 'CM-01'), masa: V(1670, 'CM-01'), precio: J(70), efecto: { fase: 'cruise', dp: -0.02 } },
     { id: 'COM-1-R2', nombre: E('Fewer assists, more fuel'), dias: I(2200), masa: J(2300), precio: J(30), efecto: { fase: 'cruise', dp: 0.03 } },
   ],
   fases: [
@@ -293,7 +293,7 @@ const ES_MIS = {
       'MER-3-O2': ['Averiguar por qué Mercurio es tan denso', 'BepiColombo responderá las preguntas 2 y 3 de la ESA: por qué el planeta es tan denso y si su núcleo es líquido.'],
       'MER-3-O3': ['Buscar hielo de agua en los cráteres polares', 'MESSENGER vio hielo de agua bajo material oscuro en cráteres de los polos.'],
     },
-    rutas: { 'MER-3-R1': 'Nueve sobrevuelos (como BepiColombo)', 'MER-3-R2': 'Menos sobrevuelos, más combustible' },
+    rutas: { 'MER-3-R1': 'Nueve sobrevuelos', 'MER-3-R2': 'Menos sobrevuelos, más combustible' },
     fases: { launch: 'Lanzamiento', cruise: 'Crucero y sobrevuelos', insertion: 'Inserción en órbita', commissioning: 'Puesta en servicio', science: 'Órbita científica' },
     verificacion: { 'MER-3-V1': 'Hay una antena montada para enviar los datos a casa.', 'MER-3-V2': 'La meta prioritaria tiene al menos la mitad de su cobertura.' },
   },
@@ -307,7 +307,7 @@ const ES_MIS = {
       'LUN-3-O3': ['Medir la atmósfera tenue de la Luna', 'LEXI midió perfiles de densidad de la exosfera lunar con el mismo resplandor de rayos X.'],
       'LUN-3-OX': ['Sondear el suelo con campos eléctricos y magnéticos', 'LMS encontró una conductividad del suelo muy parecida a la del sitio del Apolo 12.'],
     },
-    rutas: { 'LUN-3-R1': 'Órbitas de espera (45 días, como Blue Ghost)', 'LUN-3-R2': 'Vuelo directo (unos pocos días)' },
+    rutas: { 'LUN-3-R1': 'Órbitas de espera (45 días)', 'LUN-3-R2': 'Vuelo directo (unos pocos días)' },
     fases: { launch: 'Lanzamiento', transit: 'Crucero a la Luna', orbit: 'Órbita lunar', landing: 'Aterrizaje', surface: 'Operaciones en superficie' },
     verificacion: { 'LUN-3-V1': 'LEXI está montado.', 'LUN-3-V2': 'Los sensores de aterrizaje están montados.' },
   },
@@ -320,7 +320,7 @@ const ES_MIS = {
       'COM-1-O2': ['Ver cómo despierta el cometa cerca del Sol', 'Rosetta se quedó con el cometa durante su punto más cercano al Sol, el 13 de agosto de 2015.'],
       'COM-1-O3': ['Cazar gases inesperados', 'ROSINA encontró oxígeno molecular, algo inédito en un cometa, en más de 3.000 muestras.'],
     },
-    rutas: { 'COM-1-R1': 'Cuatro asistencias gravitatorias (como Rosetta, 10 años)', 'COM-1-R2': 'Menos asistencias, más combustible' },
+    rutas: { 'COM-1-R1': 'Cuatro asistencias gravitatorias (10 años)', 'COM-1-R2': 'Menos asistencias, más combustible' },
     fases: { launch: 'Lanzamiento', cruise: 'Crucero y asistencias gravitatorias', wake: 'Despertar de la hibernación', arrival: 'Encuentro con el cometa', coma: 'Ciencia en la coma' },
     verificacion: { 'COM-1-V1': 'ROSINA está montado.', 'COM-1-V2': 'La meta prioritaria tiene al menos la mitad de su cobertura.' },
     oculto: {

@@ -236,7 +236,7 @@ function avanzarReloj(e, meses, D) {
   e.fase = 'informe';
   return true;
 }
-// Mes de lanzamiento pedido en planificarRuta: `mes`, o `ventana` (nombre antiguo que aún manda la interfaz).
+// Mes de lanzamiento pedido en planificarRuta: `mes`, o `ventana` (nombre antiguo, solo en mensajes entrantes).
 const mesPedido = (p) => (p.mes !== undefined ? p.mes : p.ventana);
 
 // Reparto de carpetas (lo hace el anfitrión con la semilla: todos ven la misma mesa).
@@ -679,7 +679,6 @@ export const ACCIONES = {
       const mes = mesPedido(p);
       if (mes !== undefined) e.ruta.mes = mes;
       if (p.sitio !== undefined) e.ruta.sitio = p.sitio;
-      e.ruta.ventana = e.ruta.mes; // COMPATIBILIDAD: la interfaz del lote 1 lee ruta.ventana; se quita en el lote 2
       borrarFirmas(e);
     },
   },
@@ -784,7 +783,6 @@ function completarEstado(e) {
   if (e.briefing.reparto === undefined) e.briefing.reparto = null;
   // v4: ruta.ventana (día de una ventana) → ruta.mes (mes desde el inicio). Un día viejo no equivale a un mes: se vacía.
   if (!e.ruta || typeof e.ruta !== 'object') e.ruta = rutaInicial();
-  // (v4 guarda ruta.ventana = ruta.mes como copia para la interfaz antigua.)
   if (!Number.isInteger(e.ruta.mes)) { e.ruta.mes = null; delete e.ruta.ventana; }
   if (e.ruta.sitio === undefined) e.ruta.sitio = null;
   if (!e.reloj || typeof e.reloj !== 'object' || !Number.isInteger(e.reloj.mes) || e.reloj.mes < 0) e.reloj = relojInicial();

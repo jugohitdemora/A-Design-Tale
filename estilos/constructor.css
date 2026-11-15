@@ -301,3 +301,10 @@
 .kb-barra.presu .kb-barra-num { color: var(--lp-tinta); }
 .kb-presu-det { display: flex; flex-wrap: wrap; gap: 0 var(--e-3); margin-top: 2px; font-size: var(--t-meta); color: var(--lp-tenue); }
 .kb-presu-det b { color: var(--lp-tinta); }
+
+/* Presupuesto destacado: la cifra "usado / límite" nunca se recorta, baja a su propia línea si no cabe. */
+.kb-barra.presu .kb-barra-cab { flex-wrap: wrap; }
+.kb-barra.presu .kb-barra-num { white-space: normal; font-weight: 700; margin-left: auto; }
+
+/* Pestañas de departamento: el nombre completo se lee (se parte en líneas en vez de recortarse). */
+.kb-deptos .boton { flex: 1 1 auto; white-space: normal; text-overflow: clip; overflow-wrap: anywhere; font-family: var(--lp-ui); font-weight: 700; padding: 4px 6px; }

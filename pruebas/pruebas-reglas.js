@@ -7,8 +7,10 @@
 import { estadoInicial, reducir, usarDatos, tallerInicial, tallerVacio, FASES, VERSION_PROTOCOLO } from '../src/red/protocolo.js';
 import { num, resumen, cumple, verificar, puedeEnRestricciones, motivoRestriccion, estadoDeRatio, relojDe, planDe } from '../src/reglas/motor.js';
 import { simular } from '../src/reglas/despliegue.js';
-import { explicarCausas } from '../src/reglas/explicar.js';
+import { explicarCausas, explicarPuntos } from '../src/reglas/explicar.js';
 import { prng, derivar, barajar } from '../src/reglas/azar.js';
+import { mesesPlanificables, condicionesDeMes, etiquetaMes } from '../src/control/planificador.js';
+import { PLANIFICACION as PLAN_REAL } from '../src/datos/planificacion.js';
 
 const afirmar = (c, msg) => { if (!c) throw new Error(msg); };
 const casi = (a, b, msg) => afirmar(Math.abs(a - b) < 1e-6, `${msg}: ${a} ≠ ${b}`);
@@ -758,9 +760,9 @@ const pruebas = {
     rechaza(e, 'jvuelo', 'planificarRuta', { mes: e.reloj.mes - 1 }, /already passed/);
     ok(e, 'jvuelo', 'planificarRuta', { mes: e.reloj.mes }); // en verificación ya no falta ninguna revisión
     afirmar(verificar(e, D).pasa, `replanificado: ${JSON.stringify(verificar(e, D).comprobaciones.filter((c) => !c.ok))}`);
-    // `ventana` (nombre antiguo) vale como mes.
+    // `ventana` (nombre antiguo) solo se acepta en mensajes entrantes: vale como mes y ya no deja copia en la ruta.
     ok(e, 'jvuelo', 'planificarRuta', { ventana: e.reloj.mes + 1 });
-    afirmar(e.ruta.mes === e.reloj.mes + 1 && e.ruta.ventana === e.ruta.mes, 'alias ventana (y copia para la interfaz antigua)');
+    afirmar(e.ruta.mes === e.reloj.mes + 1 && !('ventana' in e.ruta), 'alias ventana sin copia para la interfaz antigua');
   },
 
   'Reglas · reloj: recorte de los inversores por umbrales, bono por plazo y orden de los eventos'() {
@@ -887,6 +889,61 @@ const pruebas = {
     const suerte = explicarCausas({ mision: 'T-ORB', fallos: [{ codigo: 'fase', fase: 'F1', critica: true, p: 0.95, tirada: 0.97, desglose: [], decision: null, evitar: 'suerte' }] }, D, 'en');
     afirmar(/bad luck: the phase had a 5 % chance/.test(suerte[0]), suerte[0]);
     afirmar(explicarCausas(null, D, 'en').length === 1, 'resultado vacío');
+  },
+
+  'Reglas · planificador: el selector de mes sigue el reloj, el plazo y lo que valida el protocolo'() {
+    const e = montarBueno(enDiseno('T-CAL', 'facil')); // plazo 8, mesMax 30, reloj 0
+    const info = mesesPlanificables(e, D);
+    afirmar(info.meses.length === 31 && info.meses[0].mes === 0 && info.meses[30].mes === 30, `meses ${info.meses.length}`);
+    afirmar(info.meses[0].esAhora && info.meses[0].motivo === 'pronto' && info.meses[1].motivo === 'pronto' && info.meses[2].motivo === null, 'las 2 primeras son demasiado pronto');
+    afirmar(info.meses.filter((x) => x.esPlazo).map((x) => x.mes).join() === '8', 'marca del plazo');
+    afirmar(info.limite === 20 && info.meses[20].motivo === null && info.meses[21].motivo === 'tarde', `límite ${info.limite}: los inversores no esperan más de 12 meses`);
+    // Lo mismo que valida planificarRuta.
+    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 1 }, /Too soon/);
+    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 21 }, /will not wait/);
+    ok(e, 'jvuelo', 'planificarRuta', { mes: 20 });
+    afirmar(mesesPlanificables(e, D).meses.find((x) => x.mes === 20).esElegido && !mesesPlanificables(e, D).perdida, 'mes elegido');
+    // El reloj avanza: ya no se ofrecen los meses pasados y el elegido se pierde.
+    e.reloj.mes = 21;
+    e.ruta.mes = 5;
+    const despues = mesesPlanificables(e, D);
+    afirmar(despues.perdida === true && despues.meses[0].mes === 21 && despues.meses.every((x) => !x.esElegido), 'plan perdido: hay que elegir otro mes');
+    e.reloj.mes = 3; e.fase = 'verificacion';
+    afirmar(mesesPlanificables(e, D).minimo === 3 && mesesPlanificables(e, D).meses[0].motivo === null, 'en verificación no falta ninguna revisión');
+    afirmar(mesesPlanificables(estadoInicial(), D) === null, 'sin misión no hay selector');
+  },
+
+  'Reglas · planificador: condiciones del mes como datos (clima, conjunción, ΔV, retraso) y nombres de mes'() {
+    const e = montarBueno(enDiseno('T-CAL', 'facil'));
+    const k = condicionesDeMes(e, D, 6); // mes 6: 10 días de conjunción y ΔV × 1,2 en el fixture
+    afirmar(k.cond.diasConj === 10 && Math.abs(k.factor - 1.2) < 1e-9 && Math.abs(k.dv - 3.6) < 1e-9, `mes 6: ${JSON.stringify(k.cond)}`);
+    afirmar(k.sitioLanz.nombre.en === 'Test Cape' && typeof k.hayCohete === 'boolean' && k.retraso === 0 && k.recorte === 0, 'sitio y plazo');
+    const tarde = condicionesDeMes(e, D, 11); // plazo 8: 3 meses de retraso, −4 % × (3 − 1)
+    afirmar(tarde.retraso === 3 && Math.abs(tarde.recorte - 0.08) < 1e-9, `retraso ${tarde.retraso}, recorte ${tarde.recorte}`);
+    afirmar(Object.keys(k).every((x) => !/optim|mejor|best/i.test(x)), 'ninguna condición se califica como la mejor');
+    afirmar(etiquetaMes(D, 0, { lang: 'en' }) === 'Jan 2027' && etiquetaMes(D, 17, { lang: 'es' }) === 'jun 2028' && etiquetaMes(D, 17, { lang: 'es', larga: true }) === 'junio 2028'
+      && etiquetaMes(D, 12, { lang: 'en', larga: true }) === 'January 2028', 'nombres de mes');
+  },
+
+  'Reglas · planificación: sin la ventana antigua y sin nombres de misiones reales en sitios y órbitas'() {
+    for (const [id, P] of Object.entries(PLAN_REAL)) {
+      afirmar(P.lanzamiento && !('ventana' in P), `${id}: lanzamiento sí, ventana no`);
+      for (const s of P.sitios) {
+        const t = [s.nombre?.es, s.nombre?.en, s.nota?.es, s.nota?.en].join(' ');
+        afirmar(!/como MPO|like MPO|MESSENGER\)|Blue Ghost|Philae|Agilkia|BepiColombo|Rosetta|Apolo 11|Apollo 11/.test(t), `${s.id} nombra la misión real: ${t}`);
+      }
+    }
+  },
+
+  'Reglas · explicarPuntos separa la mala suerte de las decisiones'() {
+    const fallos = [
+      { codigo: 'fase', fase: 'F1', critica: true, p: 0.95, tirada: 0.97, desglose: [], decision: null, evitar: 'suerte' },
+      { codigo: 'datos', fase: null, mb: 12, evitar: 'enlace' },
+    ];
+    const pts = explicarPuntos({ mision: 'T-ORB', fallos }, D, 'en');
+    afirmar(pts[0].tipo === 'suerte' && pts[1].tipo === 'decision', `tipos ${pts.map((p) => p.tipo)}`);
+    afirmar(pts.every((p) => p.texto === [p.causa, p.decision, p.evitar].filter((x) => x != null).join(' → ')), 'texto = causa → decisión → evitar');
+    afirmar(explicarCausas({ mision: 'T-ORB', fallos }, D, 'es').length === 2 && explicarPuntos(null, D, 'es')[0].tipo === 'info', 'es / vacío');
   },
 
   'Reglas · reloj: un estado v3 se completa (ruta.ventana → ruta.mes, reloj)'() {

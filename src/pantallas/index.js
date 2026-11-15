@@ -128,7 +128,7 @@ async function cargarModulos(simulado) {
     return { motor: { resumen: s.resumen, cumple: s.cumple, verificar: s.verificar, num: s.num }, D: s.DATOS };
   }
   const [motor, datos] = await Promise.all([import('../reglas/motor.js'), import('../datos/index.js')]);
-  return { motor: { resumen: motor.resumen, cumple: motor.cumple, verificar: motor.verificar, num: motor.num, estadoDeRatio: motor.estadoDeRatio, factorVentana: motor.factorVentana }, D: datos.DATOS };
+  return { motor: { resumen: motor.resumen, cumple: motor.cumple, verificar: motor.verificar, num: motor.num, estadoDeRatio: motor.estadoDeRatio }, D: datos.DATOS };
 }
 
 let appManual = null;
@@ -209,7 +209,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
       h('h3', {}, h('span', { class: 'signo s' + (ev.signo === '+' ? 'p' : ev.signo === '-' ? 'n' : 'x') }, ev.signo ?? '?'), ' ', en(ev.nombre) || id),
       en(ev.texto) ? h('p', {}, en(ev.texto)) : null,
       cambios.length ? h('p', {}, h('b', {}, T.changed + ': '), cambios.join(' · ')) : null,
-      en(ev.casoReal) ? h('p', { class: 'caso' }, h('b', {}, T.realCase + ': '), en(ev.casoReal), ev.src ? h('sup', { class: 'src' }, ev.src) : null) : null,
+      en(ev.casoReal) ? h('p', { class: 'caso' }, h('b', {}, T.realCase + ': '), en(ev.casoReal)) : null,
       h('div', { class: 'acciones' }, h('button', { class: 'boton primario', type: 'button', onclick: () => { cola.shift(); dibujarModal(); } }, T.close))));
   }
 

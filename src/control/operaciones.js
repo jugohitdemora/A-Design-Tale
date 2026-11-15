@@ -121,11 +121,11 @@ export function pantallaOperaciones(c) {
 
   // Trayectoria (se recalcula si cambia la misión o el día)
   const plan = res?.plan;
-  const P = c.D?.PLANIFICACION?.[c.mision?.id];
   const ov = vistaOrbital();
-  const clave = `${c.mision?.id}|${plan?.dia}|${idioma()}`;
+  const mesLz = plan?.mes ?? plan?.dia ?? null;
+  const clave = `${c.mision?.id}|${mesLz}|${idioma()}`;
   if (ov.clave !== clave) {
-    ov.tray = trayectoria(c.mision?.destino, { dia: plan?.dia ?? null, optimo: P?.ventana?.optimo ?? 0, factor: plan?.factor ?? 1 });
+    ov.tray = trayectoria(c.mision?.destino, { dia: mesLz, optimo: 0, factor: plan?.factor ?? 1 });
     ov.clave = clave; ov.frac = 0;
   }
   const perdido = r.pasos.some((p) => p.omitida);

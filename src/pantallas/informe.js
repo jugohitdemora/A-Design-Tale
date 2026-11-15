@@ -1,9 +1,11 @@
 // Report: verdict, causes, science, hidden findings, final bars, real mission, sources, replay buttons.
 import { T } from '../textos.js';
-import { idioma, tx } from '../i18n.js';
+import { idioma, tx, textos } from '../i18n.js';
 import { h, en, lista, redondear, resumenSeguro } from './ui.js';
-import { explicarCausas } from '../reglas/explicar.js';
+import { explicarPuntos } from '../reglas/explicar.js';
 import { panelGlobal } from './panel-global.js';
+
+const TI = textos({ es: { suerte: 'Mala suerte', decision: 'Decisión' }, en: { suerte: 'Bad luck', decision: 'Decision' } });
 
 function recogerFuentes(c, set) {
   const m = c.mision; if (!m) return;
@@ -36,9 +38,9 @@ export function pantallaInforme(c) {
       r.puntos != null ? h('small', {}, `${T.points}: ${redondear(Number(r.puntos), 0)}`) : null));
     raiz.append(h('h4', {}, T.causes));
     let causas = [];
-    try { causas = explicarCausas(r, c.D, idioma()); } catch (err) { console.error('explicarCausas', err); }
-    if (!causas.length) causas = lista(r.causas).map((x) => tx(x)).filter(Boolean);
-    raiz.append(causas.length ? h('ol', { class: 'causas' }, causas.map((x) => h('li', {}, x))) : h('p', { class: 'tenue' }, T.none));
+    try { causas = explicarPuntos(r, c.D, idioma()); } catch (err) { console.error('explicarPuntos', err); }
+    if (!causas.length) causas = lista(r.causas).map((x) => tx(x)).filter(Boolean).map((texto) => ({ tipo: 'info', texto }));
+    raiz.append(causas.length ? h('ol', { class: 'causas' }, causas.map((x) => h('li', {}, x.tipo === 'info' ? null : h('b', { class: 'etq' }, TI[x.tipo], ' '), x.texto))) : h('p', { class: 'tenue' }, T.none));
 
     raiz.append(h('h4', {}, T.scienceAchieved));
     const cs = h('ul', { class: 'objetivos' });

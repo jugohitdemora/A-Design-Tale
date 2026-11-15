@@ -199,18 +199,10 @@ function reglaCometa(m, D, cond, ruta) {
 }
 
 // ---------- Planificación de ruta (sala de control) ----------
-// COMPATIBILIDAD (lote 2 la quita): la interfaz anterior dibuja la curva de la ventana con esto. La ventana ya no tiene óptimo:
-// el ΔV depende del mes (calendario). Con los datos nuevos (k = 0) devuelve 1.
-export function factorVentana(v, dia) {
-  const V = obj(v);
-  const anchura = num(V.anchura) || 1;
-  const x = (finito(Number(dia)) - num(V.optimo)) / anchura;
-  return Math.min(num(V.maxFactor) || 1.6, 1 + num(V.k) * x * x);
-}
 // Mes más alto que se puede planificar (meses desde el inicio del diseño).
 export function mesMaxDe(P, m, D) {
-  const L = obj(P?.lanzamiento ?? P?.ventana);
-  const max = Math.max(0, Math.floor(num(L.mesMax ?? L.dias)));
+  const L = obj(P?.lanzamiento);
+  const max = Math.max(0, Math.floor(num(L.mesMax)));
   const total = num(D?.CALENDARIO?.MESES) || 60;
   return m?.reloj && D?.CALENDARIO ? Math.min(max, total - 1 - Math.max(0, entero(m.reloj.inicio) ?? 0)) : max;
 }
@@ -298,14 +290,14 @@ export function resumen(estado, D) {
   if (ruta) {
     sumar('masa', 'vuelo', ruta.id, num(ruta.masa));
     sumar('presupuesto', 'vuelo', ruta.id, num(ruta.precio));
-    // Mes de lanzamiento con mala geometría: más ΔV = más propelente (la parte se llama 'ventana' por compatibilidad).
-    if (plan && plan.factor > 1 + EPS) sumar('masa', 'vuelo', 'ventana', num(ruta.masa) * (plan.factor - 1));
+    // Mes de lanzamiento con mala geometría: más ΔV = más propelente (la parte se llama 'geometria').
+    if (plan && plan.factor > 1 + EPS) sumar('masa', 'vuelo', 'geometria', num(ruta.masa) * (plan.factor - 1));
   }
   const reloj = relojDe(estado, D);
   res.reloj = reloj;
   res.plan = plan ? { dia: plan.dia, mes: plan.mes, mesAbs: plan.mesAbs, sitio: plan.sitio?.id ?? null, factor: plan.factor, optimo: false,
     perdida: plan.perdida, extraKg: ruta ? num(ruta.masa) * (plan.factor - 1) : 0, horasSombra, horasEnlace, factorEnlace,
-    dv: num(obj(plan.P.lanzamiento ?? plan.P.ventana).dvMin) * plan.factor, cond: plan.cond, cometa: plan.cometa } : null;
+    dv: num(obj(plan.P.lanzamiento).dvMin) * plan.factor, cond: plan.cond, cometa: plan.cometa } : null;
   const compradas = contingenciasCompradas(estado, D);
   for (const c of compradas) {
     sumar('masa', 'comms', c.id, num(c.masa));

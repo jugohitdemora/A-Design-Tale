@@ -1,6 +1,9 @@
 // Explicación del informe de vuelo (contrato-reloj.md §6): convierte los códigos compactos de resultado.fallos (despliegue.js)
 // en viñetas "Causa → Decisión → Qué lo habría evitado", en el idioma pedido. Puro: no guarda nada, no usa DOM.
-// explicarCausas(resultado, D, idioma) → [texto] : de 1 a 5 viñetas de causas y, si hay reloj, una última de presupuesto y plazo.
+// explicarPuntos(resultado, D, idioma) → [{ tipo: 'suerte'|'decision'|'info', causa, decision, evitar, texto }]: de 1 a 5 puntos de causas y,
+//   si hay reloj, uno final de presupuesto y plazo (tipo 'info'). 'suerte' = el fallo no dependía de una decisión (p. ej. un lanzamiento
+//   que falló con un 95 % de éxito); 'decision' = había algo que el jugador pudo hacer distinto. `texto` = "causa → decisión → evitar".
+// explicarCausas(resultado, D, idioma) → [texto]: solo los textos (los usa el informe de papel).
 const obj = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});
 const arr = (x) => (Array.isArray(x) ? x : []);
 const txt = (x, l, d = '') => (x == null ? d : typeof x === 'string' ? x : x[l] ?? x.en ?? x.es ?? d);
@@ -15,8 +18,8 @@ const MAX_VINETAS = 5;
 // Textos por idioma. Cada función recibe los nombres ya traducidos.
 const T = {
   es: {
-    fase: (n, p, t) => `${n} falló (p ${p}, tirada ${t})`,
-    faseLeve: (n, p, t) => `${n} tuvo problemas (p ${p}, tirada ${t})`,
+    fase: (n, p, t) => `${n} falló (p ${p}, tirada ${String(t).replace('.', ',')})`,
+    faseLeve: (n, p, t) => `${n} tuvo problemas (p ${p}, tirada ${String(t).replace('.', ',')})`,
     clima: (mes, s, ll, v, dp) => `lanzar en ${mes} desde ${s}, lluvia ${ll} mm/día y viento ${v} m/s: ${dp}`,
     espacio: (mes, k, dp) => `volar en ${mes}, con un ${k} de probabilidad de tormenta Kp ≥ 7: ${dp}`,
     conjuncion: (mes, a, d, dp) => `lanzar en ${mes}, con el ángulo Sol–Tierra–destino en ${a}° (${d} días por debajo de 5°): ${dp}`,
@@ -75,7 +78,7 @@ function peso(f) {
   return 6;
 }
 
-export function explicarCausas(resultado, D, idioma = 'en') {
+export function explicarPuntos(resultado, D, idioma = 'en') {
   const l = idioma === 'es' ? 'es' : 'en';
   const t = T[l];
   const r = obj(resultado);
@@ -109,9 +112,10 @@ export function explicarCausas(resultado, D, idioma = 'en') {
     return t.otro(cosa(ref) ?? ref, x);
   };
 
-  const lineas = [];
+  const puntos = [];
+  const punto = (tipo, causa, decision, evitar) => puntos.push({ tipo, causa, decision, evitar, texto: [causa, decision, evitar].filter((x) => x != null).join(' → ') });
   for (const f of arr(r.fallos).filter((x) => x && typeof x === 'object').sort((a, b) => peso(a) - peso(b))) {
-    if (lineas.length >= MAX_VINETAS) break;
+    if (puntos.length >= MAX_VINETAS) break;
     if (f.codigo === 'fase') {
       const des = arr(f.desglose);
       const causa = (f.critica ? t.fase : t.faseLeve)(fase(f.fase), pct(f.p), f.tirada ?? '?');
@@ -127,23 +131,25 @@ export function explicarCausas(resultado, D, idioma = 'en') {
         decision = [t.suerte(pct(1 - (Number(f.p) || 0))), d.mes != null && d.lluvia != null && !des.some((x) => x[0] === 'clima') ? t.lanzSuerte(nombreMes(d.mes), sitioLanz(d.sitio), d.lluvia) : null,
           ...des.map((x) => aporte(x, f.decision))].filter(Boolean).join('; ');
       }
-      lineas.push(`${causa} → ${decision} → ${evitar(f.evitar)}`);
+      punto(f.evitar === 'suerte' || f.evitar == null ? 'suerte' : 'decision', causa, decision, evitar(f.evitar));
     } else if (f.codigo === 'evento') {
       const ev = obj(D?.EVENTOS_MISION)[f.evento];
       const ct = String(f.evitar ?? '').startsWith('ct:') ? cosa(f.evitar.slice(3)) : null;
-      lineas.push(`${t.evento(fase(f.fase), txt(ev?.nombre, l, f.evento))} → ${ct ? t.sinCt(ct) : t.sinCtNinguna} → ${evitar(f.evitar)}`);
+      punto(ct ? 'decision' : 'suerte', t.evento(fase(f.fase), txt(ev?.nombre, l, '?')), ct ? t.sinCt(ct) : t.sinCtNinguna, evitar(f.evitar));
     } else if (f.codigo === 'tormenta') {
-      lineas.push(`${t.tormenta(pct(f.p))} → ${t.volarEn(nombreMes(f.decision?.mes))} → ${evitar(f.evitar)}`);
+      punto('decision', t.tormenta(pct(f.p)), t.volarEn(nombreMes(f.decision?.mes)), evitar(f.evitar));
     } else if (f.codigo === 'datos') {
-      lineas.push(`${t.datos(f.mb)} → ${t.enlacePeq} → ${evitar(f.evitar)}`);
+      punto('decision', t.datos(f.mb), t.enlacePeq, evitar(f.evitar));
     } else if (f.codigo === 'cancelada') {
-      lineas.push(`${t.cancelada} → ${t.retraso(f.retraso ?? 0)} → ${evitar(f.evitar)}`);
+      punto('decision', t.cancelada, t.retraso(f.retraso ?? 0), evitar(f.evitar));
     }
   }
-  if (!lineas.length) lineas.push(t.nada);
+  if (!puntos.length) punto('info', t.nada, null, null);
   const rl = r.reloj;
-  if (rl && typeof rl === 'object') lineas.push(t.reloj(rl.mes, rl.lanzamiento ?? null, rl.plazo, rl.retraso ?? 0, pct(rl.recorte), rl.bono ? dpTxt(rl.bono) : ''));
-  return lineas;
+  if (rl && typeof rl === 'object') punto('info', t.reloj(rl.mes, rl.lanzamiento ?? null, rl.plazo, rl.retraso ?? 0, pct(rl.recorte), rl.bono ? dpTxt(rl.bono) : ''), null, null);
+  return puntos;
 }
+
+export const explicarCausas = (resultado, D, idioma = 'en') => explicarPuntos(resultado, D, idioma).map((p) => p.texto);
 
 export default explicarCausas;
