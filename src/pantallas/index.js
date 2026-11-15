@@ -5,6 +5,7 @@
 // p.vista (lo decide main.js): 'sala' (mirando la sala 3D, sin pantalla), 'laptop' (sentado frente al portátil)
 // o 'control' (frente a la pared de pantallas de la sala de control de misión).
 import { T } from '../textos.js';
+import { esEventoInversor, inversorDe, titular, TI } from '../inversores.js';
 import { textos, tx } from '../i18n.js';
 import { traducirMotivo } from '../motivos.js';
 import { h, en, lista, nombreRol, resumenSeguro, ROLES_IDS, relojMision, datosReloj, marcarTick, toastReloj, textosReloj, fechaTxt } from './ui.js';
@@ -231,6 +232,20 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     if (ef.limite) cambios.push(T.eff.limite(T.bars[ef.limite.recurso] ?? ef.limite.recurso, ef.limite.factor));
     if (ef.prioridad) cambios.push(T.eff.prioridad(en(lista(c.mision?.objetivos).find((o) => o.id === ef.prioridad)?.nombre) || ef.prioridad));
     modal.classList.remove('oculto');
+    if (esEventoInversor(id)) {
+      const inv = inversorDe(id), bueno = ev.signo === '+';
+      const razones = [en(ev.texto), TI.dinero(bueno ? 1 : -1) + (cambios.length ? ` (${cambios.join(' · ')})` : ''),
+        ef.meses ? TI.meses(ef.meses) : null].filter(Boolean);
+      modal.append(h('div', { class: 'tarjeta-inversor ' + (bueno ? 'bueno' : 'malo'), role: 'dialog', 'aria-modal': 'true' },
+        h('img', { class: 'inv-foto', src: inv.foto, alt: inv.nombre }),
+        h('div', { class: 'inv-cuerpo' },
+          h('small', {}, T.designEvent, cola.length > 1 ? ` (+${cola.length - 1})` : ''),
+          h('h3', {}, titular(id, ev.signo, inv.nombre)),
+          h('p', { class: 'inv-porque' }, TI.porque + ':'),
+          h('ul', {}, ...razones.map((r) => h('li', {}, r))),
+          h('button', { class: 'inv-aceptar', type: 'button', onclick: () => { cola.shift(); dibujarModal(); } }, '▶ ' + TI.aceptar))));
+      return;
+    }
     modal.append(h('div', { class: 'tarjeta-evento', role: 'dialog', 'aria-modal': 'true' },
       h('small', { class: 'tenue' }, T.designEvent, cola.length > 1 ? ` (+${cola.length - 1})` : ''),
       h('h3', {}, h('span', { class: 'signo s' + (ev.signo === '+' ? 'p' : ev.signo === '-' ? 'n' : 'x') }, ev.signo ?? '?'), ' ', en(ev.nombre) || id),
