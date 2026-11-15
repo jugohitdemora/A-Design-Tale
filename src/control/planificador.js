@@ -57,7 +57,7 @@ const T = textos({
     delta: (dm, kg, pres) => `${dm > 0 ? '+' : '−'}${Math.abs(dm)} ${Math.abs(dm) === 1 ? 'mes' : 'meses'} ${dm > 0 ? 'de retraso' : 'antes'} → ${kg}, ${pres}`,
     deltaKg: (s) => `${s} kg de propelente`, deltaPct: (s) => `ΔV ${s} %`, deltaPres: (s) => `presupuesto ${s}`, mismoMes: 'Es el mes ya fijado.',
     notaRetraso: 'Retrasar no es gratis: cada mes cambia la geometría (ΔV y propelente extra) y, pasado el plazo, los inversores recortan la financiación.',
-    marcaAhora: 'ahora', marcaPlazo: 'plazo', marcaFijado: 'fijado',
+    marcaAhora: 'ahora', marcaPlazo: 'plazo', marcaFijado: 'fijado', ayuda: '¿Cómo se lee?', kgExtra: (kg) => `${kg} kg extra`, dvExtra: (p) => `ΔV +${p} %`, pctAplazar: (p) => `${p} % de aplazar`, condBoton: (m) => `Condiciones de ${m}`, exitoFase: 'ÉXITO POR FASE', retrasoChip: 'Retraso',
   },
   en: {
     titulo: 'ROUTE PLANNING', ruta: 'ROUTE', mesTit: 'LAUNCH MONTH', cond: 'CONDITIONS', mapa: 'SITE / ORBIT', efectos: 'EFFECTS ON THE DESIGN', sitio: 'SITE', cambiarSitio: 'Change site',
@@ -100,7 +100,7 @@ const T = textos({
     delta: (dm, kg, pres) => `${dm > 0 ? '+' : '−'}${Math.abs(dm)} ${Math.abs(dm) === 1 ? 'month' : 'months'} ${dm > 0 ? 'delay' : 'earlier'} → ${kg}, ${pres}`,
     deltaKg: (s) => `${s} kg propellant`, deltaPct: (s) => `ΔV ${s} %`, deltaPres: (s) => `budget ${s}`, mismoMes: 'This is the month already set.',
     notaRetraso: 'Delay is not free: every month changes the geometry (ΔV and extra propellant) and, past the deadline, investors cut funding.',
-    marcaAhora: 'now', marcaPlazo: 'deadline', marcaFijado: 'set',
+    marcaAhora: 'now', marcaPlazo: 'deadline', marcaFijado: 'set', ayuda: 'How to read it', kgExtra: (kg) => `${kg} kg extra`, dvExtra: (p) => `ΔV +${p} %`, pctAplazar: (p) => `${p} % chance to slip`, condBoton: (m) => `${m} conditions`, exitoFase: 'SUCCESS BY PHASE', retrasoChip: 'Delay',
   },
 });
 
@@ -227,8 +227,9 @@ function marcas(info, x) {
 function condicionesNodos(c, info, x) {
   const D = c.D, k = condicionesDeMes(c.e, D, x.mes);
   const nombre = (abs) => etiquetaMes(D, abs);
-  const cab = h('h3', { class: 'pl-cond-cab' }, T.cond, ' · ', h('b', {}, etiquetaMes(D, x.mesAbs, { larga: true })), marcas(info, x).map((m) => h('em', {}, m)));
-  if (!k?.cond) return [cab, h('p', { class: 'mc-nota tenue' }, T.sinCond)];
+  const cab = h('summary', { class: 'boton texto' }, T.condBoton(etiquetaMes(D, x.mesAbs)));
+  const cuerpo = (...n) => [cab, h('div', { class: 'pl-cond-pop' }, h('h3', { class: 'pl-cond-cab' }, T.cond, ' · ', h('b', {}, etiquetaMes(D, x.mesAbs, { larga: true }))), ...n)];
+  if (!k?.cond) return cuerpo(h('p', { class: 'mc-nota tenue' }, T.sinCond));
   const q = k.cond;
   const fila = (etq, fuente, ...cuerpo) => h('div', { class: 'pl-fila' }, h('dt', {}, etq, fuente ? h('small', {}, fuente) : null), h('dd', {}, ...cuerpo));
   const filas = [];
@@ -248,7 +249,14 @@ function condicionesNodos(c, info, x) {
         : h('span', {}, `${T.llegada}: ${nombre(k.cometa.llegadaMesAbs)} (${(k.cometa.meses >= 0 ? T.antes : T.despues)(n1(Math.abs(k.cometa.meses)))})`)));
   }
   if (info.reloj.activo) filas.push(fila(T.plazoFila, null, h('span', {}, k.retraso > 0 ? T.retraso(k.retraso, Math.round(k.recorte * 100)) : T.aTiempo)));
-  return [cab, h('dl', { class: 'pl-datos' }, filas), k.hayCohete ? null : h('p', { class: 'mc-nota tenue' }, T.sinCohete)];
+  return cuerpo(h('dl', { class: 'pl-datos' }, filas), k.hayCohete ? null : h('p', { class: 'mc-nota tenue' }, T.sinCohete));
+}
+
+// Un <details> se vuelve a crear en cada repintado: guarda en el estado local si el jugador lo dejó abierto.
+function recordarAbierto(el, u, clave) {
+  el.open = !!u[clave];
+  el.addEventListener('toggle', () => { u[clave] = el.open; });
+  return el;
 }
 
 // Devuelve las dos tarjetas: la línea de tiempo (a todo el ancho, arriba) y las condiciones del mes visto (columna derecha).
@@ -256,7 +264,8 @@ function panelMeses(c, u) {
   const D = c.D, A = analisisMeses(c.e, D);
   const puedo = puedoPor(c, 'vuelo');
   const tiempo = h('section', { class: 'mc-panel pl-tiempo' });
-  const cond = h('section', { class: 'mc-panel pl-cond' });
+  // Las condiciones completas del mes son consulta (sus cifras clave ya salen en la lectura de la línea de tiempo): plegadas.
+  const cond = recordarAbierto(h('details', { class: 'pl-cond' }), u, 'condAbierta'); // ficha flotante junto a la línea de tiempo
   if (!A) { tiempo.append(h('h3', {}, T.mesTit), h('p', { class: 'mc-nota tenue' }, T.sinCond)); return { tiempo, cond: null }; }
   const { info, filas } = A, rl = info.reloj;
   const N = Math.max(1, info.limite);
@@ -269,18 +278,18 @@ function panelMeses(c, u) {
   u.mesVer = cand;
   let hover = null;
 
-  // --- cabecera: título, mes fijado (lo ven todos), saltar a la mejor ventana y fijar ---
+  // --- cabecera: título, mes fijado (lo ven todos), condiciones, ayuda y fijar ---
   const fijado = h('span', { class: 'pl-lt-fijado' + (info.elegido != null && !info.perdida ? ' ok' : info.perdida ? ' mal' : '') },
     info.elegido != null ? T.fijado(nombre(info.elegido, true)) : T.sinFijar);
-  const saltar = h('button', { class: 'boton texto pl-lt-saltar', type: 'button', title: T.saltarTip, disabled: !A.mejor, onclick: () => { if (A.mejor) { cand = A.mejor.mes; hover = null; u.mesVer = cand; act(); } } },
-    A.mejor ? T.saltar : T.sinVentana);
   const fijar = puedo ? h('button', { class: 'boton primario pl-lt-fijar', type: 'button', onclick: () => c.enviar('planificarRuta', { mes: cand }) }) : null;
-  const leyenda = h('p', { class: 'pl-lt-ley' },
+  const leyenda = h('div', { class: 'pl-lt-ley' },
     h('span', { class: 'cur' }, T.leyCurva), h('span', { class: 'scr' }, T.leyScrub), h('span', { class: 'ven' }, T.leyVentana),
     h('span', { class: 'pas' }, T.leyPasado), h('span', { class: 'rev' }, T.leyRevision), rl.activo ? h('span', { class: 'dem' }, T.leyDemora) : null,
     h('span', { class: 'nota' }, T.notaRetraso, info.limite < info.max ? ` ${T.tarde(nombre(info.limite, true))}` : ''));
   const delta = h('div', { class: 'pl-lt-delta' });
-  tiempo.append(h('div', { class: 'pl-lt-cab' }, h('h3', {}, T.mesTit), fijado, delta, h('span', { class: 'pl-lt-esp' }), saltar, fijar));
+  // Leyenda y nota de retraso: consulta, plegadas tras "¿Cómo se lee?" (cada franja también lo dice al pasar el ratón).
+  const ayuda = recordarAbierto(h('details', { class: 'pl-lt-ayuda' }, h('summary', { class: 'boton texto' }, T.ayuda), leyenda), u, 'ayudaAbierta');
+  tiempo.append(h('div', { class: 'pl-lt-cab' }, h('h3', {}, T.mesTit), fijado, delta, h('span', { class: 'pl-lt-esp' }), cond, ayuda, fijar));
 
   // --- marcas (ahora, plazo, fijado) en dos carriles para que no se pisen ---
   const lista_ = [{ mes: rl.mes, txt: `▸ ${T.marcaAhora}`, cls: 'ahora' }];
@@ -345,7 +354,7 @@ function panelMeses(c, u) {
   graf.addEventListener('click', (ev) => { cand = cercano(mesBajoRaton(ev)); u.mesVer = cand; act(); });
 
   const lectura = h('div', { class: 'pl-lt-lectura', 'aria-live': 'polite' });
-  tiempo.append(zona, lectura, leyenda);
+  tiempo.append(zona, lectura);
   if (info.perdida) {
     const sug = A.mejor ?? libres[0];
     tiempo.append(h('p', { class: 'mc-nota aviso pl-perdida', role: 'alert' }, T.perdida(nombre(info.elegido, true), sug ? nombre(sug.mes, true) : null)));
@@ -357,22 +366,23 @@ function panelMeses(c, u) {
   const xDe = (mes) => info.meses.find((y) => y.mes === mes) ?? { mes, mesAbs: rl.inicio + mes, esAhora: false, esPlazo: rl.activo && mes === rl.plazo, esElegido: mes === info.elegido };
   const leer = (mes) => {
     const f = filas[mes], x = xDe(mes);
-    const m = [...marcas(info, x), A.optimos.has(mes) ? T.leyVentana : null].filter(Boolean);
+    const m = marcas(info, x);
     const fecha = chip(T.fecha, h('b', {}, nombre(mes, true)), m.map((t) => h('em', {}, t)));
     if (!f.libre) {
       const por = f.motivo === 'pasado' ? T.mPasado : f.motivo === 'pronto' ? T.pronto(MESES_REVISION, nombre(info.minimo, true)) : f.motivo === 'tarde' ? T.tarde(nombre(info.limite, true)) : T.mFase;
       return [fecha, h('div', { class: 'pl-lt-chip ancho mal' }, h('span', {}, por))];
     }
-    const dv = f.pctSobreMejor < 0.05 ? (A.masa != null ? T.mejorMes : T.mejorMesPct)
-      : A.masa != null ? T.extraKg(n1(f.kgSobreMejor, 0), n1(f.pctSobreMejor, 0)) : T.extraPct(nf(f.factor), n1(f.pctSobreMejor, 0));
-    const sitio = condicionesDeMes(c.e, D, mes)?.sitioLanz;
-    const riesgo = f.scrub == null ? '—' : T.scrubTxt(n1(f.scrub * 100, 0), sitio ? tx(sitio.nombre).replace(/\s*\(.*?\)/, '') : '');
+    // Solo el dato, sin juicio ("mejor mes", "mejor ventana"): el jugador compara y decide.
+    const dv = A.masa != null ? T.kgExtra(n1(f.kgSobreMejor, 0)) : T.dvExtra(n1(f.pctSobreMejor, 0));
+    const riesgo = f.scrub == null ? '—' : T.pctAplazar(n1(f.scrub * 100, 0));
     const plazoTxt = !rl.activo ? T.sinPlazo : f.retraso > 0 ? T.retraso(f.retraso, 0) : T.aTiempo;
     const recTxt = f.recorte > 0 ? `−${Math.round(f.recorte * 100)} % · ${dinero(f.recorteM)}` : T.sinRecorte;
-    return [fecha, chip(T.propelente, dv), chip(T.riesgo, riesgo), chip(T.plazoChip, plazoTxt), chip(T.recorteChip, recTxt)];
+    // Plazo y recorte solo cuando ese mes llega tarde: "dentro del plazo / sin recorte" no pide nada al jugador.
+    const tarde = rl.activo && f.retraso > 0;
+    return [fecha, chip(T.propelente, dv), chip(T.riesgo, riesgo), tarde ? chip(T.retrasoChip, h('span', { class: 'mal' }, plazoTxt, f.recorte > 0 ? ` · ${recTxt}` : '')) : null].filter(Boolean);
   };
   const deltaNodos = () => {
-    if (!elegidoOk || cand === info.elegido) return cand === info.elegido && elegidoOk ? [h('p', { class: 'pl-lt-dnota' }, T.mismoMes)] : [];
+    if (!elegidoOk || cand === info.elegido) return []; // el mes ya fijado: la cabecera ya lo dice
     const d = deltaMes(filas[info.elegido], filas[cand]);
     if (!d) return [];
     const kg = d.kg != null ? T.deltaKg(signo(d.kg)) : T.deltaPct(signo(d.pct));
@@ -391,8 +401,9 @@ function panelMeses(c, u) {
     lHover.hidden = hover == null || hover === cand;
     if (fijar) {
       const ya = elegidoOk && cand === info.elegido;
-      fijar.disabled = ya || !filas[cand]?.libre;
-      fijar.textContent = ya ? T.yaFijado : T.fijarMes(nombre(cand));
+      fijar.disabled = !filas[cand]?.libre;
+      fijar.style.display = ya ? 'none' : ''; // ya fijado: "Mes fijado: …" en la cabecera; un botón apagado no aporta
+      fijar.textContent = T.fijarMes(nombre(cand));
     }
     cond.replaceChildren(...condicionesNodos(c, info, xDe(v)).filter(Boolean));
   };
@@ -409,7 +420,7 @@ function panelRutas(c) {
     h('div', { class: 'pl-rutas' }, rutas.map((r) => {
       const fase = lista(c.mision.fases).find((f) => f.id === r.efecto?.fase);
       const es = r.id === elegida;
-      const tip = [puedo ? '' : `🔒 ${T.soloRuta()}`, r.efecto && fase ? `${tx(fase.nombre)}: ${r.efecto.dp > 0 ? '+' : ''}${Math.round(r.efecto.dp * 100)} %` : '', `${T.precio}: ${valor(c, r.precio, 'M USD').textContent}`].filter(Boolean).join(' · ');
+      const tip = [tx(r.nombre) || r.id, puedo ? '' : `🔒 ${T.soloRuta()}`, r.efecto && fase ? `${tx(fase.nombre)}: ${r.efecto.dp > 0 ? '+' : ''}${Math.round(r.efecto.dp * 100)} %` : '', `${T.precio}: ${valor(c, r.precio, 'M USD').textContent}`].filter(Boolean).join(' · ');
       return h('button', {
         class: 'pl-ruta' + (es ? ' elegida' : ''), type: 'button', disabled: !puedo || es, title: tip,
         onclick: () => c.enviar('elegirRuta', { id: r.id }),
@@ -545,9 +556,9 @@ function fichaSitio(c, P, u, res) {
       filas.push(h('li', { class: k >= 1 ? 'ok' : 'mal' }, `${tx(o?.nombre) || '—'}: ${T.factor(k)}`));
     }
     if (ef.horasSombra != null) filas.push(h('li', {}, `${T.sombra}: ${ef.horasSombra} h`));
-    tarjeta.push(h('div', { class: 'pl-sitio-card' + (elegido ? ' elegido' : '') },
+    tarjeta.push(h('div', { class: 'pl-sitio-card' + (elegido ? ' elegido' : ''), title: tx(sitio.nota) || null }, // la descripción, al pasar el ratón
       h('b', {}, tx(sitio.nombre)), sitio.inc != null ? h('small', {}, T.inc(sitio.inc)) : sitio.lat != null ? h('small', {}, `${sitio.lat}°, ${sitio.lon}°`) : null,
-      h('p', {}, tx(sitio.nota)), filas.length ? h('ul', { class: 'mc-lista' }, filas) : h('p', { class: 'tenue' }, T.sinEfectos),
+      filas.length ? h('ul', { class: 'mc-lista' }, filas) : h('p', { class: 'tenue' }, T.sinEfectos),
       // Elegido: el borde verde de la tarjeta ya lo dice; no hace falta un botón apagado.
       elegido ? null : h('button', { class: 'boton primario ancho', type: 'button', disabled: !puedo, title: puedo ? null : `🔒 ${T.soloSitio()}`, onclick: () => c.enviar('planificarRuta', { sitio: sitio.id }) }, T.elegir),
       elegido || puedo ? null : avisoBloqueo(T.soloSitio())));
@@ -558,17 +569,21 @@ function fichaSitio(c, P, u, res) {
   }, tx(s.nombre))));
   // Con un sitio ya elegido (y sin previsualizar otro), la lista se pliega: deja sitio a la tarjeta y a los efectos.
   const elegidoYa = c.e?.ruta?.sitio && id === c.e.ruta.sitio;
-  if (elegidoYa) caja.append(...tarjeta, h('details', { class: 'pl-cambiar' }, h('summary', { class: 'boton texto' }, T.cambiarSitio), chips));
-  else caja.append(chips, ...tarjeta);
-  // Probabilidad por fase con el diseño actual: solo cuando ya hay sitio elegido (antes no responde a nada que hagas aquí;
-  // al previsualizar un sitio, su tarjeta ya muestra cuánto cambia cada fase).
-  if (c.e?.ruta?.sitio) caja.append(h('h3', { class: 'pl-sep' }, T.efectos), h('h4', {}, T.fasesTit), h('ul', { class: 'mc-barras' }, lista(res?.fases).map((f) => h('li', {},
-    h('span', {}, tx(f.nombre) || '—'), h('i', {}, h('b', { style: `width:${Math.round(f.p * 100)}%` })), h('em', {}, pct(f.p))))));
-  // La cobertura de objetivos ya se ve en el Constructor (CIENCIA): aquí solo lo que cambia el sitio.
+  if (elegidoYa) caja.append(...tarjeta, recordarAbierto(h('details', { class: 'pl-cambiar' }, h('summary', { class: 'boton texto' }, T.cambiarSitio), chips), u, 'cambiarAbierto'));
+  else caja.append(...tarjeta, chips); // al previsualizar, la tarjeta y su botón ELEGIR SITIO arriba: nunca quedan bajo el pliegue
+  // Probabilidad por fase: en panelEfectos (columna izquierda). La cobertura de objetivos ya se ve en el Constructor (CIENCIA).
   const sinMes = res?.plan?.mes == null || res.plan.perdida, sinSitio = !res?.plan?.sitio;
   const listo = !sinMes && !sinSitio;
   caja.append(h('p', { class: 'mc-nota ' + (listo ? 'ok' : 'aviso') }, listo ? T.ok : sinMes && sinSitio ? T.falta : sinMes ? T.faltaMes : T.faltaSitio));
   return caja;
+}
+
+// Probabilidad por fase con el diseño actual: solo con sitio elegido (al previsualizar un sitio, su tarjeta ya muestra el cambio).
+// Va bajo la ruta, en la columna izquierda, que tiene sitio libre; la derecha queda para elegir sitio.
+function panelEfectos(c, res) {
+  if (!c.e?.ruta?.sitio || !lista(res?.fases).length) return null;
+  return h('section', { class: 'mc-panel' }, h('h3', { title: T.efectos }, T.exitoFase), h('ul', { class: 'mc-barras' }, lista(res?.fases).map((f) => h('li', {},
+    h('span', {}, tx(f.nombre) || '—'), h('i', {}, h('b', { style: `width:${Math.round(f.p * 100)}%` })), h('em', {}, pct(f.p))))));
 }
 
 export function pantallaPlanificador(c) {
@@ -579,8 +594,8 @@ export function pantallaPlanificador(c) {
   const { tiempo, cond } = panelMeses(c, u);
   return h('div', { class: 'pl' },
     tiempo,
-    h('div', { class: 'pl-izq', 'data-scroll': 'pl-izq' }, panelRutas(c)),
+    h('div', { class: 'pl-izq', 'data-scroll': 'pl-izq' }, panelRutas(c), panelEfectos(c, res)),
     mapa(c, P, u),
-    h('div', { class: 'pl-der', 'data-scroll': 'pl-der' }, cond, fichaSitio(c, P, u, res)));
+    h('div', { class: 'pl-der', 'data-scroll': 'pl-der' }, fichaSitio(c, P, u, res)));
 }
 export { nombreRol };

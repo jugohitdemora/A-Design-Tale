@@ -245,7 +245,7 @@
 .pl-lt-marca.plazo { color: var(--mc-cian); } .pl-lt-marca.ahora { color: var(--mc-blanco); }
 .pl-lt-marca.fijado { color: var(--mc-ambar); } .pl-lt-marca.fijado.perdido { color: var(--mc-rojo); text-decoration: line-through; }
 .pl-lt-rango { display: block; width: calc(100% + 20px); margin: 0 -10px; height: 22px; background: transparent; cursor: pointer; accent-color: var(--mc-ambar); }
-.pl-lt-graf { position: relative; height: 44px; border: 1px solid var(--mc-borde); background: var(--mc-hundido); cursor: crosshair; }
+.pl-lt-graf { position: relative; height: 80px; border: 1px solid var(--mc-borde); background: var(--mc-hundido); cursor: crosshair; }
 .pl-lt-banda { position: absolute; top: 0; bottom: 0; pointer-events: none; }
 .pl-lt-banda.pasado { background: repeating-linear-gradient(135deg, var(--mc-pasado) 0 4px, var(--mc-pasado-2) 4px 8px); opacity: 0.92; z-index: 2; }
 .pl-lt-banda.pronto { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--mc-tenue) 25%, transparent) 0 4px, transparent 4px 8px); z-index: 2; }
@@ -268,7 +268,7 @@
 .pl-lt-eje span.anio { color: var(--mc-tinta); font-weight: 600; }
 .pl-lt-lectura { display: flex; flex-wrap: wrap; gap: var(--e-1) var(--e-3); margin-top: var(--e-1); }
 .pl-lt-chip { display: flex; flex-direction: column; min-width: 110px; font-size: var(--t-meta); line-height: 1.25; }
-.pl-lt-chip small { color: var(--mc-tenue); text-transform: uppercase; letter-spacing: 0.3px; }
+.pl-lt-chip small { font-size: var(--t-meta); color: var(--mc-tenue); text-transform: uppercase; letter-spacing: 0.3px; }
 .pl-lt-chip b { font-size: var(--t-cuerpo); color: var(--mc-tinta); }
 .pl-lt-chip em { font-style: normal; margin-left: 6px; padding: 0 5px; border: 1px solid var(--mc-borde); border-radius: 3px; color: var(--mc-tenue); }
 .pl-lt-chip.ancho { flex: 1; } .pl-lt-chip.mal { color: var(--mc-ambar); }
@@ -292,3 +292,27 @@
 /* Aviso de bloqueo por rol: texto visible junto al control desactivado (y como tooltip) */
 .mc-bloqueo { margin: var(--e-1) 0 0; padding: var(--e-1) var(--e-2); border: 1px solid var(--mc-ambar); border-radius: 3px; background: color-mix(in srgb, var(--mc-ambar) 12%, transparent);
   color: var(--mc-ambar); font-size: var(--t-meta); line-height: 1.3; }
+
+/* ---- Planificador: lo que es consulta va plegado ---- */
+/* "¿Cómo se lee?": la leyenda de la línea de tiempo se abre como ficha flotante, sin empujar la pantalla */
+.pl-lt-ayuda { position: relative; }
+.pl-lt-ayuda > summary { list-style: none; display: inline-flex; min-height: 32px; padding: 4px 12px; }
+.pl-lt-ayuda > summary::-webkit-details-marker { display: none; }
+.pl-lt-ayuda[open] > .pl-lt-ley { position: absolute; right: 0; top: calc(100% + 6px); z-index: 6; width: 560px; margin: 0; padding: var(--e-3);
+  background: var(--mc-panel); border: 2px solid var(--mc-borde); border-radius: 3px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+/* Condiciones del mes: botón junto a la línea de tiempo; se abren como ficha flotante (consulta, con fuentes) */
+.pl-cond { position: relative; }
+.pl-cond > summary { list-style: none; display: inline-flex; min-height: 32px; padding: 4px 12px; }
+.pl-cond > summary::-webkit-details-marker { display: none; }
+.pl-cond[open] > .pl-cond-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 6; width: 440px; max-height: 470px; overflow: auto; padding: var(--e-3);
+  background: var(--mc-panel); border: 2px solid var(--mc-borde); border-radius: 3px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+.pl-cond-pop h3 { margin: 0 0 var(--e-2); }
+.pl-lt-chip .mal { color: var(--mc-ambar); }
+.pl { grid-template-columns: 330px 1fr 360px; }
+.pl-izq .mc-barras li { grid-template-columns: minmax(0, 1fr) 70px 40px; margin: 1px 0; }
+.pl-izq { gap: var(--e-2); }
+.pl-izq .mc-panel { padding-top: var(--e-2); padding-bottom: var(--e-2); }
+.pl-izq .mc-panel h3 { margin-bottom: var(--e-2); }
+.pl-izq .mc-barras li { font-size: var(--t-meta); line-height: 1.2; }
+.pl-ruta { line-height: 1.2; }
+.pl-ruta b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* nombre completo en el title; días y propelente debajo */

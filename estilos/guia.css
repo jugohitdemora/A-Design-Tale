@@ -114,3 +114,8 @@ body.en-proyector .f-hud .g-linea { display: none; } /* la barra del proyector y
 .rm-toast.mal { border-color: #ff7a68; background: #3d0c07; color: #fff; }
 .rm-toast.ver { transform: translate(-50%, 0); opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .rm.tick { animation: none; background-color: rgba(242, 184, 68, 0.3); } .rm-toast, .rm-barra i { transition: none; } }
+
+/* Cabecera de la pared: sin repetir lo que la pantalla ya dice */
+.mc-cab .mc-logo { display: none; }                 /* el modo (PLANIFICACIÓN…) ya nombra la sala */
+.mc-cab .rm-vel { display: none; }                  /* ritmo del reloj: dato de consulta */
+.mc.fase-diseno .mc-cab .rm-lanz, .mc.fase-restricciones .mc-cab .rm-lanz { display: none; } /* la línea de tiempo ya dice si hay mes */
