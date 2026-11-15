@@ -26,9 +26,9 @@
 .f-hud .g-fase { font: var(--tp-etq) var(--pixel); letter-spacing: 0.5px; opacity: 1; }
 .f-vistas { display: grid; gap: var(--e-2); }
 .f-vista span { font-family: var(--ui); font-size: 18px; }
-.f-pie { display: flex; justify-content: space-between; align-items: center; gap: var(--e-2); font-size: var(--t-meta); color: #b9c3d0;
+.f-pie { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--e-2); font-size: var(--t-meta); color: #b9c3d0;
   border-top: 2px solid rgba(241, 230, 207, 0.25); padding-top: var(--e-2); }
-.boton.f-salir { min-height: 32px; padding: 6px 10px; font-size: var(--tp-etq); box-shadow: 0 3px 0 var(--b-sombra); }
+.boton.f-salir { flex: none; white-space: nowrap; min-height: 32px; padding: 6px 10px; font-size: var(--tp-etq); box-shadow: 0 3px 0 var(--b-sombra); }
 
 /* Fases como puntos */
 .g-pasos { display: flex; align-items: center; gap: var(--e-2); white-space: nowrap; }
