@@ -43,34 +43,71 @@ const T = textos({
 });
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Modelos. Dimensiones en metros SOLO COMO PROPORCIÓN VISUAL (aproximadas, de memoria); los números del juego salen de D.COHETES.
-// seg: tramos de abajo arriba { h, r (radio inferior), r2 (radio superior, opcional), c (color) }.
-// carena: { r, hc (parte cilíndrica), hn (ojiva), c }.  lateral: propulsores { n, dist, ang0, r, seg, punta:{tipo,h,c} }.
+// Modelos de los cohetes REALES. Dimensiones en metros, aproximadas (fichas públicas de cada fabricante y Wikipedia), SOLO COMO
+// PROPORCIÓN VISUAL: los números del juego salen de D.COHETES. Los colores son aproximados (foto típica de cada vehículo).
+// Mismo estilo de siempre: cilindros de 10 caras y sombreado plano; los detalles pequeños son cajas y barras.
+//
+// nucleo: { seg, carena | punta, motores, acc }
+//   seg: tramos de abajo arriba { h, r (radio inferior), r2 (radio superior, opcional), c (color) }.
+//   carena: { r, hc (parte cilíndrica), hn (ojiva), c, tr (cono de transición si la cofia es más ancha que la última etapa) }.
+//   motores: { n, centro, r, h } toberas bajo la base.   acc: { patas, rejillas: { y }, cinta: { y, h } } (accesorios del propulsor).
+// lateral: propulsores { n, dist, ang0 | angs, r, seg, punta:{tipo,h,c}, acc }.
+// ala: ala delta en el plano del cohete { env, cuerda, y }.   aletas: { n, ang0, y, c }.
 // ---------------------------------------------------------------------------------------------------------------------
-const BLANCO = '#ecebe6', NEGRO = '#2b2d31', GRIS = '#a9adb3', NARANJA = '#d9792f', PLATA = '#c9ccd1', AZUL = '#3b5a8a', MARRON = '#b46a3c';
+const BLANCO = '#ecebe6', NEGRO = '#2b2d31', GRIS = '#a9adb3', NARANJA = '#d9792f', PLATA = '#c9ccd1';
+const GRAFITO = '#3c4048', CREMA = '#ddd9cc', COBRE = '#b9803f', ROJIZO = '#d1692b', GRIS_OSC = '#5b6066', CINTA = '#c3c6cb';
+const ANG_CAM = Math.PI / 4;   // dirección (en el plano XZ) de la que mira la cámara isométrica
 
 export const MODELOS = {
+  // Falcon 9 Block 5: 70 m, Ø 3,66 m. Primera etapa blanca con entreetapa negra, 4 aletas de rejilla y 4 patas plegadas; cofia de 5,2 m.
   falcon9: { nombre: 'Falcon 9', ESC: 1,
-    nucleo: { seg: [{ h: 41, r: 1.85, c: BLANCO }, { h: 2, r: 1.85, c: NEGRO }, { h: 14, r: 1.85, c: BLANCO }], carena: { r: 2.6, hc: 5, hn: 7, c: BLANCO } }, patas: true },
+    nucleo: {
+      seg: [{ h: 0.9, r: 1.83, c: NEGRO }, { h: 35.5, r: 1.83, c: BLANCO }, { h: 4.8, r: 1.83, c: NEGRO }, { h: 12.6, r: 1.83, c: BLANCO }],
+      carena: { r: 2.6, tr: 1.5, hc: 6.5, hn: 8, c: BLANCO }, motores: { n: 9, h: 1.2 },
+      acc: { patas: 9, rejillas: { y: 34.5 }, cinta: { y: 3, h: 30 } } } },
+  // Falcon Heavy: núcleo central como el Falcon 9 y dos propulsores laterales con ojiva en lugar de entreetapa (también con rejillas y patas).
   falconheavy: { nombre: 'Falcon Heavy', ESC: 1,
-    nucleo: { seg: [{ h: 41, r: 1.85, c: BLANCO }, { h: 2, r: 1.85, c: NEGRO }, { h: 14, r: 1.85, c: BLANCO }], carena: { r: 2.6, hc: 5, hn: 7, c: BLANCO } },
-    lateral: { n: 2, dist: 3.75, ang0: 0, r: 1.85, seg: [{ h: 41, r: 1.85, c: BLANCO }], punta: { tipo: 'ojiva', h: 7, c: NEGRO } }, patas: true },
+    nucleo: {
+      seg: [{ h: 0.9, r: 1.83, c: NEGRO }, { h: 35.5, r: 1.83, c: BLANCO }, { h: 4.8, r: 1.83, c: NEGRO }, { h: 12.6, r: 1.83, c: BLANCO }],
+      carena: { r: 2.6, tr: 1.5, hc: 6.5, hn: 8, c: BLANCO }, motores: { n: 9, h: 1.2 },
+      acc: { patas: 9, rejillas: { y: 34.5 } } },
+    lateral: { n: 2, dist: 3.95, ang0: ANG_CAM + Math.PI / 2, r: 1.83, seg: [{ h: 0.9, r: 1.83, c: NEGRO }, { h: 38, r: 1.83, c: BLANCO }], punta: { tipo: 'ojiva', h: 6.5, c: BLANCO },
+      acc: { patas: 9, rejillas: { y: 36 } } } },
+  // Vulcan Centaur VC4S: 61,6 m, Ø 5,4 m en toda la altura. Etapa de cobre, Centaur V plateado, cofia blanca de 15,5 m, 4 GEM 63XL (Ø 1,6 × 22 m).
   vulcan: { nombre: 'Vulcan Centaur', ESC: 1,
-    nucleo: { seg: [{ h: 33, r: 2.7, c: AZUL }, { h: 1.5, r: 2.7, c: NEGRO }, { h: 12, r: 2.7, c: PLATA }], carena: { r: 2.7, hc: 8, hn: 7, c: BLANCO } },
-    lateral: { n: 4, dist: 3.55, ang0: Math.PI / 4, r: 0.8, seg: [{ h: 21, r: 0.8, c: GRIS }], punta: { tipo: 'cono', h: 3, c: GRIS } } },
+    nucleo: {
+      seg: [{ h: 33.3, r: 2.7, c: COBRE }, { h: 1, r: 2.7, c: NEGRO }, { h: 9.7, r: 2.7, c: PLATA }],
+      carena: { r: 2.7, hc: 9.5, hn: 8, c: BLANCO }, motores: { n: 2, centro: false, r: 0.7, h: 2.2 } },
+    lateral: { n: 4, dist: 3.56, ang0: ANG_CAM, r: 0.81, seg: [{ h: 1, r: 0.81, c: NEGRO }, { h: 17.5, r: 0.81, c: CREMA }], punta: { tipo: 'ojiva', h: 3.5, c: CREMA } } },
+  // Atlas V 541: 58 m. Primera etapa común (Ø 3,8 m) naranja, cofia de 5 m (Ø 5,4) con base cónica, 4 AJ-60A blancos (Ø 1,6 × 20 m) en dos pares.
   atlasv: { nombre: 'Atlas V', ESC: 1,
-    nucleo: { seg: [{ h: 32, r: 1.9, c: NARANJA }, { h: 1, r: 1.9, c: NEGRO }, { h: 12, r: 1.5, c: PLATA }], carena: { r: 2.5, hc: 7, hn: 6, c: BLANCO } },
-    lateral: { n: 2, dist: 2.75, ang0: Math.PI / 2, r: 0.8, seg: [{ h: 17, r: 0.8, c: BLANCO }], punta: { tipo: 'cono', h: 2.5, c: BLANCO } } },
+    nucleo: {
+      seg: [{ h: 32.5, r: 1.9, c: ROJIZO }, { h: 0.8, r: 1.9, c: NEGRO }],
+      carena: { r: 2.7, tr: 2.8, hc: 15, hn: 7, c: BLANCO }, motores: { n: 1, r: 1.1, h: 2.4 } },
+    lateral: { angs: [-30, 30, 150, 210].map((d) => ANG_CAM + d * Math.PI / 180), dist: 2.73, r: 0.78, seg: [{ h: 0.8, r: 0.78, c: NEGRO }, { h: 16.6, r: 0.78, c: BLANCO }], punta: { tipo: 'cono', h: 3, c: BLANCO } } },
+  // Electron: 18 m, Ø 1,2 m, todo en fibra de carbono negra con una banda plateada en la entreetapa.
   electron: { nombre: 'Electron', ESC: 2.2,
-    nucleo: { seg: [{ h: 12, r: 0.6, c: NEGRO }, { h: 0.5, r: 0.6, c: GRIS }, { h: 3.5, r: 0.6, c: NEGRO }], carena: { r: 0.6, hc: 0.8, hn: 1.4, c: NEGRO } } },
+    nucleo: {
+      seg: [{ h: 12.1, r: 0.6, c: NEGRO }, { h: 0.7, r: 0.6, c: GRIS }, { h: 2.5, r: 0.6, c: GRAFITO }],
+      carena: { r: 0.6, hc: 0.9, hn: 1.7, c: NEGRO }, motores: { n: 9, h: 0.5 } } },
+  // Pegasus XL: 17,6 m, Ø 1,28 m. Tres etapas blancas, ala delta de 6,7 m de envergadura y tres aletas de cola.
   pegasus: { nombre: 'Pegasus XL', ESC: 2.2,
-    nucleo: { seg: [{ h: 10.3, r: 0.64, c: BLANCO }, { h: 1, r: 0.64, c: NEGRO }, { h: 3, r: 0.64, c: BLANCO }], carena: { r: 0.64, hc: 1, hn: 1.7, c: BLANCO } },
-    ala: { env: 6.7, cuerda: 7.5, y: 1.2 } },
+    nucleo: {
+      seg: [{ h: 10.3, r: 0.64, c: BLANCO }, { h: 0.4, r: 0.64, c: NEGRO }, { h: 2.9, r: 0.64, c: BLANCO }],
+      carena: { r: 0.64, hc: 1.3, hn: 2.8, c: BLANCO }, motores: { n: 1, r: 0.4, h: 0.9 } },
+    ala: { env: 6.7, cuerda: 3.7, y: 3.6, c: GRIS_OSC }, aletas: { n: 3, ang0: Math.PI / 2, y: 0.2, c: NEGRO } },
+  // Minotaur IV: 23,9 m, Ø 2,34 m. Tres motores sólidos de Peacekeeper (el último más estrecho), cuarta etapa Orion 38 dentro de la cofia.
   minotaur4: { nombre: 'Minotaur IV', ESC: 1.6,
-    nucleo: { seg: [{ h: 9.5, r: 1.15, c: GRIS }, { h: 0.6, r: 1.15, c: NEGRO }, { h: 5.5, r: 1.0, c: BLANCO }, { h: 0.5, r: 1.0, c: NEGRO }, { h: 3.5, r: 0.75, c: GRIS }], carena: { r: 1.0, hc: 1.5, hn: 2.5, c: BLANCO } } },
+    nucleo: {
+      seg: [{ h: 8.6, r: 1.17, c: CREMA }, { h: 0.5, r: 1.17, c: NEGRO }, { h: 5.6, r: 1.17, c: CREMA }, { h: 0.5, r: 1.17, c: NEGRO }, { h: 3.6, r: 0.9, c: CREMA }],
+      carena: { r: 1.17, tr: 1.0, hc: 1.6, hn: 2.6, c: BLANCO }, motores: { n: 1, r: 0.7, h: 1.4 } } },
+  // SLS Block 1: 98 m. Etapa central naranja (Ø 8,4 m, 4 RS-25), dos SRB de 5 segmentos (Ø 3,7 × 54 m), adaptador cónico, ICPS, Orion con torre de aborto.
   sls: { nombre: 'SLS', ESC: 1,
-    nucleo: { seg: [{ h: 64, r: 4.2, c: NARANJA }, { h: 3, r: 4.2, r2: 2.5, c: BLANCO }, { h: 14, r: 2.5, c: BLANCO }, { h: 3.5, r: 2.5, r2: 1.5, c: BLANCO }, { h: 8, r: 0.3, c: NEGRO }], carena: null, punta: { tipo: 'cono', h: 1.5, r: 0.3, c: NEGRO } },
-    lateral: { n: 2, dist: 6.4, ang0: 0, r: 1.85, seg: [{ h: 54, r: 1.85, c: BLANCO }], punta: { tipo: 'ojiva', h: 5, c: BLANCO } } },
+    nucleo: {
+      seg: [{ h: 64.6, r: 4.2, c: NARANJA }, { h: 8.4, r: 4.2, r2: 2.55, c: NARANJA }, { h: 9, r: 2.55, c: BLANCO }, { h: 1.3, r: 2.55, r2: 2.5, c: GRIS }, { h: 4, r: 2.5, c: PLATA },
+        { h: 3.5, r: 2.5, r2: 0.9, c: BLANCO }, { h: 5, r: 0.55, c: PLATA }],
+      carena: null, punta: { tipo: 'cono', h: 2.2, r: 0.55, c: NEGRO }, motores: { n: 4, centro: false, r: 0.9, h: 3 } },
+    lateral: { n: 2, dist: 6.35, ang0: ANG_CAM + Math.PI / 2, r: 1.85, seg: [{ h: 3, r: 1.85, c: GRIS_OSC }, { h: 46.5, r: 1.85, c: BLANCO }], punta: { tipo: 'ojiva', h: 4.5, c: CREMA } } },
 };
 
 const ESC_MUNDO = 0.16;        // metros → unidades de escena (cohete de 70 m ≈ 11 u)
@@ -113,26 +150,72 @@ function barra(p1, p2, g, color) {
   m.lookAt(b);
   return m;
 }
+// Caja pegada al costado de un cilindro: esp = grosor radial, ancho = tangencial, a la dirección `ang` (plano XZ).
+function bloqueRadial(ang, rad, y, ancho, alto, esp, color) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(esp, alto, ancho), mat(color));
+  m.position.set(Math.cos(ang) * rad, y + alto / 2, Math.sin(ang) * rad);
+  m.rotation.y = -ang;
+  return m;
+}
+// Plancha plana (ala, aletas) a partir de un contorno 2D, centrada en su grosor.
+function placa(pts, grosor, color) {
+  const geo = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y))), { depth: grosor, bevelEnabled: false });
+  geo.translate(0, 0, -grosor / 2);
+  return new THREE.Mesh(geo, mat(color));
+}
+
+// Toberas bajo la base: una, o un anillo (con o sin tobera central).
+function toberas(m, r0) {
+  const g = new THREE.Group();
+  const n = m?.n ?? 1, h = m?.h ?? 1.4;
+  const pos = m?.centro === false ? [] : [[0, 0]];
+  const k = n - pos.length;
+  const rb = m?.r ?? (n > 1 ? r0 * 0.22 : r0 * 0.5);
+  const d = n > 2 ? r0 * (m?.centro === false ? 0.5 : 0.62) : r0 * 0.5;
+  for (let i = 0; i < k; i++) { const a = (i / k) * Math.PI * 2 + Math.PI / 4; pos.push([Math.cos(a) * d, Math.sin(a) * d]); }
+  for (const [x, z] of pos) {
+    const t = cil(rb, rb * 0.4, h, NEGRO, -h + 0.1, 8);
+    t.position.x = x; t.position.z = z;
+    g.add(t);
+  }
+  return g;
+}
+
+// Accesorios de un propulsor de Falcon: patas plegadas (negras, pegadas al costado), aletas de rejilla en lo alto y la canaleta lateral.
+function accesorios(g, r, a) {
+  if (a.patas) {
+    for (let i = 0; i < 4; i++) {
+      const ang = Math.PI / 4 + i * Math.PI / 2, c = Math.cos(ang), s = Math.sin(ang);
+      g.add(barra([c * (r + 0.9), 0.5, s * (r + 0.9)], [c * (r + 0.3), a.patas, s * (r + 0.3)], 0.55, NEGRO));
+      g.add(bloqueRadial(ang, r + 0.95, 0, 1, 0.8, 1, NEGRO));   // pie
+    }
+  }
+  if (a.rejillas) {
+    for (let i = 0; i < 4; i++) g.add(bloqueRadial(i * Math.PI / 2, r + 0.2, a.rejillas.y, 1.9, 1.6, 0.35, GRAFITO));
+  }
+  if (a.cinta) g.add(bloqueRadial(ANG_CAM + 0.45, r + 0.08, a.cinta.y, 0.55, a.cinta.h, 0.18, CINTA));
+}
 
 function nucleo(cfg) {
   const n = new THREE.Group();
   let y = 0;
   const r0 = cfg.seg[0].r;
-  n.add(cil(r0 * 0.35, r0 * 0.55, 1.6, NEGRO, -0.9, 8)); // tobera
+  n.add(toberas(cfg.motores, r0));
   for (const s of cfg.seg) { n.add(cil(s.r, s.r2 ?? s.r, s.h, s.c, y)); y += s.h; }
   const ult = cfg.seg[cfg.seg.length - 1];
   if (cfg.carena) {
     const k = cfg.carena, rUlt = ult.r2 ?? ult.r;
-    if (k.r > rUlt + 0.01) { n.add(cil(rUlt, k.r, 1.5, k.c, y)); y += 1.5; }
+    if (k.r > rUlt + 0.01) { const tr = k.tr ?? 1.5; n.add(cil(rUlt, k.r, tr, k.c, y)); y += tr; }
     n.add(cil(k.r, k.r, k.hc, k.c, y)); y += k.hc;
     n.add(ojiva(k.r, k.hn, k.c, y)); y += k.hn;
   } else if (cfg.punta) {
     n.add(cil(cfg.punta.r ?? 0.3, 0.02, cfg.punta.h, cfg.punta.c, y)); y += cfg.punta.h;
   }
+  if (cfg.acc) accesorios(n, r0, cfg.acc);
   return { grupo: n, alto: y };
 }
 
-function construirCohete(id) {
+export function construirCohete(id) {
   const spec = MODELOS[id] ?? MODELOS.falcon9;
   const g = new THREE.Group();
   const { grupo, alto } = nucleo(spec.nucleo);
@@ -140,35 +223,35 @@ function construirCohete(id) {
   let ancho = spec.nucleo.seg[0].r;
   if (spec.lateral) {
     const l = spec.lateral;
-    for (let i = 0; i < l.n; i++) {
-      const a = l.ang0 + (i / l.n) * Math.PI * 2;
+    const angs = l.angs ?? Array.from({ length: l.n }, (_, i) => l.ang0 + (i / l.n) * Math.PI * 2);
+    for (const a of angs) {
       const b = new THREE.Group();
       let y = 0;
-      b.add(cil(l.r * 0.4, l.r * 0.6, 1, NEGRO, -0.7, 8));
+      b.add(toberas({ n: 1, r: l.r * 0.5, h: 1 }, l.r));
       for (const s of l.seg) { b.add(cil(s.r, s.r2 ?? s.r, s.h, s.c, y)); y += s.h; }
       if (l.punta.tipo === 'ojiva') b.add(ojiva(l.r, l.punta.h, l.punta.c, y));
       else b.add(cil(l.r, 0.05, l.punta.h, l.punta.c, y));
+      if (l.acc) accesorios(b, l.r, l.acc);
       b.position.set(Math.cos(a) * l.dist, 0, Math.sin(a) * l.dist);
       g.add(b);
     }
     ancho = l.dist + l.r;
   }
-  if (spec.patas) {
-    for (let i = 0; i < 4; i++) {
-      const a = i * Math.PI / 2 + Math.PI / 4;
-      const p = barra([Math.cos(a) * 1.8, 8, Math.sin(a) * 1.8], [Math.cos(a) * 4.6, -0.6, Math.sin(a) * 4.6], 0.3, NEGRO);
+  if (spec.ala) {
+    // Ala delta de 45° en el plano que contiene el eje del cohete (la envergadura va en X, el grosor en Z).
+    const w = spec.ala, r = spec.nucleo.seg[0].r, mit = w.env / 2, yb = w.y, yt = yb + w.cuerda, yl = yt - (mit - r);
+    const ala = placa([[-r * 0.7, yt], [-mit, yl], [-mit, yb], [mit, yb], [mit, yl], [r * 0.7, yt]], 0.2, w.c ?? GRAFITO);
+    g.add(ala);
+    ancho = Math.max(ancho, mit);
+  }
+  if (spec.aletas) {
+    const f = spec.aletas, r = spec.nucleo.seg[0].r;
+    for (let i = 0; i < f.n; i++) {
+      const a = f.ang0 + (i / f.n) * Math.PI * 2;
+      const p = placa([[r - 0.1, f.y], [r + 1.6, f.y + 0.6], [r + 1.6, f.y + 1.8], [r - 0.1, f.y + 2.5]], 0.14, f.c);
+      p.rotation.y = -a;
       g.add(p);
     }
-  }
-  if (spec.ala) {
-    // Silueta del ala delta (el avión portador es opcional; aquí solo el ala del cohete)
-    const w = spec.ala, sh = new THREE.Shape();
-    sh.moveTo(-w.env / 2, w.cuerda); sh.lineTo(0, 0); sh.lineTo(w.env / 2, w.cuerda); sh.lineTo(-w.env / 2, w.cuerda);
-    const m = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.15, bevelEnabled: false }), mat(NEGRO));
-    m.rotation.x = -Math.PI / 2;
-    m.position.set(0, w.y, w.cuerda * 0.3);
-    g.add(m);
-    ancho = Math.max(ancho, w.env / 2);
   }
   g.scale.setScalar(ESC_MUNDO * (spec.ESC ?? 1));
   const sop = new THREE.Group();
