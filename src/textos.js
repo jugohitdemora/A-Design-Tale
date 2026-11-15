@@ -76,7 +76,7 @@ export const T = textos({
 
   // panel global
   globalPanel: 'Estado global',
-  categories: { actitud: 'control de actitud', antena: 'antena', bateria: 'batería', camara: 'cámara', computador: 'computador', estructura: 'estructura', guiado: 'guiado', instrumento: 'instrumento', memoria: 'almacenamiento de datos', navegacion: 'navegación', paneles: 'paneles solares', polvo: 'control de polvo', propulsion: 'propulsión', proteccion: 'blindaje', sondas: 'sondas', termica: 'térmica', tierra: 'segmento terrestre' },
+  categories: { actitud: 'control de actitud', antena: 'antena', bateria: 'batería', camara: 'cámara', computador: 'computador', estructura: 'estructura', guiado: 'guiado', instrumento: 'instrumento', memoria: 'almacenamiento de datos', navegacion: 'navegación', paneles: 'paneles solares', polvo: 'control de polvo', propulsion: 'propulsión', proteccion: 'blindaje', sondas: 'sondas', termica: 'térmica', tierra: 'segmento terrestre', movilidad: 'movilidad', robotica: 'robótica', despliegue: 'despliegue', rtg: 'generador nuclear', blindaje: 'blindaje', regulacion: 'regulación eléctrica', procesador: 'procesador de datos' },
   bars: { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Enlace de datos', presupuesto: 'Presupuesto', volumen: 'Volumen' },
   units: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/día', presupuesto: 'M USD', volumen: 'L' },
   barState: { ok: 'OK', tolerancia: 'Tolerancia: más riesgo de fallo', exceso: 'Muy por encima' },
@@ -268,7 +268,7 @@ export const T = textos({
 
   // global panel
   globalPanel: 'Global status',
-  categories: { actitud: 'attitude control', antena: 'antenna', bateria: 'battery', camara: 'camera', computador: 'computer', estructura: 'structure', guiado: 'guidance', instrumento: 'instrument', memoria: 'data storage', navegacion: 'navigation', paneles: 'solar panels', polvo: 'dust control', propulsion: 'propulsion', proteccion: 'shielding', sondas: 'probes', termica: 'thermal', tierra: 'ground segment' },
+  categories: { actitud: 'attitude control', antena: 'antenna', bateria: 'battery', camara: 'camera', computador: 'computer', estructura: 'structure', guiado: 'guidance', instrumento: 'instrument', memoria: 'data storage', navegacion: 'navigation', paneles: 'solar panels', polvo: 'dust control', propulsion: 'propulsion', proteccion: 'shielding', sondas: 'probes', termica: 'thermal', tierra: 'ground segment', movilidad: 'mobility', robotica: 'robotics', despliegue: 'deployment', rtg: 'nuclear generator', blindaje: 'shielding', regulacion: 'power regulation', procesador: 'data processor' },
   bars: { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data link', presupuesto: 'Budget', volumen: 'Volume' },
   units: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/day', presupuesto: 'M USD', volumen: 'L' },
   barState: { ok: 'OK', tolerancia: 'Tolerance: higher failure risk', exceso: 'Too far over' },

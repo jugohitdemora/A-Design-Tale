@@ -466,13 +466,20 @@ function crearCarpeta() {
 
 // ---------- Portada de las carpetas ----------
 // Fotos del destino: mapas reales donde los hay (assets/mapas) y dibujo procedural para Tierra y Marte.
-const FOTOS = { mercurio: 'assets/mapas/mercurio-color.jpg', luna: 'assets/mapas/luna-color.jpg', cometa: 'assets/mapas/cometa-67p.jpg' };
+const FOTOS = {
+  mercurio: 'assets/mapas/mercurio-color.jpg', luna: 'assets/mapas/luna-color.jpg', cometa: 'assets/mapas/cometa-67p.jpg',
+  // Misiones nuevas (assets/mapas, fuentes en src/datos/mapas-nuevos.js). Si falta un archivo, se dibuja un mapa procedural.
+  tierra: 'assets/mapas/tierra-color.jpg', marte: 'assets/mapas/marte-color.jpg', europa: 'assets/mapas/europa-color.jpg',
+  encelado: 'assets/mapas/encelado-color.jpg', iss: 'assets/mapas/iss.jpg',
+};
 const imagenes = {};
 function imagen(clave, alCargar) {
   let r = imagenes[clave];
   if (!r) {
     r = imagenes[clave] = { img: new Image(), listo: false, esperan: [] };
     r.img.onload = () => { r.listo = true; r.esperan.splice(0).forEach((f) => f()); };
+    // Si el archivo falta, se usa el mapa procedural del cuerpo.
+    r.img.onerror = () => { r.img = mapaProcedural(clave); r.listo = true; r.esperan.splice(0).forEach((f) => f()); };
     r.img.src = FOTOS[clave];
   }
   if (r.listo) return r.img;
@@ -506,6 +513,9 @@ function claveCuerpo(cuerpo) {
   if (t.includes('moon') || t.includes('luna')) return 'luna';
   if (t.includes('comet')) return 'cometa';
   if (t.includes('mars') || t.includes('marte')) return 'marte';
+  if (t.includes('europa')) return 'europa';
+  if (t.includes('encel') || t.includes('saturn')) return 'encelado';
+  if (t.includes('station') || t.includes('estación') || t.includes('iss')) return 'iss';
   return 'tierra';
 }
 const hash = (txt) => [...String(txt)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
@@ -562,7 +572,7 @@ function vestirCarpeta(c, id, info, indice) {
     g.save(); g.translate(368, 182); g.rotate([-0.08, 0.06, -0.03][indice % 3]);
     g.fillStyle = '#f7f3ea'; g.fillRect(-112, -132, 224, 250);
     const fuente = FOTOS[clave] ? imagen(clave, pintar) : mapaProcedural(clave);
-    dibujarFoto(g, -100, -120, 200, 190, fuente, clave === 'cometa', variante, desfase);
+    dibujarFoto(g, -100, -120, 200, 190, fuente, clave === 'cometa' || clave === 'iss', variante, desfase);
     g.fillStyle = '#555'; g.font = '18px "Space Grotesk", sans-serif'; g.textAlign = 'center'; g.fillText(info.cuerpoTexto ?? '', 0, 100);
     g.strokeStyle = '#9aa0a8'; g.lineWidth = 5; g.beginPath(); g.roundRect(-30, -146, 22, 54, 10); g.stroke();
     g.restore();

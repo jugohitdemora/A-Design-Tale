@@ -1,4 +1,4 @@
-// Escenarios y misiones. 3 jugables (MER-3, LUN-3, COM-1: una por escenario, mecanicas-del-juego.md §2) y 15 filas `jugable: false`
+// Escenarios y misiones. 9 jugables, 3 por escenario: MER-3, LUN-3 y COM-1 aquí; las otras 6 en src/datos/misiones-nuevas/. 15 filas `jugable: false`
 // (las otras 6 de Mateo y las 9 de misiones-referencias.md). Para volver jugable una fila: ver recursos-nasa.md §3.
 //
 // Números: `presupuesto` es un valor {v, conf, src}; `horasSombra`, `horasEnlace`, `diasPrevistos`, `valor`, `usoObjetivo`, `pBase`, `p`, `dp`
@@ -20,19 +20,19 @@ export const ESCENARIOS = [
     id: 'orbita', nombre: N('ÓRBITA', 'ORBIT'),
     desc: E('Put a spacecraft in orbit around a world and bring its data home.'),
     regla: E('Score: the useful data you send home during the life of the mission.'),
-    misiones: ['MER-3', 'MER-1', 'MER-2', 'M-ORB-1', 'M-ORB-3', 'M-ORB-4'],
+    misiones: ['MER-3', 'ISS-1', 'AGR-1'],
   },
   {
     id: 'landing', nombre: N('LANDING', 'LANDING'),
     desc: E('Land a probe on the surface and work there as long as you can.'),
     regla: E('Score: the chain from launch to touchdown must hold, then science times the days you work on the surface.'),
-    misiones: ['LUN-3', 'LUN-1', 'LUN-2', 'M-LND-1', 'M-LND-2', 'M-LND-3'],
+    misiones: ['LUN-3', 'EUR-1', 'MAR-1'],
   },
   {
     id: 'exploracion', nombre: N('EXPLORACIÓN', 'EXPLORATION'),
     desc: E('Explore a place nobody knows yet and find what is hidden there.'),
     regla: E('Score: the science you gain plus hidden findings, for every watt-hour you spend.'),
-    misiones: ['COM-1', 'COM-2', 'COM-3', 'M-EXP-1', 'M-EXP-2', 'M-EXP-3'],
+    misiones: ['COM-1', 'VIP-1', 'SAT-1'],
   },
 ];
 

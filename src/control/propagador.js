@@ -13,6 +13,12 @@ export const CUERPOS = {
   mercurio: { central: 'sol', a: 0.387, e: 0.2056, nombre: { es: 'Mercurio', en: 'Mercury' }, color: '#c9b49a', radioKm: 2439.7, mu: 22032 },
   cometa: { central: 'sol', a: 3.46, e: 0.641, nombre: { es: '67P/C-G', en: '67P/C-G' }, color: '#bfbfbf', radioKm: 2, mu: 0.00067 },
   luna: { central: 'tierra', rKm: 384400, nombre: { es: 'Luna', en: 'Moon' }, color: '#d8d8d8', radioKm: 1737.4, mu: 4902.8 },
+  // Órbita baja: subida tipo Hohmann desde 200 km hasta la órbita final (ISS ~ 415 km; heliosíncrona ~ 700 km).
+  leo: { central: 'tierra', rKm: 6378 + 415, nombre: { es: 'Órbita baja', en: 'Low orbit' }, color: '#9fd3ff', radioKm: 0.05, mu: 0 },
+  // Elementos medios aproximados (NSSDC Planetary Fact Sheet): a en UA, e. Europa y Encélado viajan con su planeta.
+  marte: { central: 'sol', a: 1.524, e: 0.0934, nombre: { es: 'Marte', en: 'Mars' }, color: '#d0743c', radioKm: 3389.5, mu: 42828 },
+  europa: { central: 'sol', a: 5.203, e: 0.0484, nombre: { es: 'Júpiter (Europa)', en: 'Jupiter (Europa)' }, color: '#d9b38c', radioKm: 1560.8, mu: 3203 },
+  saturno: { central: 'sol', a: 9.537, e: 0.0539, nombre: { es: 'Saturno (Encélado)', en: 'Saturn (Enceladus)' }, color: '#e3cf8f', radioKm: 252.1, mu: 7.2 },
 };
 
 // Un paso RK4 de r'' = -μ r / |r|³ en 2D. s = [x, y, vx, vy].
@@ -63,6 +69,7 @@ export function trayectoria(destino, { dia = null, optimo = 0, factor = 1 } = {}
   if (C.central === 'tierra') {
     // Geocéntrico: órbita de aparcamiento de 200 km e inyección translunar tipo Hohmann (perigeo 6578 km).
     const r1 = 6378 + 200, r2 = C.rKm;
+    // Órbita baja: la escala se ajusta al radio de la Tierra para que se vea la subida.
     const at = (r1 + r2) / 2;
     const v1 = Math.sqrt(MU_TIERRA * (2 / r1 - 1 / at)) * (1 + (factor - 1) * 0.02);
     const ang = -Math.PI / 2 + desfase;
@@ -73,15 +80,15 @@ export function trayectoria(destino, { dia = null, optimo = 0, factor = 1 } = {}
     const llegada = puntos[puntos.length - 1];
     const aparcamiento = elipse(r1, 0, 0, 90);
     return {
-      central: 'tierra', escala: r2 * 1.15, unidad: 'km',
-      orbitas: [{ puntos: elipse(r2, 0, 0, 240), color: '#8fa3b8', nombre: C.nombre }, { puntos: aparcamiento, color: '#4fb0ff', nombre: { es: 'LEO 200 km', en: 'LEO 200 km' } }],
+      central: 'tierra', escala: r2 * (destino === 'leo' ? 1.6 : 1.15), unidad: 'km',
+      orbitas: [{ puntos: elipse(r2, 0, 0, 240), color: C.color ?? '#8fa3b8', nombre: C.nombre }, { puntos: aparcamiento, color: '#4fb0ff', nombre: { es: 'LEO 200 km', en: 'LEO 200 km' } }],
       transferencia: puntos, llegada, dvKms: v1 - Math.sqrt(MU_TIERRA / r1), diasVuelo: T / 86400,
-      captura: { radio: C.radioKm, puntos: elipse(C.radioKm + 100, 0, 0, 90) },
+      captura: { radio: C.radioKm, puntos: elipse(destino === 'leo' ? r2 : C.radioKm + 100, 0, 0, 90) },
     };
   }
   // Heliocéntrico: la Tierra en 1 UA, salida tipo Hohmann hacia el perihelio/afelio del destino (aproximación).
   const r1 = 1;
-  const r2 = C.e ? (C.a > 1 ? C.a * (1 + C.e) * 0.72 : C.a) : C.a;
+  const r2 = C.e ? (C.a > 1 && C.e > 0.3 ? C.a * (1 + C.e) * 0.72 : C.a) : C.a; // cometa: llega antes del afelio; planetas: a
   const at = (r1 + r2) / 2;
   const vTierra = Math.sqrt(MU_SOL / r1);
   const vT = Math.sqrt(MU_SOL * (2 / r1 - 1 / at));

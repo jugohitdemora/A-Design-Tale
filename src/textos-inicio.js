@@ -30,6 +30,7 @@
 //   el select #in-idioma con el idioma activo. Se ejecuta al cargar y en cada evento 'idioma'.
 import { textos, idioma } from './i18n.js';
 import { JUEGO, TEXTOS } from './config.js';
+import { textoBotonCreditos } from './creditos.js';
 
 export const TI = textos({
   es: {
@@ -141,6 +142,7 @@ export function traducirIndex() {
   poner('jugadores', JUEGO.JUGADORES);
   poner('txt-unirse', TEXTOS.unirse);
   poner('btn-ajustes', TEXTOS.ajustes);
+  poner('btn-creditos', textoBotonCreditos());
   const sel = $('in-idioma');
   if (sel) sel.value = idioma();
   document.title = JUEGO.NOMBRE.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());

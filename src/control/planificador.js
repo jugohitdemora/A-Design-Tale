@@ -464,6 +464,8 @@ function mapa(c, P, u) {
   const ar = figura ? `${base?.ancho ?? 625} / ${base?.alto ?? 450}` : '2 / 1';
   const escenario = h('div', { class: 'pl-mapa' + (figura ? ' figura' : ''), style: `--ar:${ar}` });
   if (base) escenario.append(h('img', { src: ruta(base.archivo), alt: tx(base.nombre), draggable: 'false' }));
+  // Crédito de la imagen real (agencia y título): visible sobre el mapa, con el enlace a la fuente en el title.
+  if (base?.fuente) escenario.append(h('div', { class: 'pl-credito', title: [base.fuente.titulo, base.fuente.licencia, base.fuente.url].filter(Boolean).join(' · ') }, `© ${base.fuente.agencia ?? ''} · ${tx(base.nombre)}`));
   for (const capa of lista(P.capas)) {
     if (!u.capas.includes(capa.id) || capa.id === 'color') continue;
     if (capa.real && MAPAS[capa.mapa]) escenario.append(h('img', { class: 'pl-capa', src: ruta(MAPAS[capa.mapa].archivo), alt: '', draggable: 'false' }));
