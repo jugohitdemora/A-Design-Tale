@@ -221,7 +221,16 @@ sup.src { font-size: var(--t-meta); color: var(--tenue); margin-left: 2px; }
 .pista { position: relative; height: 14px; background: #1e2733; border-radius: 6px; overflow: hidden; }
 .pista.fina { height: 7px; }
 .relleno-barra, .relleno-ciencia { height: 100%; border-radius: 6px; }
-.barra.ok .relleno-barra { background: var(--ok); } .barra.tolerancia .relleno-barra { background: var(--aviso); } .barra.exceso .relleno-barra { background: var(--mal); }
+/* Barra apilada: un tramo por departamento (color del departamento). El estado va en el borde de la pista, no en el relleno. */
+.relleno-barra.apilado { display: flex; overflow: hidden; }
+.seg-rol { display: block; height: 100%; flex: none; }
+.seg-rol + .seg-rol { box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.35); }
+.seg-rol.otros { opacity: 0.9; }
+.barra.tolerancia .pista { box-shadow: 0 0 0 2px var(--aviso); }
+.barra.exceso .pista { box-shadow: 0 0 0 2px var(--mal); }
+.leyenda-roles { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: var(--t-meta); margin-top: 2px; }
+.leyenda-roles .lr { display: inline-flex; align-items: center; gap: 4px; }
+.leyenda-roles .lr i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
 .barra.ok .barra-estado { color: var(--ok); } .barra.tolerancia .barra-estado { color: var(--aviso); } .barra.exceso .barra-estado { color: var(--mal); }
 .marca { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; opacity: 0.8; }
 .marca.m100 { left: 66.667%; } .marca.m120 { left: 80%; opacity: 0.45; }

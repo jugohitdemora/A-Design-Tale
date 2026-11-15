@@ -15,7 +15,7 @@ import { pasosFase, lineaGuia } from './index.js';
 const T = textos({
   es: {
     so: 'AGENCIA·OS', apps: { constructor: 'Constructor', cohete: 'Cámara de lanzamiento', contingencias: 'Contingencias', ruta: 'Sala de control',
-      expediente: 'Expediente', manual: 'Manual SOP', estado: 'Estado', verificacion: 'Verificación', informe: 'Informe' },
+      expediente: 'Expediente', manual: 'Manual SOP', juego: 'Manual de juego', estado: 'Estado', verificacion: 'Verificación', informe: 'Informe' },
     levantarse: 'Sala (Esc)',
     bloqueada: 'Disponible cuando empiece el diseño', ruta: 'La ruta se planifica en la SALA DE CONTROL DE MISIÓN.',
     rutaTxt: 'Ventana de lanzamiento, trayectoria y sitio de descenso u órbita con capas de datos satelitales.', irControl: 'Ir a la sala de control',
@@ -24,7 +24,7 @@ const T = textos({
   },
   en: {
     so: 'AGENCY·OS', apps: { constructor: 'Builder', cohete: 'Launch camera', contingencias: 'Contingencies', ruta: 'Control room',
-      expediente: 'Dossier', manual: 'SOP manual', estado: 'Status', verificacion: 'Verification', informe: 'Report' },
+      expediente: 'Dossier', manual: 'SOP manual', juego: 'Game manual', estado: 'Status', verificacion: 'Verification', informe: 'Report' },
     levantarse: 'Room (Esc)',
     bloqueada: 'Available once design starts', ruta: 'The route is planned in the MISSION CONTROL ROOM.',
     rutaTxt: 'Launch window, trajectory and landing site or orbit with satellite data layers.', irControl: 'Go to the control room',
@@ -33,7 +33,7 @@ const T = textos({
   },
 });
 
-const ICONOS = { constructor: '🛰', cohete: '📹', contingencias: '⚠', ruta: '🗺', expediente: '📁', manual: '📘', estado: '📊', verificacion: '✔', informe: '📄' };
+const ICONOS = { constructor: '🛰', cohete: '📹', contingencias: '⚠', ruta: '🗺', expediente: '📁', manual: '📘', juego: '📖', estado: '📊', verificacion: '✔', informe: '📄' };
 
 // Apps externas (las escriben otros módulos). Se rellenan al cargar.
 const externas = {};
@@ -46,17 +46,18 @@ cargar('constructor', '../laptop/constructor.js', 'appConstructor');
 cargar('contingencias', '../laptop/contingencias.js', 'appContingencias');
 cargar('cohete', '../laptop/camara-lanzamiento.js', 'appCohete');
 cargar('manual', '../laptop/manual.js', 'appManual');
+cargar('juego', '../laptop/manual.js', 'appManualJuego');
 export function alCargarApps(f) { avisarCarga = f; }
 
 // La verificación (votación GO / NO-GO) y el informe ya no van en el portátil: están en la sala de control.
 // El icono "Sala de control" del dock no abre una ventana: lleva directamente allí.
 function appsDeFase(fase) {
-  if (fase === 'briefing') return ['expediente', 'manual'];
+  if (fase === 'briefing') return ['expediente', 'manual', 'juego'];
   // En diseño el Constructor ya muestra los recursos del equipo: la app Estado repetiría lo mismo.
-  if (fase === 'diseno' || fase === 'restricciones') return ['constructor', 'cohete', 'contingencias', 'expediente', 'manual'];
-  return ['estado', 'expediente', 'manual'];
+  if (fase === 'diseno' || fase === 'restricciones') return ['constructor', 'cohete', 'contingencias', 'expediente', 'manual', 'juego'];
+  return ['estado', 'expediente', 'manual', 'juego'];
 }
-const TODAS = ['constructor', 'cohete', 'contingencias', 'estado', 'expediente', 'manual'];
+const TODAS = ['constructor', 'cohete', 'contingencias', 'estado', 'expediente', 'manual', 'juego'];
 
 function contenidoApp(c, app, fase, irA) {
   const restr = fase === 'restricciones';
@@ -66,6 +67,7 @@ function contenidoApp(c, app, fase, irA) {
       case 'cohete': return externas.cohete ? externas.cohete(c) : pestanaCohete(c);
       case 'contingencias': return externas.contingencias ? externas.contingencias(c) : pestanaRiesgos(c, resumenSeguro(c));
       case 'manual': return externas.manual ? externas.manual(c, { rol: c.ui.manualRol ?? c.rol }) : h('p', { class: 'lp-vacio' }, T.cargando);
+      case 'juego': return externas.juego ? externas.juego(c, { rol: c.rol }) : h('p', { class: 'lp-vacio' }, T.cargando);
       case 'verificacion': return pantallaVerificacion(c);
       case 'informe': return pantallaInforme(c);
       case 'estado': return h('div', { class: 'lp-estado' }, panelGlobal(c, resumenSeguro(c), { revision: fase === 'diseno' || fase === 'restricciones' }));

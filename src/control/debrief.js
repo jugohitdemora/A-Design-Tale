@@ -5,14 +5,15 @@ import { textos, idioma, tx } from '../i18n.js';
 import { h, en, lista, redondear, fuenteLink } from '../pantallas/ui.js';
 import { eventoDe } from '../pantallas/mision.js';
 import { explicarPuntos } from '../reglas/explicar.js';
+import { lanzamientoFallido, olvidarLanzamiento } from '../laptop/camara-lanzamiento.js';
 
 const T = textos({
-  es: { pts: 'puntos', sinResultado: 'Aún no hay resultado.', pasos: 'Pasos', ciencia: 'Ciencia', real: 'Misión real',
+  es: { sinLanz: 'El cohete nunca llegó al espacio: el lanzamiento falló y las fases siguientes no se volaron.', pts: 'puntos', sinResultado: 'Aún no hay resultado.', pasos: 'Pasos', ciencia: 'Ciencia', real: 'Misión real',
     ref: 'Referencia', agencia: 'Agencia', cohete: 'Cohete real', encontro: 'Qué encontró', ok: 'Logrado', no: 'No logrado', prio: 'prioritario',
     hallazgos: 'Hallazgos ocultos', porque: 'Por qué ha pasado', suerte: 'Mala suerte', decision: 'Decisión', fuentes: 'Fuentes', ninguno: 'Ninguno',
     visto: 'detectado', perdido: 'se escapó', ausente: 'no estaba', otra: 'Volver a volar', nueva: 'Nueva misión', sinMision: 'Sin datos de misión.',
     leyenda: 'Mala suerte: el fallo no dependía de tus decisiones. Decisión: había algo que cambiar.', estimaciones: 'Estimaciones del equipo de diseño' },
-  en: { pts: 'points', sinResultado: 'No result yet.', pasos: 'Steps', ciencia: 'Science', real: 'Real mission',
+  en: { sinLanz: 'The rocket never reached space: the launch failed and the following phases were not flown.', pts: 'points', sinResultado: 'No result yet.', pasos: 'Steps', ciencia: 'Science', real: 'Real mission',
     ref: 'Reference', agencia: 'Agency', cohete: 'Real rocket', encontro: 'What it found', ok: 'Achieved', no: 'Not achieved', prio: 'priority',
     hallazgos: 'Hidden findings', porque: 'Why it happened', suerte: 'Bad luck', decision: 'Decision', fuentes: 'Sources', ninguno: 'None',
     visto: 'detected', perdido: 'missed', ausente: 'not there', otra: 'Fly again', nueva: 'New mission', sinMision: 'No mission data.',
@@ -68,7 +69,9 @@ export function pantallaDebrief(c) {
   const vd = r.veredicto;
   const banner = h('section', { class: 'dbf-veredicto v-' + vd },
     h('b', { class: 'dbf-vd' }, r.cancelada ? TG.cancelledTitle : (TG.verdicts[vd] ?? '-')), h('span', {}, r.cancelada ? TG.cancelledText : (TG.verdictText[vd] ?? '')),
-    r.puntos != null ? h('em', {}, `${redondear(Number(r.puntos), 0)} ${T.pts}`) : null);
+    r.puntos != null ? h('em', {}, `${redondear(Number(r.puntos), 0)} ${T.pts}`) : null,
+    lanzamientoFallido(r) ? h('p', { class: 'dbf-sin-vuelo' }, '✖ ', T.sinLanz) : null);
+  olvidarLanzamiento();   // el próximo vuelo vuelve a mostrar el despegue
 
   const fases = lista(m?.fases);
   const pasos = lista(r.pasos);

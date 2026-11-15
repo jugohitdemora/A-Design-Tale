@@ -6,6 +6,7 @@ import { h, lista, redondear, puedoPor, resumenSeguro } from '../pantallas/ui.js
 import { textos, tx, depto, idioma } from '../i18n.js';
 import { unaVez } from '../pantallas/panel-global.js';
 import { trayectoria } from './propagador.js';
+import { lanzamiento, lanzamientoFallido } from '../laptop/camara-lanzamiento.js';
 
 const T = textos({
   es: {
@@ -47,6 +48,38 @@ function bucle(t) {
   V.frac += (V.objetivo - V.frac) * 0.03;
   dibujarOrbita();
 }
+// Colocador de etiquetas sin solapes: cada etiqueta prueba varias anclas y desplazamientos alrededor; la primera posición libre gana
+// (con línea guía si queda lejos del ancla). Si no cabe en ningún sitio, la de menor prioridad se omite.
+function colocador(g, w, hh) {
+  const ocupados = [], pend = [];
+  const choca = (a) => ocupados.some((b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y);
+  return {
+    reservar(x, y, ww, alto) { ocupados.push({ x, y, w: ww, h: alto }); },
+    poner(txt, anclas, color, prio) { pend.push({ txt, anclas, color, prio }); },
+    dibujar() {
+      pend.sort((a, b) => b.prio - a.prio);
+      for (const e of pend) {
+        const tw = g.measureText(e.txt).width + 4, th = 16;
+        const cand = [[8, -8 - th], [8, 8], [-8 - tw, -8 - th], [-8 - tw, 8], [-tw / 2, -12 - th], [-tw / 2, 12], [22, -22 - th], [-22 - tw, 22], [22, 22], [-22 - tw, -22 - th]];
+        let hecho = false;
+        for (const [ax, ay] of e.anclas) {
+          for (let i = 0; i < cand.length && !hecho; i++) {
+            const r = { x: ax + cand[i][0], y: ay + cand[i][1], w: tw, h: th };
+            if (r.x < 3 || r.y < 3 || r.x + r.w > w - 3 || r.y + r.h > hh - 3 || choca(r)) continue;
+            if (i >= 6) {   // lejos del ancla: línea guía hasta el borde más cercano de la caja
+              g.strokeStyle = e.color; g.globalAlpha = 0.5; g.lineWidth = 1; g.beginPath(); g.moveTo(ax, ay);
+              g.lineTo(Math.max(r.x, Math.min(ax, r.x + r.w)), Math.max(r.y, Math.min(ay, r.y + r.h))); g.stroke(); g.globalAlpha = 1;
+            }
+            g.fillStyle = 'rgba(4,7,13,0.75)'; g.fillRect(r.x, r.y, r.w, r.h);
+            g.fillStyle = e.color; g.fillText(e.txt, r.x + 2, r.y + th - 4);
+            ocupados.push(r); hecho = true;
+          }
+          if (hecho) break;
+        }
+      }
+    },
+  };
+}
 function dibujarOrbita() {
   const { canvas, g, tray } = V;
   const w = canvas.clientWidth, hh = canvas.clientHeight;
@@ -66,20 +99,29 @@ function dibujarOrbita() {
   // Cuerpo central
   g.fillStyle = tray.central === 'sol' ? '#ffd35a' : '#3f7fd8';
   g.beginPath(); g.arc(cx, cy, tray.central === 'sol' ? 7 : 9, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#9fb3c8'; g.font = '14px monospace';
-  g.fillText(tray.central === 'sol' ? T.sol : T.tierra, cx + 10, cy - 10);
-  for (const o of tray.orbitas) {
-    linea(o.puntos, o.color, 1, true);
-    const [x, y] = P(o.puntos[Math.floor(o.puntos.length * 0.12)]);
-    g.fillStyle = o.color; g.fillText(tx(o.nombre), x + 4, y - 4);
-  }
+  g.font = '13px monospace';
+  const etq = colocador(g, w, hh);
+  // Zonas que ninguna etiqueta debe tapar: ejes (esquinas) y el cuerpo central
+  const ejeX = `${tray.unidad === 'UA' ? 'X (UA)' : 'X (km)'} →`;
+  const wEje = g.measureText(ejeX).width;
+  etq.reservar(w - wEje - 10, hh - 22, wEje + 6, 18); etq.reservar(2, 2, 36, 18);
+  etq.reservar(cx - 10, cy - 10, 20, 20);
+  const iDestino = tray.central === 'sol' ? 1 : 0;
+  tray.orbitas.forEach((o) => linea(o.puntos, o.color, 1, true));
+  // Etiquetas por prioridad (se colocan de mayor a menor): cuerpo central, destino, y las demás órbitas probando varios puntos de su trazo
+  etq.poner(tray.central === 'sol' ? T.sol : T.tierra, [[cx, cy]], '#9fb3c8', 11);
+  const [dx, dy] = P(tray.llegada);
+  etq.poner(tx(tray.orbitas[iDestino].nombre), [[dx, dy]], tray.orbitas[iDestino].color, 8);
+  tray.orbitas.forEach((o, i) => {
+    if (i === iDestino) return;
+    etq.poner(tx(o.nombre), [0.12, 0.3, 0.5, 0.7, 0.88].map((f) => P(o.puntos[Math.floor((o.puntos.length - 1) * f)])), o.color, 3);
+  });
   // Transferencia: recorrida (brillante) y por recorrer (tenue)
   const n = tray.transferencia.length;
   const hecho = Math.max(1, Math.floor(Math.min(1, V.frac) * (n - 1)));
   linea(tray.transferencia, 'rgba(95,224,138,0.25)', 1);
   linea(tray.transferencia.slice(0, hecho + 1), '#5fe08a', 2);
   // Destino en su punto de llegada
-  const [dx, dy] = P(tray.llegada);
   g.fillStyle = '#d8d0c0'; g.beginPath(); g.arc(dx, dy, 5, 0, Math.PI * 2); g.fill();
   // Nave
   let pos = tray.transferencia[hecho];
@@ -92,7 +134,8 @@ function dibujarOrbita() {
   g.fillStyle = '#f2b844'; g.fillRect(sx - 3, sy - 3, 6, 6);
   g.strokeStyle = '#f2b844'; g.beginPath(); g.moveTo(sx - 9, sy); g.lineTo(sx + 9, sy); g.stroke();
   // Ejes
-  g.fillStyle = '#5d7a96'; g.fillText(`${tray.unidad === 'UA' ? 'X (UA)' : 'X (km)'} →`, w - 70, hh - 8);
+  etq.dibujar();
+  g.fillStyle = '#5d7a96'; g.fillText(ejeX, w - wEje - 6, hh - 8);
   g.fillText(`↑ Y`, 6, 14);
 }
 
@@ -107,6 +150,16 @@ function barrasLed(n, total, clase = '') {
   return h('div', { class: 'op-led ' + clase }, Array.from({ length: total }, (_, i) => h('i', { class: i < n ? 'on' : '' })));
 }
 
+// ---------- Fallo de lanzamiento → informe: se avanza paso a paso hasta el último (el anfitrión solo avanza de uno en uno) ----------
+let haciaInforme = false, ultimoEnviado = -1;
+function empujarInforme(c) {
+  const paso = c.e?.vista?.paso ?? 0;
+  if (c.e?.fase !== 'mision' || ultimoEnviado === paso) return;
+  ultimoEnviado = paso;
+  c.enviar('avanzar', { paso });
+}
+export { lanzamientoFallido };
+
 // ---------- Pantalla ----------
 export function pantallaOperaciones(c) {
   const r = c.e?.resultado;
@@ -114,6 +167,22 @@ export function pantallaOperaciones(c) {
   if (!r || !Array.isArray(r.pasos)) return h('div', { class: 'mc-vacio' }, h('p', {}, T.sinResultado));
   const paso = Number.isFinite(c.e?.vista?.paso) ? c.e.vista.paso : 0;
   const total = r.pasos.length;
+  // ---- despegue: lo ven todos antes de la simulación. Si el lanzamiento falla, la misión termina aquí (nada de órbitas) ----
+  if (c.e.fase === 'mision') {
+    const falla = lanzamientoFallido(r);
+    const nombre0 = tx(lista(c.mision?.fases).find((f) => f.id === r.pasos[0]?.fase)?.nombre) || '';
+    const clave = `${c.mision?.id}|${JSON.stringify(r.pasos.map((p) => [p.fase, p.ok, p.p]))}`;
+    const seq = lanzamiento(c, {
+      clave, falla, reproducir: paso === 0, coheteId: c.e?.porRol?.vuelo?.cohete,
+      fase: { nombre: nombre0, p: r.pasos[0]?.p },
+      onInforme: () => { haciaInforme = true; ultimoEnviado = -1; empujarInforme(c); },
+    });
+    if (seq) {
+      if (falla && haciaInforme && paso < total - 1) setTimeout(() => empujarInforme(c), 60);
+      return h('div', { class: 'lz-host' }, seq);
+    }
+  }
+  haciaInforme = false;
   const final = c.e.fase === 'informe' || paso >= total - 1;
   const actual = r.pasos[paso] ?? {};
   const fasesM = lista(c.mision?.fases);
@@ -137,7 +206,7 @@ export function pantallaOperaciones(c) {
   const secuencia = h('ol', { class: 'op-secuencia' }, r.pasos.map((p, i) => {
     const estado = i > paso ? 'pendiente' : p.omitida ? 'omitida' : p.ok ? 'ok' : 'falla';
     const icono = { pendiente: '⧗', omitida: '—', ok: '✔', falla: '✖' }[estado];
-    return h('li', { class: `${estado}${i === paso ? ' actual' : ''}` }, h('span', { class: 'op-ico' }, icono), h('span', {}, nombreFase(p.fase)), h('em', { title: T.exito }, i > paso ? '' : pct(p.p)));
+    return h('li', { class: `${estado}${i === paso ? ' actual' : ''}` }, h('span', { class: 'op-ico' }, icono), h('span', {}, nombreFase(p.fase)), h('em', { title: T.exito, class: 'op-num' }, i > paso ? '' : pct(p.p)));
   }));
   const izq = h('section', { class: 'mc-panel op-izq' }, h('h3', {}, T.secuencia), secuencia);
 
@@ -196,7 +265,7 @@ export function pantallaOperaciones(c) {
       tele(T.comms, h('div', { class: 'op-senal' }, [1, 2, 3, 4, 5].map((i) => h('i', { class: i <= Math.round(enlace * 5) ? 'on' : '', style: `height:${i * 20}%` })))),
       tele(T.orientacion, h('p', { class: fallos ? 'aviso' : 'ok' }, fallos ? T.degradado : T.estable)),
       tele(T.enlace, h('p', { class: perdido ? 'mal' : fallos ? 'aviso' : 'ok' }, estadoEnlace)),
-      tele(T.datos, barrasLed(Math.round(((paso + 1) / total) * 12), 12), h('span', { class: 'op-mb' }, `${redondear(recibidos, 0)} MB`))),
+      tele(T.datos, barrasLed(Math.round(((paso + 1) / total) * 12), 12), h('span', { class: 'op-mb op-num' }, `${String(redondear(recibidos, 0)).padStart(5, ' ')} MB`))),
     alerta ? null : h('p', { class: 'mc-nota tenue' }, T.sinEvento),
     h('details', { class: 'op-rover' }, h('summary', {}, T.rover), h('p', {}, T.roverTxt),
       h('div', { class: 'op-dpad' }, ['▲', '◀', '■', '▶', '▼'].map((x) => h('button', { class: 'boton op-flecha', type: 'button', disabled: true }, x)))),

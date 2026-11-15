@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { textos, tx, idioma, depto } from '../i18n.js';
 import { T as TU } from '../textos.js';
-import { h, dinero, puedoPor, lista } from '../pantallas/ui.js';
+import { h, dinero, puedoPor, lista, redondear } from '../pantallas/ui.js';
 
 const T = textos({
   es: {
@@ -19,10 +19,10 @@ const T = textos({
     usoNasa: 'Uso en NASA', ninguno: 'ninguno', nota: 'Nota', elegir: 'SELECCIONAR', elegido: 'SELECCIONADO',
     soloRol: (r) => `Solo ${r} elige el cohete.`,
     margen: 'Margen de masa', masaNave: 'Masa de la nave', capacidad: 'Capacidad del cohete',
-    libres: (n) => `Quedan ${n} kg libres.`, tolerancia: (n) => `Excede ${n} kg (tolerancia del 20 %). Habrá que recortar.`,
+    libres: (n) => `Quedan ${n} kg libres.`, tolerancia: (n) => `Excede ${n} kg (tolerancia): pasa, pero sube el riesgo de fallo en el lanzamiento.`,
     exceso: (n) => `Excede ${n} kg. No pasa la revisión.`, sinCapacidad: 'Sin capacidad hacia este destino.',
     presupuesto: 'Presupuesto', sinCohete: 'sin cohete', conEste: 'con este cohete',
-    presOk: (n) => `Quedan ${n}.`, presTol: (n) => `Excede ${n} (tolerancia). Habrá que recortar.`, presExc: (n) => `Excede ${n}. No pasa la revisión.`,
+    presOk: (n) => `Quedan ${n}.`, presTol: (n) => `Excede ${n} (tolerancia): pasa, pero sube el riesgo de fallo en el lanzamiento.`, presExc: (n) => `Excede ${n}. No pasa la revisión.`,
     config: 'Configuración', motoresF: 'Motores', materialesF: 'Materiales', registroF: 'Registro',
     teclas: 'Flechas ← → para cambiar de cohete', juego: '≈ valor de juego',
     cohetes: 'COHETES',
@@ -35,10 +35,10 @@ const T = textos({
     usoNasa: 'NASA use', ninguno: 'none', nota: 'Note', elegir: 'SELECT', elegido: 'SELECTED',
     soloRol: (r) => `Only ${r} chooses the rocket.`,
     margen: 'Mass margin', masaNave: 'Spacecraft mass', capacidad: 'Rocket capacity',
-    libres: (n) => `${n} kg left.`, tolerancia: (n) => `Over by ${n} kg (20 % tolerance). Cut mass.`,
+    libres: (n) => `${n} kg left.`, tolerancia: (n) => `Over by ${n} kg (tolerance): passes, but raises launch failure risk.`,
     exceso: (n) => `Over by ${n} kg. Review fails.`, sinCapacidad: 'No capacity to this destination.',
     presupuesto: 'Budget', sinCohete: 'no rocket', conEste: 'with this rocket',
-    presOk: (n) => `${n} left.`, presTol: (n) => `Over by ${n} (tolerance). Cut cost.`, presExc: (n) => `Over by ${n}. Review fails.`,
+    presOk: (n) => `${n} left.`, presTol: (n) => `Over by ${n} (tolerance): passes, but raises launch failure risk.`, presExc: (n) => `Over by ${n}. Review fails.`,
     config: 'Configuration', motoresF: 'Engines', materialesF: 'Materials', registroF: 'Record',
     teclas: 'Arrow keys ← → switch rocket', juego: '≈ game value',
     cohetes: 'ROCKETS',
@@ -605,3 +605,264 @@ export function appCohete(c) {
 }
 
 export default appCohete;
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Secuencia de lanzamiento: la misma cámara (escenario y cohete de arriba) con el despegue de verdad. Se reproduce al entrar en la
+// fase 'mision', antes de la simulación de trayectoria. Todo se calcula en función del tiempo t (sin estado), así que se puede saltar.
+// Si falla el lanzamiento: el cohete estalla (bola de fuego, restos) y sale la tarjeta "FALLO DE LANZAMIENTO".
+// ---------------------------------------------------------------------------------------------------------------------
+const TL = textos({
+  es: { cam: 'CAM 02 · PLATAFORMA 1', rec: 'REC', alt: 'ALT', vel: 'VEL', saltar: 'Saltar ▶▶', ver: 'VER INFORME ▶',
+    cuenta: 'CUENTA ATRÁS', ignicion: 'IGNICIÓN', despegue: 'DESPEGUE', ascenso: 'ASCENSO', maxq: 'MAX-Q', anomalia: 'ANOMALÍA', perdida: 'SEÑAL PERDIDA',
+    fallo: 'FALLO DE LANZAMIENTO', falloTxt: 'El cohete se perdió durante el ascenso. La misión nunca llegó al espacio.',
+    falloTxt2: 'Las fases siguientes no se volaron.', fase: 'Fase fallida', prob: 'prob. de éxito', sinWebgl: 'Sin imagen 3D' },
+  en: { cam: 'CAM 02 · PAD 1', rec: 'REC', alt: 'ALT', vel: 'VEL', saltar: 'Skip ▶▶', ver: 'VIEW REPORT ▶',
+    cuenta: 'COUNTDOWN', ignicion: 'IGNITION', despegue: 'LIFTOFF', ascenso: 'ASCENT', maxq: 'MAX-Q', anomalia: 'ANOMALY', perdida: 'SIGNAL LOST',
+    fallo: 'LAUNCH FAILURE', falloTxt: 'The rocket was lost during ascent. The mission never reached space.',
+    falloTxt2: 'The following phases were not flown.', fase: 'Failed phase', prob: 'success chance', sinWebgl: 'No 3D image' },
+});
+
+export const LZ = { TOTAL: 7.5, IGN: 0.3, DESPEGUE: 1.7, BOOM: 4.1, CARTA: 5.5 };
+const ACEL = 5, M_POR_U = 6.4;
+const altura = (t) => (t < LZ.DESPEGUE ? 0 : 0.5 * ACEL * (t - LZ.DESPEGUE) ** 2);
+const velocidad = (t) => (t < LZ.DESPEGUE ? 0 : ACEL * (t - LZ.DESPEGUE));
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+const NPUFF = 72, NRESTOS = 26;
+
+// Estado de módulo: qué lanzamiento se está viendo (clave) y desde cuándo. Sobrevive a los repintados del host.
+const SL = { clave: null, t0: 0, hecho: false, falla: false, hud: null, timer: null, c: null };
+export function olvidarLanzamiento() { SL.clave = null; SL.hecho = false; clearTimeout(SL.timer); }
+const transcurrido = () => (performance.now() - SL.t0) / 1000;
+
+let L = null;
+function contextoLanz() {
+  if (L) return L;
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.className = 'lz-canvas';
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
+    renderer.setPixelRatio(1);
+    renderer.setClearColor('#a9d0e0');
+    const escena = new THREE.Scene();
+    escena.add(new THREE.HemisphereLight('#fff4de', '#5f7a4a', 1.15));
+    const sol = new THREE.DirectionalLight('#fff0d0', 1.6);
+    sol.position.set(-20, 40, 14);
+    escena.add(sol);
+    construirEscenario(escena);
+    const camara = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 400);
+    const luz = new THREE.PointLight('#ff9a3c', 0, 60, 1.2);
+    escena.add(luz);
+    const dinamico = new THREE.Group();   // todo lo que cambia de un lanzamiento a otro
+    escena.add(dinamico);
+    L = { canvas, renderer, escena, camara, luz, dinamico, cohete: null, llama: null, puffs: [], bola: null, bola2: null, restos: [], corriendo: false, ancho: 0, alto: 0 };
+  } catch (err) {
+    console.error('lanzamiento: sin WebGL', err);
+    L = { error: true };
+  }
+  return L;
+}
+
+const basico = (hex, op = 1) => {
+  const m = new THREE.MeshBasicMaterial({ color: hex, transparent: op < 1, opacity: op, depthWrite: op >= 1 });
+  m.userData = { propio: true };
+  return m;
+};
+
+function prepararEscena(id) {
+  const d = L.dinamico;
+  d.traverse((o) => { o.geometry?.dispose?.(); if (o.material && o.material.userData?.propio) o.material.dispose(); });
+  d.clear();
+  const cohete = construirCohete(id);
+  cohete.position.y = ALTURA_MONTAJE;
+  d.add(cohete);
+  L.cohete = cohete;
+  const rr = Math.max(0.6, cohete.userData.ancho * 0.32);
+  // Llama: dos conos (naranja y amarillo) con la punta hacia abajo, colgados de la base del cohete
+  const llama = new THREE.Group();
+  for (const [hex, k] of [['#ff7a1a', 1], ['#ffe07a', 0.55]]) {
+    const cono = new THREE.Mesh(new THREE.ConeGeometry(rr * k, 5.5 * k, 8), basico(hex));
+    cono.rotation.x = Math.PI; cono.position.y = -2.75 * k;
+    llama.add(cono);
+  }
+  llama.visible = false;
+  cohete.add(llama);
+  L.llama = llama;
+  // Humo: puffs deterministas; el i-ésimo sale en t = IGN + i·0,1 por debajo del cohete
+  const rnd = prng(11);
+  L.puffs = Array.from({ length: NPUFF }, (_, i) => {
+    const p = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), basico('#d9d7d0', 0.7));
+    p.visible = false; d.add(p);
+    return { m: p, ts: LZ.IGN + i * 0.1, dx: (rnd() - 0.5) * 2, dz: (rnd() - 0.5) * 2, s: 0.7 + rnd() * 0.8 };
+  });
+  // Explosión: dos bolas de fuego y restos
+  L.bola = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), basico('#fff3c0')); L.bola.visible = false; d.add(L.bola);
+  L.bola2 = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), basico('#ff6a1c', 0.8)); L.bola2.visible = false; d.add(L.bola2);
+  const cols = ['#ecebe6', '#2b2d31', '#a9adb3', '#d9792f', '#3c4048'];
+  L.restos = Array.from({ length: NRESTOS }, (_, i) => {
+    const w = 0.3 + rnd() * 1.1;
+    const p = new THREE.Mesh(new THREE.BoxGeometry(w, w * (0.4 + rnd() * 1.6), w * 0.5), basico(cols[i % cols.length]));
+    p.visible = false; d.add(p);
+    const a = rnd() * Math.PI * 2, v = 5 + rnd() * 11;
+    return { m: p, vx: Math.cos(a) * v * (0.5 + rnd()), vz: Math.sin(a) * v * (0.5 + rnd()), vy: -2 + rnd() * 16, sx: rnd() * 6 - 3, sz: rnd() * 6 - 3 };
+  });
+  L.ancho = 0; L.alto = 0;
+}
+
+// Un fotograma de la escena en el instante t.
+function cuadro(t, falla) {
+  const d = L;
+  const roto = falla && t >= LZ.BOOM;
+  const alt = altura(Math.min(t, falla ? LZ.BOOM : t));
+  d.cohete.visible = !roto;
+  d.cohete.position.y = ALTURA_MONTAJE + alt;
+  d.cohete.rotation.z = falla && t > LZ.BOOM - 0.9 && !roto ? Math.sin((t - LZ.BOOM) * 18) * 0.05 * (t - LZ.BOOM + 0.9) : 0;
+  const enc = !roto && t >= LZ.IGN;
+  d.llama.visible = enc;
+  if (enc) {
+    const k = clamp01((t - LZ.IGN) / 0.9) * (t < LZ.DESPEGUE ? 0.6 : 1);
+    const f = 0.85 + 0.25 * Math.sin(t * 47) + 0.1 * Math.sin(t * 23);
+    d.llama.scale.set(0.9 + 0.1 * Math.sin(t * 31), Math.max(0.05, k * f * (1 + Math.min(1, Math.max(0, t - LZ.DESPEGUE) * 0.4) * 0.4)), 0.9 + 0.1 * Math.cos(t * 29));
+  }
+  d.luz.intensity = enc ? 40 * clamp01((t - LZ.IGN) / 0.8) : 0;
+  d.luz.position.set(0, ALTURA_MONTAJE + alt - 1, 0);
+  // Humo
+  const tHumo = falla ? LZ.BOOM : LZ.TOTAL + 1;
+  for (const p of d.puffs) {
+    const edad = t - p.ts;
+    if (edad < 0 || p.ts > tHumo) { p.m.visible = false; continue; }
+    const a = altura(p.ts), suelo = clamp01(1 - a / 6);   // en el suelo se abre en abanico
+    const sp = 1 + suelo * (2.2 + edad * 2.5);
+    p.m.visible = true;
+    p.m.position.set(p.dx * sp * 2 + edad * 0.8, ALTURA_MONTAJE + a - 1 + Math.min(edad * 0.9, 3) * (1 - suelo * 0.6) + (suelo > 0.5 ? 0.6 : 0), p.dz * sp * 2);
+    p.m.scale.setScalar(p.s * (0.8 + edad * 1.5 + suelo * 1.2));
+    p.m.material.opacity = Math.max(0, 0.75 - edad * 0.14);
+  }
+  // Explosión
+  const tb = t - LZ.BOOM;
+  const yb = ALTURA_MONTAJE + altura(LZ.BOOM) + d.cohete.userData.alto * 0.35;
+  d.bola.visible = d.bola2.visible = roto;
+  if (roto) {
+    const e = 1 - Math.pow(1 - clamp01(tb / 1.1), 3);
+    d.bola.position.set(0, yb, 0); d.bola.scale.setScalar(0.5 + e * 9);
+    d.bola.material.color.set(tb < 0.12 ? '#ffffff' : tb < 0.6 ? '#ffd45a' : '#ff8a2a');
+    d.bola.visible = tb < 1.2;
+    d.bola2.position.set(0.8, yb + 1.5 * e, -0.6); d.bola2.scale.setScalar(0.5 + e * 12);
+    d.bola2.material.color.set(tb < 1.0 ? '#ff6a1c' : '#3a2a22');
+    d.bola2.material.opacity = Math.max(0, 0.85 - Math.max(0, tb - 0.8) * 0.4);
+    d.luz.intensity = Math.max(0, 120 * (1 - tb / 1.2)); d.luz.position.set(0, yb, 0);
+  }
+  for (const r of d.restos) {
+    if (!roto) { r.m.visible = false; continue; }
+    const y = yb + r.vy * tb - 4.5 * tb * tb;
+    r.m.visible = y > 0.3;
+    r.m.position.set(r.vx * tb, y, r.vz * tb);
+    r.m.rotation.set(tb * r.sx, tb * r.sz, tb * (r.sx - r.sz));
+  }
+  // Cámara: empieza en el plano isométrico de siempre y baja hacia el horizonte mientras el cohete sube (inclinación hacia arriba)
+  const sube = clamp01((Math.min(t, falla ? LZ.BOOM : t) - LZ.DESPEGUE) / 4.2), k = 1 - Math.pow(1 - sube, 2);
+  const objY = 6.2 + alt * 0.85;
+  const vib = t >= LZ.IGN && t < LZ.DESPEGUE + 3 && !roto ? 0.07 : (roto && tb < 1.2 ? 0.22 * (1 - tb / 1.2) : 0);
+  const mitad = MEDIA_ALTURA + 7 * k + (roto ? 3 : 0);
+  const asp = d.ancho && d.alto ? d.ancho / d.alto : 1.6;
+  d.camara.left = -mitad * asp; d.camara.right = mitad * asp; d.camara.top = mitad; d.camara.bottom = -mitad;
+  d.camara.updateProjectionMatrix();
+  const sx = (Math.random() - 0.5) * vib * 2, sy = (Math.random() - 0.5) * vib * 2;
+  d.camara.position.set(40 + sx, objY + 40 - 24 * k + sy, 40);
+  d.camara.lookAt(0, objY, 0);
+  d.renderer.render(d.escena, d.camara);
+}
+
+function ajustarLanz() {
+  const host = L.canvas.parentElement;
+  if (!host) return;
+  const w = host.clientWidth, hh = host.clientHeight;
+  if (!w || !hh || (w === L.ancho && hh === L.alto)) return;
+  L.ancho = w; L.alto = hh;
+  L.renderer.setSize(Math.max(2, Math.round(w / PIX)), Math.max(2, Math.round(hh / PIX)), false);
+}
+
+const rel = (n, ancho, d = 0) => n.toFixed(d).padStart(ancho, ' ');   // cifras de ancho fijo: no se corre la telemetría
+function estadoTexto(t, falla) {
+  if (falla && t >= LZ.BOOM + 0.4) return TL.perdida;
+  if (falla && t >= LZ.BOOM) return TL.anomalia;
+  if (t < LZ.IGN) return TL.cuenta;
+  if (t < LZ.DESPEGUE) return TL.ignicion;
+  if (t < LZ.DESPEGUE + 0.9) return TL.despegue;
+  if (t > LZ.DESPEGUE + 2 && t < LZ.DESPEGUE + 3) return TL.maxq;
+  return TL.ascenso;
+}
+
+function actualizarHud() {
+  const hud = SL.hud;
+  if (!hud || !hud.raiz.isConnected) return false;
+  const t = transcurrido(), falla = SL.falla;
+  const roto = falla && t >= LZ.BOOM;
+  const tt = t - LZ.IGN;
+  hud.reloj.textContent = `T${tt < 0 ? '−' : '+'}${rel(Math.abs(tt), 5, 1)} s`;
+  hud.alt.textContent = roto ? '-----' : rel(altura(t) * M_POR_U, 5);
+  hud.vel.textContent = roto ? '-----' : rel(velocidad(t) * M_POR_U, 5);
+  const txt = estadoTexto(t, falla);
+  if (hud.estado.textContent !== txt) hud.estado.textContent = txt;
+  hud.raiz.classList.toggle('boom', roto);
+  hud.raiz.classList.toggle('con-carta', falla && t >= LZ.CARTA);
+  return true;
+}
+
+const tFinal = () => (SL.falla ? LZ.CARTA + 2 : LZ.TOTAL);
+function bucleLanz() {
+  if (!L || L.error || !L.canvas.isConnected) { if (L) L.corriendo = false; return; }
+  requestAnimationFrame(bucleLanz);
+  ajustarLanz();
+  cuadro(Math.min(transcurrido(), tFinal()), SL.falla);
+  actualizarHud();
+}
+
+// Devuelve el nodo de la secuencia, o null si no hay que mostrarla (ya vista, o terminada sin fallo).
+// opts: { clave, falla, coheteId, reproducir, fase: {nombre, p}, onInforme }
+export function lanzamiento(c, opts) {
+  const { clave, falla } = opts;
+  SL.c = c;
+  if (SL.clave !== clave) {
+    SL.clave = clave; SL.falla = !!falla; SL.hecho = false;
+    SL.t0 = performance.now() - (opts.reproducir ? 0 : (falla ? LZ.CARTA : LZ.TOTAL) * 1000);
+    clearTimeout(SL.timer);
+    if (!falla && opts.reproducir) SL.timer = setTimeout(() => { SL.hecho = true; SL.c?.repintar?.(); }, LZ.TOTAL * 1000 + 60);
+  }
+  if (!falla && (SL.hecho || transcurrido() >= LZ.TOTAL)) { SL.hecho = true; return null; }
+
+  const ctx = contextoLanz();
+  const hud = { reloj: h('b', { class: 'lz-reloj' }, ''), alt: h('b', {}, ''), vel: h('b', {}, ''), estado: h('span', { class: 'lz-estado' }, '') };
+  const saltar = () => {
+    SL.t0 = Math.min(SL.t0, performance.now() - (SL.falla ? LZ.CARTA : LZ.TOTAL) * 1000);
+    if (!SL.falla) { SL.hecho = true; clearTimeout(SL.timer); c.repintar?.(); }
+    else { if (L && !L.error && L.canvas.isConnected) cuadro(Math.min(transcurrido(), tFinal()), true); actualizarHud(); }
+  };
+  const nombre = opts.fase?.nombre ?? '';
+  const carta = h('div', { class: 'lz-carta', role: 'alertdialog' },
+    h('h2', {}, '✖ ', TL.fallo),
+    h('p', {}, TL.falloTxt), h('p', { class: 'tenue' }, TL.falloTxt2),
+    nombre ? h('p', { class: 'lz-fase' }, `${TL.fase}: `, h('b', {}, nombre), opts.fase?.p != null ? ` · ${redondear(opts.fase.p * 100, 0)} % ${TL.prob}` : '') : null,
+    h('button', { class: 'boton primario grande', type: 'button', onclick: () => opts.onInforme?.() }, TL.ver));
+  const raiz = h('div', { class: 'lz' + (falla ? ' falla' : '') },
+    h('div', { class: 'lz-feed' },
+      ctx.error ? h('p', { class: 'lz-sinwebgl' }, TL.sinWebgl) : ctx.canvas,
+      h('div', { class: 'cam-lineas', 'aria-hidden': 'true' }), h('div', { class: 'cam-vineta', 'aria-hidden': 'true' }), h('div', { class: 'lz-destello', 'aria-hidden': 'true' })),
+    h('div', { class: 'lz-cab' }, h('span', { class: 'lz-cam' }, TL.cam), h('span', { class: 'lz-rec' }, h('i', { class: 'rec-punto' }), TL.rec, ' ', hud.reloj)),
+    h('div', { class: 'lz-pie' },
+      h('div', { class: 'lz-tele' }, h('span', {}, TL.alt, ' ', hud.alt, ' m'), h('span', {}, TL.vel, ' ', hud.vel, ' m/s')),
+      hud.estado,
+      h('button', { class: 'boton lz-saltar', type: 'button', onclick: saltar }, TL.saltar)),
+    falla ? carta : null);
+  hud.raiz = raiz;
+  SL.hud = hud;
+  if (!ctx.error) {
+    prepararEscena(opts.coheteId || 'falcon9');
+    if (!ctx.corriendo) { ctx.corriendo = true; requestAnimationFrame(bucleLanz); }
+    requestAnimationFrame(() => { if (raiz.isConnected) { ajustarLanz(); cuadro(Math.min(transcurrido(), tFinal()), SL.falla); actualizarHud(); } });
+  }
+  actualizarHud();
+  return raiz;
+}
+
+// El primer paso del vuelo es el lanzamiento: si falla, la misión no llegó a volar (los pasos siguientes vienen como omitidos).
+export const lanzamientoFallido = (r) => Array.isArray(r?.pasos) && r.pasos.length > 0 && r.pasos[0]?.ok === false;

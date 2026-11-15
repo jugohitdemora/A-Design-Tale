@@ -308,3 +308,11 @@
 
 /* Pestañas de departamento: el nombre completo se lee (se parte en líneas en vez de recortarse). */
 .kb-deptos .boton { flex: 1 1 auto; white-space: normal; text-overflow: clip; overflow-wrap: anywhere; font-family: var(--lp-ui); font-weight: 700; padding: 4px 6px; }
+
+/* Barras apiladas por departamento: el color del tramo es el del departamento; el estado (tolerancia / exceso) va en el borde. */
+.kb-barra.tolerancia:not(.alerta) { border-color: var(--lp-aviso); }
+.kb-barra.exceso:not(.alerta) { border-color: var(--lp-mal); }
+.kb-seg.otros + .kb-seg, .kb-seg + .kb-seg.otros { box-shadow: inset 1px 0 0 var(--lp-borde); }
+.kb-leyenda-barras { display: flex; flex-wrap: wrap; gap: 2px var(--e-3); margin-top: var(--e-2); font: 600 var(--t-meta) var(--lp-ui); color: var(--lp-tenue); }
+.kb-leyenda-barras span { display: inline-flex; align-items: center; gap: var(--e-1); cursor: help; }
+.kb-leyenda-barras i { display: inline-block; width: 10px; height: 10px; background: var(--rol); border: 2px solid var(--lp-borde); flex: none; }

@@ -120,8 +120,9 @@ export function resumen(e, D = DATOS) {
   // Reloj (forma de motor.relojDe, sin recorte en el presupuesto falso).
   const plazo = e?.mision?.plazo ?? null, mes = e?.reloj?.mes ?? 0;
   const retraso = plazo == null ? 0 : Math.max(0, Math.max(mes, e?.ruta?.mes ?? mes) - plazo);
-  const reloj = { activo: plazo != null, mes, plazo, inicio: 0, retraso, recorte: Math.min(0.4, 0.04 * Math.max(0, retraso - 1)), bono: 0, cancelada: retraso > 12 };
-  return { barras, ciencia: { objetivos, total: objetivos.reduce((a, o) => a + o.cobertura, 0) / (objetivos.length || 1) }, riesgos, reloj, plan: null };
+  const reloj = { activo: plazo != null, mes, plazo, inicio: 0, retraso, recorte: Math.min(0.4, 0.04 * Math.max(0, retraso - 1)), bono: 0, cancelada: retraso > 12,
+    corriendo: !!e?.reloj?.corriendo, msPorMes: e?.reloj?.msPorMes ?? MS_SIM, inicioMes: e?.reloj?.inicioMes ?? 0 };
+  return { barras, ciencia: { objetivos, total: objetivos.reduce((a, o) => a + o.cobertura, 0) / (objetivos.length || 1) }, riesgos, reloj, plan: null, tolerancia: [] };
 }
 export function cumple(res) {
   const est = Object.entries(res.barras).filter(([, b]) => b.estado !== 'ok');
@@ -133,7 +134,7 @@ export function verificar(e, D = DATOS) {
   const v = e.porRol?.vuelo ?? {};
   const prio = res.ciencia.objetivos.find((o) => o.prioridad);
   const c = [
-    { id: 'bars', ok: cumple(res).nivel === 'dentro', texto: N('All six bars are within their limits') },
+    { id: 'bars', ok: cumple(res).nivel !== 'fuera', texto: N('No bar is more than 20% over its limit') },
     { id: 'rocket', ok: !!(v.cohete && v.ruta), texto: N('A rocket and a route are chosen') },
     { id: 'prio', ok: (prio?.cobertura ?? 0) > 0, texto: N('The priority goal has some coverage') },
     { id: 'pw', ok: res.barras.potencia.limite > 0 && res.barras.datos.limite > 0, texto: N('There is a power source and a downlink') },
@@ -163,7 +164,9 @@ const DISENO_BASE = {
   comms: { piezas: { 'CM-1': { op: 'A', uso: 12 } }, contingencias: [] },
 };
 const clon = (x) => JSON.parse(JSON.stringify(x));
-const MESES_REVISION = 2, MESES_REDISENO = 6; // como reglas/motor.js
+const MESES_REDISENO = 6; // como reglas/motor.js
+const MS_SIM = 20_000; // un mes simulado dura 20 s (parámetro ?msmes=); el real dura 60-105 s según los jugadores
+const FASES_RELOJ = ['diseno', 'restricciones', 'verificacion'];
 
 function preparar(e) {
   const fase = e.fase;
@@ -183,7 +186,7 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
     fase: params.get('fase') || 'diseno', jugadores: { [jugadorId]: { nick, rol, orden: 1, conectado: true, desconectadoEn: 0, ultimaIntencion: 0 } }, siguienteOrden: 2, semilla: 12345,
     briefing: { objetivos: true, tareas: false, riesgos: false, reparto: null, repartos: 0, listos: {} }, registro: [],
     mision: null, porRol: clon(DISENO_BASE), diseno: { revisiones: 0, eventos: [] }, firmas: {}, resultado: null, vista: { paso: 0 },
-    ruta: { mes: null, sitio: null }, reloj: { mes: 0 },
+    ruta: { mes: null, sitio: null }, reloj: { mes: 0, msPorMes: Number(params.get('msmes')) || MS_SIM, inicioMes: Date.now(), corriendo: false },
   };
   const otros = ['ciencia', 'comms', 'potencia', 'vuelo'].filter((r) => r !== rol).slice(0, n - 1);
   otros.forEach((r, i) => { e.jugadores['bot' + i] = { nick: ['Ana', 'Luis', 'Mara'][i], rol: r, orden: i + 2, conectado: true, desconectadoEn: 0, ultimaIntencion: 0 }; });
@@ -204,7 +207,7 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
         }
         m.escenario = p.escenario; if (DATOS.MISIONES[m.id]?.escenario !== p.escenario) m.id = null;
       }
-      if (p.id) { m.id = p.id; m.escenario = DATOS.MISIONES[p.id].escenario; e.porRol = clon(DISENO_BASE); for (const r of Object.keys(e.porRol)) e.porRol[r].piezas = {}; e.porRol.vuelo.cohete = null; e.porRol.vuelo.ruta = null; m.objetivos = (DATOS.MISIONES[p.id].objetivos || []).map((x) => x.id); m.plazo = DATOS.MISIONES[p.id].reloj?.plazos?.[1] ?? null; e.reloj = { mes: 0 }; e.ruta = { mes: null, sitio: null }; e.briefing.listos = {}; }
+      if (p.id) { m.id = p.id; m.escenario = DATOS.MISIONES[p.id].escenario; e.porRol = clon(DISENO_BASE); for (const r of Object.keys(e.porRol)) e.porRol[r].piezas = {}; e.porRol.vuelo.cohete = null; e.porRol.vuelo.ruta = null; m.objetivos = (DATOS.MISIONES[p.id].objetivos || []).map((x) => x.id); m.plazo = DATOS.MISIONES[p.id].reloj?.plazos?.[1] ?? null; e.reloj = { ...e.reloj, mes: 0, inicioMes: Date.now() }; e.ruta = { mes: null, sitio: null }; e.briefing.listos = {}; }
       if (p.dificultad) m.dificultad = p.dificultad;
       e.mision = m;
     },
@@ -219,14 +222,12 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
       const i = l.indexOf(p.id); if (p.on && i < 0) l.push(p.id); if (!p.on && i >= 0) l.splice(i, 1); e.firmas = {};
     },
     pedirRevision() {
+      // Como el real: la revisión no suma meses ni saca eventos (los saca el reloj en tiempo real, ver el temporizador de abajo).
       e.diseno.revisiones++;
-      e.reloj.mes += MESES_REVISION; // el reloj de misión avanza con cada revisión (sin eventos con `meses` aquí)
-      const libres = ['ED-1', 'ED-2', 'ED-3'].filter((id) => !e.diseno.eventos.some((x) => x.id === id));
-      const maxEv = { facil: 1, normal: 2, dificil: 3 }[e.mision?.dificultad] ?? 2;
-      if (libres.length && e.diseno.eventos.length < maxEv) { e.diseno.eventos.push({ id: libres[0] }); return null; }
-      const c = cumple(resumen(e)).nivel;
-      if (c === 'fuera') return 'Simulated: some bars are more than 20% over';
-      e.fase = c === 'tolerancia' ? 'restricciones' : 'verificacion';
+      const c = cumple(resumen(e)); // la tolerancia pasa a verificación
+      e.diseno.ultima = { tipo: 'revision', nivel: c.nivel, barras: c.barras, revision: e.diseno.revisiones, mes: e.reloj.mes };
+      if (c.nivel === 'fuera') return 'Simulated: some bars are more than 20% over';
+      e.fase = 'verificacion';
     },
     firmar(p) { e.firmas[p.rol ?? yo().rol] = !!p.on; },
     lanzar() {
@@ -301,9 +302,28 @@ export function crearSesionSimulada({ jugadorId, nick, params }) {
       if (motivo) emitir('aviso', motivo);
       setTimeout(() => emitir('estado', e), 0);
     },
-    presencia() {}, salir() {},
+    presencia() {}, salir() { clearInterval(timerReloj); },
     _montadas: montadas,
   };
+
+  // Reloj en tiempo real (como el anfitrión real): corre en diseño/restricciones/verificación; cada mes suma 1 y, cada 3 meses,
+  // sale uno de los eventos de diseño falsos (hasta el máximo de la dificultad).
+  const mantenerReloj = () => {
+    const r = e.reloj, corre = FASES_RELOJ.includes(e.fase), t = Date.now();
+    let cambio = false;
+    if (r.corriendo !== corre) { r.corriendo = corre; if (corre) r.inicioMes = t; cambio = true; }
+    if (corre && t - r.inicioMes >= r.msPorMes) {
+      r.mes++; r.inicioMes = t; cambio = true;
+      const libres = ['ED-1', 'ED-2', 'ED-3'].filter((id) => !e.diseno.eventos.some((x) => x.id === id));
+      const maxEv = { facil: 1, normal: 2, dificil: 3 }[e.mision?.dificultad] ?? 2;
+      if (r.mes % 3 === 0 && libres.length && e.diseno.eventos.length < maxEv) {
+        e.diseno.eventos.push({ id: libres[0] });
+        e.diseno.ultima = { tipo: 'evento', id: libres[0], mes: r.mes, revision: e.diseno.revisiones };
+      }
+    }
+    if (cambio) emitir('estado', e);
+  };
+  const timerReloj = setInterval(mantenerReloj, 500);
 
   // Floating review bar: jump to any phase or role.
   const barra = document.createElement('div');

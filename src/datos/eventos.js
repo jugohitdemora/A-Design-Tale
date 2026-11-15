@@ -5,6 +5,8 @@
 //    y queda el lado bueno. Positivo ('+'): `efecto.ciencia` o `efecto.dias` > 1. Negativo ('-'): factor < 1 o `falla: true`.
 //  - `efecto.dias` < 1 recorta la vida útil; > 1 la alarga.
 //  - `efecto.meses` (evento de diseño): meses de retraso que suma al reloj cuando sale (contrato-reloj.md §1).
+//  - Eventos de diseño: salen en tiempo real con el reloj (acción `tic`), no al pedir una revisión. Los de misiones[].eventosDiseno
+//    se reparten según la dificultad; los `generico: true` salen al azar (≈7 % por mes, máx. 3).
 //  - Los ids de fase de `fase` son los de la misión que usa el evento (cada evento pertenece a una sola misión).
 //  - `mitiga` (contingencia) y `mitigadoPor` (evento) son simétricos: el script de comprobación lo verifica.
 
@@ -49,6 +51,29 @@ export const EVENTOS_DISENO = {
   'ED-COM-LIM': ed('ED-COM-LIM', '-', 'Farther from the Sun', 'The comet is farther out, so sunlight and power are lower. Resizing the panels takes 2 months.', { limite: { recurso: 'potencia', factor: 0.85 }, meses: 2 },
     'Rosetta\'s panels gave 850 W at 3.4 AU but only 395 W at 5.25 AU.', 'CM-08'),
 };
+
+// ---------------- Eventos genéricos de diseño (valen para cualquier misión; salen en tiempo real, a ~7 % por mes, como mucho 3) ----------------
+// `generico: true` (+ `misiones: [ids]` si solo valen para algunas). Su dinero va como factor del límite de presupuesto (un % de la
+// misión, así vale para 185 M y para 1100 M). Un `meses` > 0 salta el reloj de misión. Los casos reales sin fuente verificada son
+// "Generic game event" con src 'JUEGO'.
+const GEN = 'Generic game event (F-06b).';
+const eg = (id, signo, nombre, texto, efecto, casoReal, src = 'JUEGO') => ({ ...ed(id, signo, nombre, texto, efecto, casoReal, src), generico: true });
+const lim = (recurso, factor, extra = {}) => ({ limite: { recurso, factor }, ...extra });
+Object.assign(EVENTOS_DISENO, {
+  'EG-INV-NEW': eg('EG-INV-NEW', '+', 'A new investor', 'A new backer joins and adds money to the mission.', lim('presupuesto', 1.08),
+    `${GEN} Real parallel: NASA paid about 44 M USD for the 10 Blue Ghost payloads on top of the delivery.`, 'BG-03'),
+  'EG-GRANT': eg('EG-GRANT', '+', 'A research grant', 'A science foundation pays part of the instruments.', lim('presupuesto', 1.05), `${GEN}`),
+  'EG-DONA': eg('EG-DONA', '+', 'A part is donated', 'A partner donates a flight-proven component, so you save money.', lim('presupuesto', 1.04), `${GEN}`),
+  'EG-PROV': eg('EG-PROV', '+', 'A better supplier', 'A new supplier offers more efficient solar cells.', lim('potencia', 1.05), `${GEN}`),
+  'EG-FIRE': eg('EG-FIRE', '-', 'Fire at the test stand', 'A fire damages the test stand. Repairs cost money and take 2 months.', lim('presupuesto', 0.93, { meses: 2 }), `${GEN}`),
+  'EG-QUIEBRA': eg('EG-QUIEBRA', '-', 'A supplier goes bankrupt', 'A key supplier closes. Finding another one costs money and takes 2 months.', lim('presupuesto', 0.95, { meses: 2 }), `${GEN}`),
+  'EG-ENFERMOS': eg('EG-ENFERMOS', '-', 'Key engineers fall ill', 'Part of the team is out sick, and work slips by 1 month.', lim('presupuesto', 0.97, { meses: 1 }), `${GEN}`),
+  'EG-CELDAS': eg('EG-CELDAS', '-', 'Solar cell shortage', 'There are fewer solar cells than planned, so less power is allowed. Re-planning takes 1 month.', lim('potencia', 0.95, { meses: 1 }), `${GEN}`),
+  'EG-PATROCINIO': eg('EG-PATROCINIO', '-', 'A sponsor cuts funding', 'A sponsor reduces its support and the budget shrinks.', lim('presupuesto', 0.9),
+    `${GEN} Real parallel: NASA ended the VIPER rover project in July 2024 over cost and delays, then revived it in 2025.`, 'EXP-03'),
+  'EG-LANZ': eg('EG-LANZ', '±', 'A cheaper launch slot', 'A cheaper slot opens on a rocket, but it is 2 months later.', lim('presupuesto', 1.06, { meses: 2 }), `${GEN}`),
+  'EG-LIGERA': eg('EG-LIGERA', '±', 'A lighter structure, later', 'A new alloy lets you carry more mass, but qualifying it takes 2 months.', lim('masa', 1.1, { meses: 2 }), `${GEN}`),
+});
 
 export const EVENTOS_MISION = {
   // ---------------- MER-3: fases launch, cruise, insertion, commissioning, science ----------------
@@ -149,6 +174,20 @@ const ES_ED = {
   'ED-COM-OBJ': ['Primero los gases sorpresa', 'Ahora los científicos quieren cazar primero los gases inesperados.', 'ROSINA de Rosetta encontró oxígeno molecular, algo inédito en un cometa, en más de 3.000 muestras.'],
   'ED-COM-LIM': ['Más lejos del Sol', 'El cometa está más lejos, así que hay menos luz solar y menos energía. Redimensionar los paneles lleva 2 meses.', 'Los paneles de Rosetta daban 850 W a 3,4 UA, pero solo 395 W a 5,25 UA.'],
 };
+const GEN_ES = 'Evento genérico del juego (F-06b).';
+Object.assign(ES_ED, {
+  'EG-INV-NEW': ['Entra un nuevo inversionista', 'Un nuevo patrocinador se suma y aporta dinero a la misión.', `${GEN_ES} Paralelo real: la NASA pagó cerca de 44 M USD por las 10 cargas de Blue Ghost, además del envío.`],
+  'EG-GRANT': ['Una beca de investigación', 'Una fundación científica paga parte de los instrumentos.', GEN_ES],
+  'EG-DONA': ['Donan una pieza', 'Un socio dona un componente ya probado en vuelo, y ahorras dinero.', GEN_ES],
+  'EG-PROV': ['Un proveedor mejor', 'Un nuevo proveedor ofrece celdas solares más eficientes.', GEN_ES],
+  'EG-FIRE': ['Incendio en el banco de pruebas', 'Un incendio daña el banco de pruebas. Repararlo cuesta dinero y lleva 2 meses.', GEN_ES],
+  'EG-QUIEBRA': ['Quiebra un proveedor', 'Cierra un proveedor clave. Buscar otro cuesta dinero y lleva 2 meses.', GEN_ES],
+  'EG-ENFERMOS': ['Ingenieros clave enferman', 'Parte del equipo está de baja y el trabajo se retrasa 1 mes.', GEN_ES],
+  'EG-CELDAS': ['Escasez de celdas solares', 'Hay menos celdas solares de las previstas, así que se permite menos potencia. Replanificar lleva 1 mes.', GEN_ES],
+  'EG-PATROCINIO': ['Un patrocinador recorta fondos', 'Un patrocinador reduce su apoyo y el presupuesto se reduce.', `${GEN_ES} Paralelo real: en julio de 2024 la NASA canceló el rover VIPER por costos y retrasos, y lo retomó en 2025.`],
+  'EG-LANZ': ['Un lanzamiento más barato', 'Se abre un hueco más barato en un cohete, pero es 2 meses más tarde.', GEN_ES],
+  'EG-LIGERA': ['Una estructura más ligera, pero más tarde', 'Una aleación nueva permite llevar más masa, pero calificarla lleva 2 meses.', GEN_ES],
+});
 const ES_EM = {
   'EM-MER-1': ['Propulsores débiles', 'Los propulsores iónicos empujan menos de lo previsto y el viaje dura más.', 'En 2024 los propulsores de BepiColombo dieron menos potencia y obligaron a una trayectoria de menor empuje; la llegada pasó de diciembre de 2025 a noviembre de 2026.', 'Deja margen de empuje en un plan de bajo empuje.'],
   'EM-MER-2': ['Luz solar ruidosa', 'Los cambios en la luz solar enturbian las mediciones de radio.', 'Un estudio de 2022 encontró que las variaciones de la luz solar confunden el experimento de radio de BepiColombo (MORE).', 'Planea cómo calibrar el ruido antes de volar.'],

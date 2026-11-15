@@ -2,6 +2,16 @@
 import { T } from '../textos.js';
 import { h, en, lista, redondear, resumenSeguro } from './ui.js';
 import { panelGlobal, unaVez } from './panel-global.js';
+import { lanzamiento, lanzamientoFallido } from '../laptop/camara-lanzamiento.js';
+
+// Fallo de lanzamiento: se avanza paso a paso hasta el informe (el anfitrión avanza de uno en uno).
+let haciaInforme = false, ultimoEnviado = -1;
+function empujarInforme(c) {
+  const p = c.e?.vista?.paso ?? 0;
+  if (c.e?.fase !== 'mision' || ultimoEnviado === p) return;
+  ultimoEnviado = p;
+  c.enviar('avanzar', { paso: p });
+}
 
 // `evento` in a step may be an id or an object; `mitigado` a boolean.
 export function eventoDe(c, ev) {
@@ -21,6 +31,21 @@ export function pantallaMision(c) {
   const paso = Number.isFinite(c.e?.vista?.paso) ? c.e.vista.paso : 0;
   const total = r.pasos.length;
   const ultimo = paso >= total - 1;
+  // Despegue (igual que en la consola de la sala de control); si el lanzamiento falla la misión termina aquí y se pasa al informe.
+  if (c.e?.fase === 'mision') {
+    const falla = lanzamientoFallido(r);
+    const nombre0 = en(lista(c.mision?.fases).find((f) => f.id === r.pasos[0]?.fase)?.nombre) || '';
+    const seq = lanzamiento(c, {
+      clave: `${c.mision?.id}|${JSON.stringify(r.pasos.map((p) => [p.fase, p.ok, p.p]))}`, falla, reproducir: paso === 0,
+      coheteId: c.e?.porRol?.vuelo?.cohete, fase: { nombre: nombre0, p: r.pasos[0]?.p },
+      onInforme: () => { haciaInforme = true; ultimoEnviado = -1; empujarInforme(c); },
+    });
+    if (seq) {
+      if (falla && haciaInforme && paso < total - 1) setTimeout(() => empujarInforme(c), 60);
+      return h('div', { class: 'lz-host lz-host-viejo' }, seq);
+    }
+    haciaInforme = false;
+  }
   raiz.append(h('h4', {}, T.steps));
   const ol = h('ol', { class: 'pasos' });
   r.pasos.forEach((p, i) => {

@@ -1,7 +1,14 @@
 // Workshop screen (phases `diseno` and `restricciones`): tabs + parts list + blueprint + global panel.
 import { T } from '../textos.js';
 import { h, en, lista, valor, redondear, dinero, panelVacio, ROLES_IDS, ROL_COLOR, nombreRol, puedoPor, rolesQuePuedo, conRol, piezasMontadas, resumenSeguro } from './ui.js';
+import { textos } from '../i18n.js';
+import { avisoBloqueo } from '../control/bloqueo.js';
 import { panelGlobal } from './panel-global.js';
+
+const L = textos({
+  es: { solo: (r) => `Solo ${r} puede editar estas piezas (o cualquiera si ese puesto está vacante).` },
+  en: { solo: (r) => `Only ${r} can edit these parts (or anyone if that seat is vacant).` },
+});
 import { pestanaCohete } from './cohete.js';
 import { pestanaRuta } from './ruta.js';
 import { pestanaRiesgos } from './riesgos.js';
@@ -62,11 +69,11 @@ function columnaPiezas(c, rol, restr) {
         m ? h('span', { class: 'etq ok' }, T.mounted)
           : h('button', {
             class: 'boton', type: 'button', disabled: !editable || restr || !op,
-            title: restr ? T.addDisabled : undefined,
+            title: !editable ? `🔒 ${L.solo(nombreRol(rol))}` : restr ? T.addDisabled : undefined,
             onclick: () => c.enviar('montar', conRol(c, rol, { pieza: p.id, op: opId, uso: p.uso?.def ?? 24 })),
           }, T.mount))));
   }
-  return h('section', { class: 'caja col-piezas' }, h('h3', {}, T.partsList(nombreRol(rol))), cuerpo);
+  return h('section', { class: 'caja col-piezas' }, h('h3', {}, T.partsList(nombreRol(rol))), editable ? null : avisoBloqueo(L.solo(nombreRol(rol))), cuerpo);
 }
 
 // ---- centre: blueprint with everything mounted by the four roles ----
@@ -75,7 +82,7 @@ function loteRol(c, rol, activo) {
   const editable = puedoPor(c, rol);
   const ids = Object.keys(montadas);
   const caja = h('div', { class: 'lote' + (rol === activo ? ' activo' : ' ajeno'), style: `--rol:${ROL_COLOR[rol]}` },
-    h('div', { class: 'lote-cab' }, h('b', {}, nombreRol(rol)), !editable ? h('small', {}, ' · ', T.readOnly) : null));
+    h('div', { class: 'lote-cab', title: editable ? null : `🔒 ${L.solo(nombreRol(rol))}` }, h('b', {}, nombreRol(rol)), !editable ? h('small', {}, ' · 🔒 ', T.readOnly) : null));
   if (!ids.length) { caja.append(h('p', { class: 'tenue pequeno' }, '-')); return caja; }
   for (const id of ids) {
     const m = montadas[id] ?? {};

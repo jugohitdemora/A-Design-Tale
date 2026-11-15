@@ -28,11 +28,11 @@ const T = textos({
     barras: { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Datos', presupuesto: 'Presupuesto', volumen: 'Volumen' },
     sinLimite: { masa: 'Sin cohete: elígelo en la cámara de lanzamiento', potencia: 'Sin paneles', bateria: 'Sin batería',
       datos: 'Sin antena', presupuesto: 'Sin presupuesto', volumen: 'Sin estructura' },
-    est: { ok: 'OK', tolerancia: 'TOL', exceso: 'EXC' }, marcas: '▮ 100 %   ▯ 120 % (tolerancia)',
+    est: { ok: 'OK', tolerancia: 'TOL', exceso: 'EXC' }, marcas: '▮ 100 %   ▯ 120 % (tolerancia: pasa, con más riesgo de fallo)', otros: 'Otros',
     ciencia: 'CIENCIA', sinObjetivos: 'Sin objetivos marcados.',
     pedir: 'PEDIR REVISIÓN', revisiones: (n) => `Revisiones: ${n}`, revHint: 'Una revisión puede sacar un evento.',
-    ultima: { dentro: 'Última revisión: todo dentro.', tolerancia: (b) => `Última revisión: tolerancia en ${b}.`, fuera: (b) => `Última revisión: fuera en ${b}.`, evento: (n) => `Salió un evento de diseño: ${n}.` },
-    nivel: { dentro: 'DENTRO DE LÍMITES', tolerancia: 'EN TOLERANCIA', fuera: 'FUERA DE LÍMITES' },
+    ultima: { dentro: 'Última revisión: todo dentro.', tolerancia: (b) => `Última revisión: en tolerancia en ${b}. Pasa la revisión, pero sube el riesgo de fallo de una fase de la misión.`, fuera: (b) => `Última revisión: fuera en ${b}.`, evento: (n) => `Salió un evento de diseño: ${n}.` },
+    nivel: { dentro: 'DENTRO DE LÍMITES', tolerancia: 'EN TOLERANCIA: PASA, MÁS RIESGO', fuera: 'FUERA DE LÍMITES' },
     restrTit: 'RESTRICCIONES', restrTxt: 'Recorta hasta cumplir todos los límites. No se añaden piezas.', restrOk: 'Todo dentro: pide revisión.',
     porDepto: 'Por departamento',
     cats: { estructura: 'Estructura', propulsion: 'Propulsión', actitud: 'Actitud', guiado: 'Guiado', camara: 'Cámara', proteccion: 'Protección', sondas: 'Sondas',
@@ -57,11 +57,11 @@ const T = textos({
     barras: { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data', presupuesto: 'Budget', volumen: 'Volume' },
     sinLimite: { masa: 'No rocket: choose one in the launch camera', potencia: 'No panels', bateria: 'No battery',
       datos: 'No antenna', presupuesto: 'No budget', volumen: 'No structure' },
-    est: { ok: 'OK', tolerancia: 'TOL', exceso: 'OVER' }, marcas: '▮ 100 %   ▯ 120 % (tolerance)',
+    est: { ok: 'OK', tolerancia: 'TOL', exceso: 'OVER' }, marcas: '▮ 100 %   ▯ 120 % (tolerance: passes, higher failure risk)', otros: 'Other',
     ciencia: 'SCIENCE', sinObjetivos: 'No goals ticked.',
     pedir: 'REQUEST REVIEW', revisiones: (n) => `Reviews: ${n}`, revHint: 'A review can draw an event.',
-    ultima: { dentro: 'Last review: all within limits.', tolerancia: (b) => `Last review: tolerance on ${b}.`, fuera: (b) => `Last review: over on ${b}.`, evento: (n) => `A design event came up: ${n}.` },
-    nivel: { dentro: 'WITHIN LIMITS', tolerancia: 'IN TOLERANCE', fuera: 'OVER LIMITS' },
+    ultima: { dentro: 'Last review: all within limits.', tolerancia: (b) => `Last review: in tolerance on ${b}. It passes the review, but a related mission stage has a higher failure risk.`, fuera: (b) => `Last review: over on ${b}.`, evento: (n) => `A design event came up: ${n}.` },
+    nivel: { dentro: 'WITHIN LIMITS', tolerancia: 'IN TOLERANCE — passes, higher failure risk', fuera: 'OVER LIMITS' },
     restrTit: 'CONSTRAINTS', restrTxt: 'Cut until all limits are met. Do not add parts.', restrOk: 'All within limits: request review.',
     porDepto: 'By department',
     cats: { estructura: 'Structure', propulsion: 'Propulsion', actitud: 'Attitude', guiado: 'Guidance', camara: 'Camera', proteccion: 'Protection', sondas: 'Probes',
@@ -465,19 +465,22 @@ function centro(c, u, todas, restr) {
 // Derecha: recursos del equipo
 // ---------------------------------------------------------------------------------------------------------------------
 const cantidad = (id, n) => (id === 'presupuesto' ? dinero(n) : `${fmt(n)} ${UNIDAD[id]}`);
+const COLOR_OTROS = '#7d8590'; // gris neutro: parte del uso sin departamento
 function barra(c, id, b, restr, extra = null) {
   const usado = Number(b?.usado) || 0, limite = Number(b?.limite) || 0;
   const ratio = limite > 0 ? usado / limite : usado > 0 ? Infinity : 0;
   const est = b?.estado ?? 'ok';
+  // La pista va de 0 a 150 % del límite (100 % en 66,7 % y 120 % en 80 %). Cada tramo mide su parte del límite.
   const escala = limite > 0 ? limite * 1.5 : usado > 0 ? usado : 1;
-  const porRol = {};
-  for (const x of lista(b?.partes)) porRol[x.rol ?? 'comms'] = (porRol[x.rol ?? 'comms'] ?? 0) + (Number(x.v) || 0);
-  let resto = 100;
-  const segs = ROLES_IDS.filter((r) => porRol[r] > 0).map((r) => {
-    const w = Math.min(resto, (porRol[r] / escala) * 100);
-    resto -= w;
-    return h('i', { class: 'kb-seg ' + est, style: `width:${w}%;opacity:${0.55 + 0.15 * ROLES_IDS.indexOf(r)}` });
-  });
+  const porRol = Object.fromEntries(ROLES_IDS.map((r) => [r, 0]));
+  for (const x of lista(b?.partes)) if (ROLES_IDS.includes(x.rol)) porRol[x.rol] += Number(x.v) || 0;
+  const otros = Math.max(0, usado - Object.values(porRol).reduce((s, v) => s + v, 0));
+  const tramo = (v, nombre, color, clase = '') => {
+    const porLimite = limite > 0 ? ` (${fmt((v / limite) * 100, 0)} %)` : '';
+    return h('i', { class: 'kb-seg' + clase, style: `width:${(v / escala) * 100}%;background:${color}`, title: `${nombre}: ${cantidad(id, v)}${porLimite}` });
+  };
+  const segs = ROLES_IDS.filter((r) => porRol[r] > 0).map((r) => tramo(porRol[r], depto(r), colorRol(r)));
+  if (otros > 1e-9) segs.push(tramo(otros, T.otros, COLOR_OTROS, ' otros'));
   const detalle = ROLES_IDS.filter((r) => porRol[r] > 0).map((r) => `${depto(r)}: ${cantidad(id, porRol[r])}`).join('\n');
   const pct = limite > 0 ? ` · ${fmt(ratio * 100, 0)} %` : '';
   const tit = [`${T.barras[id]}${pct}`, detalle ? `${T.porDepto}\n${detalle}` : '', T.marcas].filter(Boolean).join('\n');
@@ -514,6 +517,9 @@ function recursos(c, res, restr) {
   try { nivel = res && c.motor?.cumple ? c.motor.cumple(res)?.nivel : null; } catch { nivel = null; }
   if (nivel && nivel !== 'dentro') cuerpo.append(h('div', { class: 'kb-nivel ' + nivel }, T.nivel[nivel] ?? nivel));
   cuerpo.append(h('div', { class: 'kb-barras' }, ['presupuesto', ...BARRAS.filter((k) => k !== 'presupuesto')].map((id) => barra(c, id, res?.barras?.[id], restr, id === 'presupuesto' ? desglosePresupuesto(rl?.presupuesto) : null))));
+  cuerpo.append(h('div', { class: 'kb-leyenda-barras', title: T.porDepto },
+    ROLES_IDS.map((r) => h('span', { style: `--rol:${colorRol(r)}` }, h('i', {}), depto(r))),
+    h('span', { style: `--rol:${COLOR_OTROS}` }, h('i', {}), T.otros)));
 
   cuerpo.append(h('h4', {}, T.ciencia));
   const objs = lista(res?.ciencia?.objetivos);

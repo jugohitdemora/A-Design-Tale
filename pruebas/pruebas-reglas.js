@@ -5,7 +5,7 @@
 // DATOS DE PRUEBA: el fixture de abajo es inventado para probar las reglas. No son cifras reales de ninguna
 // misión ni de ninguna pieza, y no dependen de src/datos/ (se inyectan con usarDatos y ctx.datos).
 import { estadoInicial, reducir, usarDatos, tallerInicial, tallerVacio, FASES, VERSION_PROTOCOLO } from '../src/red/protocolo.js';
-import { num, resumen, cumple, verificar, puedeEnRestricciones, motivoRestriccion, estadoDeRatio, relojDe, planDe } from '../src/reglas/motor.js';
+import { num, resumen, cumple, verificar, puedeEnRestricciones, motivoRestriccion, estadoDeRatio, relojDe, planDe, siguienteEventoDiseno, msPorMes, riesgoTolerancia } from '../src/reglas/motor.js';
 import { simular } from '../src/reglas/despliegue.js';
 import { explicarCausas, explicarPuntos } from '../src/reglas/explicar.js';
 import { prng, derivar, barajar } from '../src/reglas/azar.js';
@@ -119,7 +119,7 @@ let D = crearFixture();
 const ROLES = ['vuelo', 'ciencia', 'potencia', 'comms'];
 const CTX = () => ({ ahora: 1_000_000, aleatorio: () => 0.5, datos: D });
 let idInt = 0;
-const hacer = (e, quien, tipo, payload = {}) => reducir(e, quien, { id: ++idInt, tipo, payload }, CTX());
+const hacer = (e, quien, tipo, payload = {}) => reducir(e, quien, { id: ++idInt, tipo, payload }, tipo === 'tic' ? { ...CTX(), reloj: true } : CTX());
 function ok(e, quien, tipo, payload) {
   const m = hacer(e, quien, tipo, payload);
   afirmar(m === null, `${tipo} ${JSON.stringify(payload ?? {})} rechazado: ${m}`);
@@ -165,15 +165,18 @@ function montarBueno(e) {
   ok(e, quien('comms'), 'contingencia', { id: 'T-c1', on: true });
   return e;
 }
-// Pide revisiones hasta agotar los eventos de diseño. Devuelve cuántos salieron.
-function agotarEventos(e) {
+// Un tic del reloj en tiempo real (lo manda el anfitrión; aquí con ctx.reloj). Devuelve el id del evento que salió, o null.
+function ticar(e) {
+  const antes = e.diseno.eventos.length;
+  ok(e, Object.keys(e.jugadores)[0], 'tic', { mes: e.reloj.mes });
+  return e.diseno.eventos.length > antes ? e.diseno.eventos[antes].id : null;
+}
+function rechazaTicRepetido(e) { rechaza(e, Object.keys(e.jugadores)[0], 'tic', { mes: e.reloj.mes - 1 }, /already advanced/); }
+// Deja pasar meses hasta agotar los eventos de diseño de la misión y pide una revisión (que evalúa). Devuelve cuántos eventos salieron.
+function agotarEventos(e, quien = 'jvuelo') {
   let n = 0;
-  while (e.fase === 'diseno') {
-    const antes = e.diseno.eventos.length;
-    ok(e, 'jvuelo', 'pedirRevision', {});
-    if (e.diseno.eventos.length === antes) break;
-    n++;
-  }
+  for (let k = 0; k < 60 && e.fase === 'diseno' && siguienteEventoDiseno(e, D) !== null; k++) if (ticar(e)) n++;
+  if (e.fase === 'diseno') ok(e, quien, 'pedirRevision', {});
   return n;
 }
 function firmarTodo(e) { for (const r of ROLES) ok(e, 'j' + r, 'firmar', { on: true }); }
@@ -267,17 +270,22 @@ const pruebas = {
     casi(c.objetivos.find((o) => o.id === 'O2').cobertura, 0.5, 'cobertura O2 = 1 × min(1, 4/8)');
   },
 
-  'Reglas · eventos de diseño: 1/2/3 según dificultad, una vez cada uno, antes de evaluar'() {
+  'Reglas · eventos de diseño: en tiempo real, 1/2/3 según dificultad, una vez cada uno, nunca por una revisión'() {
     for (const [dificultad, n] of [['facil', 1], ['normal', 2], ['dificil', 3]]) {
       const e = montarBueno(enDiseno('T-ORB', dificultad));
       const vistos = [];
-      for (let k = 0; k < n; k++) {
-        ok(e, 'jciencia', 'pedirRevision', {});
-        afirmar(e.fase === 'diseno', `${dificultad}: la revisión ${k + 1} no debería evaluarse`);
-        afirmar(e.diseno.eventos.length === k + 1 && e.diseno.ultima.tipo === 'evento', `${dificultad}: no salió el evento ${k + 1}`);
+      // Una revisión no saca eventos ni suma meses.
+      ok(e, 'jciencia', 'pedirRevision', {});
+      afirmar(e.diseno.eventos.length === 0 && e.reloj.mes === 0 && e.fase === 'verificacion', `${dificultad}: la revisión no debe sacar eventos ni sumar meses`);
+      ok(e, 'jciencia', 'cambiarFase', { fase: 'diseno' });
+      for (let k = 0, t = 0; k < n; k++) {
+        while (e.diseno.eventos.length === k && t++ < 40) ticar(e);
+        afirmar(e.diseno.eventos.length === k + 1 && e.diseno.ultima.tipo === 'evento' && e.diseno.ultima.id === e.diseno.eventos[k].id && e.diseno.ultima.mes >= 1, `${dificultad}: no salió el evento ${k + 1}`);
         vistos.push(e.diseno.eventos[k].id);
       }
       afirmar(new Set(vistos).size === n, `${dificultad}: evento repetido ${vistos}`);
+      for (let t = 0; t < 30 && e.fase === 'diseno'; t++) ticar(e);
+      afirmar(e.diseno.eventos.length === n, `${dificultad}: salió un evento de más`);
       ok(e, 'jciencia', 'pedirRevision', {});
       afirmar(e.diseno.eventos.length === n && e.diseno.ultima.tipo === 'revision', `${dificultad}: salió un evento de más`);
       afirmar(e.fase === 'verificacion', `${dificultad}: un diseño bueno tendría que ir a verificación (${e.fase})`);
@@ -308,11 +316,15 @@ const pruebas = {
     ok(e, 'jvuelo', 'montar', { pieza: 'T-lastre', op: 'D' }); // masa 136/100
     agotarEventos(e);
     afirmar(e.fase === 'diseno' && e.diseno.ultima.nivel === 'fuera' && e.diseno.ultima.barras.includes('masa'), `exceso → ${e.fase}`);
-    // Tolerancia → restricciones.
+    // Tolerancia → verificación (ya no obliga a recortar; solo sube el riesgo de una fase).
     e = montarBueno(enDiseno());
     ok(e, 'jvuelo', 'montar', { pieza: 'T-lastre', op: 'C' }); // masa 106/100
     agotarEventos(e);
-    afirmar(e.fase === 'restricciones' && e.diseno.ultima.nivel === 'tolerancia', `tolerancia → ${e.fase}`);
+    afirmar(e.fase === 'verificacion' && e.diseno.ultima.nivel === 'tolerancia' && verificar(e, D).pasa, `tolerancia → ${e.fase}`);
+    const rt = riesgoTolerancia(e, D);
+    afirmar(rt.length === 1 && rt[0].barra === 'masa' && rt[0].fase === 'F1' && Math.abs(rt[0].dp - 0.03) < 1e-9, `riesgo: ${JSON.stringify(rt)}`);
+    const f1 = resumen(e, D).fases[0];
+    afirmar(f1.desglose.some((x) => x.fuente === 'tolerancia' && x.ref === 'masa' && Math.abs(x.dp + 0.03) < 1e-9), 'la fase de lanzamiento resta 3 pp');
     // Todo ok → verificación.
     e = mk();
     afirmar(e.fase === 'verificacion' && e.diseno.ultima.nivel === 'dentro', `ok → ${e.fase}`);
@@ -320,10 +332,13 @@ const pruebas = {
     e = montarBueno(enDiseno());
     rechaza(e, 'jvuelo', 'cambiarFase', { fase: 'verificacion' }, /review/i);
     rechaza(e, 'jvuelo', 'cambiarFase', { fase: 'restricciones' });
+    afirmar(/host clock/.test(reducir(e, 'jvuelo', { id: ++idInt, tipo: 'tic', payload: { mes: 0 } }, CTX())), 'un cliente no puede mover el reloj'); // sin ctx.reloj
+    ticar(e); rechazaTicRepetido(e);
     e = mk();
     rechaza(e, 'jvuelo', 'cambiarFase', { fase: 'mision' }, /launch/i);
     // Doble clic: la revisión con número viejo se rechaza.
     e = montarBueno(enDiseno());
+    ok(e, 'jvuelo', 'montar', { pieza: 'T-lastre', op: 'D' }); // fuera de límites: la revisión se queda en diseño
     const n = e.diseno.revisiones;
     ok(e, 'jvuelo', 'pedirRevision', { revision: n });
     rechaza(e, 'jciencia', 'pedirRevision', { revision: n }, /already/i);
@@ -333,7 +348,7 @@ const pruebas = {
     const e = montarBueno(enDiseno());
     ok(e, 'jvuelo', 'montar', { pieza: 'T-lastre', op: 'C' });
     agotarEventos(e);
-    afirmar(e.fase === 'restricciones', 'preparación: tendría que estar en restricciones');
+    e.fase = 'restricciones'; // ya no se llega por una revisión en tolerancia: la fase sigue existiendo (partidas antiguas)
     rechaza(e, 'jvuelo', 'montar', { pieza: 'T-lastre', op: 'D' }, /raise|over/i);       // sube masa
     rechaza(e, 'jpotencia', 'montar', { pieza: 'T-panel', op: 'B' });                    // panel B pesa más
     rechaza(e, 'jcomms', 'contingencia', { id: 'T-c2', on: true }, /cannot buy/i);
@@ -660,7 +675,7 @@ const pruebas = {
   },
 
   'Reglas · estado inicial y fusión de talleres (unirse)'() {
-    afirmar(VERSION_PROTOCOLO === 4, 'versión del protocolo (4: reloj de misión, contrato-reloj.md)');
+    afirmar(VERSION_PROTOCOLO === 5, 'versión del protocolo (5: reloj en tiempo real)');
     afirmar(FASES.join() === 'lobby,briefing,diseno,restricciones,verificacion,mision,informe', 'FASES');
     const e = estadoInicial();
     afirmar(e.mision === null && e.resultado === null && e.vista.paso === 0 && e.diseno.eventos.length === 0, 'campos nuevos');
@@ -720,19 +735,28 @@ const pruebas = {
     rechaza(e, 'jvuelo', 'comprometerPlazo', { plazo: 4 }); // fuera del briefing
   },
 
-  'Reglas · reloj: la revisión avanza 2 meses, los eventos con meses suman y rediseñar 6'() {
+  'Reglas · reloj: cada tic suma 1 mes, la revisión ninguno, los eventos con meses suman y rediseñar 6'() {
     const e = montarBueno(enDiseno('T-CAL', 'dificil'));
-    afirmar(e.reloj.mes === 0, 'empieza en el mes 0');
+    afirmar(e.reloj.mes === 0 && e.reloj.corriendo === true && e.reloj.msPorMes === 60_000 && Number.isFinite(e.reloj.inicioMes), `reloj al empezar: ${JSON.stringify(e.reloj)}`);
     let esperado = 0;
-    while (e.fase === 'diseno') {
-      const antes = e.diseno.eventos.length;
-      ok(e, 'jvuelo', 'pedirRevision', {});
-      const salio = e.diseno.eventos.length > antes ? e.diseno.eventos[antes].id : null;
-      esperado += 2 + (salio ? num(D.EVENTOS_DISENO[salio].efecto.meses) : 0);
-      afirmar(e.reloj.mes === esperado, `tras ${salio ?? 'la revisión'}: ${e.reloj.mes} ≠ ${esperado}`);
-      if (!salio) break;
+    while (e.fase === 'diseno' && siguienteEventoDiseno(e, D) !== null) {
+      const salio = ticar(e);
+      esperado += 1 + (salio ? num(D.EVENTOS_DISENO[salio].efecto.meses ?? 0) : 0);
+      afirmar(e.reloj.mes === esperado, `tras ${salio ?? 'el tic'}: ${e.reloj.mes} ≠ ${esperado}`);
     }
-    afirmar(e.diseno.eventos.some((x) => x.id === 'ED-lim') ? esperado >= 11 : esperado === 8, `total de meses: ${esperado}`);
+    ok(e, 'jvuelo', 'pedirRevision', {});
+    afirmar(e.reloj.mes === esperado, 'la revisión no suma meses');
+    rechazaTicRepetido(e); // doble tic con el mes viejo
+    // Velocidad según los jugadores con rol: 4 → 60 s, 3 → 75, 2 → 90, 1 → 105.
+    afirmar([4, 3, 2, 1].map(msPorMes).join() === '60000,75000,90000,105000', 'velocidades');
+    const e2 = montarBueno(enDiseno('T-CAL', 'facil', { roles: ['vuelo', 'ciencia'] }));
+    afirmar(e2.reloj.msPorMes === 90_000, `2 jugadores: ${e2.reloj.msPorMes}`);
+    // Parado fuera de diseño, restricciones y verificación; vuelve a correr al volver.
+    e.fase = 'informe'; ok(e, 'jvuelo', 'elegirRol', { rol: 'vuelo' }); afirmar(e.reloj.corriendo === false, 'parado en el informe');
+    e.fase = 'diseno'; ok(e, 'jvuelo', 'elegirRol', { rol: 'vuelo' }); afirmar(e.reloj.corriendo === true, 'vuelve a correr');
+    // Estado v4 (solo { mes }): se completa sin perder el mes.
+    const e4 = montarBueno(enDiseno('T-CAL', 'facil')); e4.reloj = { mes: 5 }; ok(e4, 'jvuelo', 'editarPropio', { clave: 'nota', valor: 'x' });
+    afirmar(e4.reloj.mes === 5 && e4.reloj.msPorMes > 0 && 'inicioMes' in e4.reloj, `v4: ${JSON.stringify(e4.reloj)}`);
     // Rediseño: +6 meses, y nueva misión: vuelta a 0.
     e.fase = 'informe';
     const antes = e.reloj.mes;
@@ -745,13 +769,14 @@ const pruebas = {
 
   'Reglas · reloj: ventana perdida, mes demasiado pronto y replanificar en verificación'() {
     const e = montarBueno(enDiseno('T-CAL', 'facil'));
-    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 1 }, /Too soon/);
+    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 0 }, /Too soon/);
     rechaza(e, 'jvuelo', 'planificarRuta', { mes: 31 }, /Unknown launch month/);
     rechaza(e, 'jvuelo', 'planificarRuta', { mes: 2.5 }, /Unknown launch month/);
     ok(e, 'jvuelo', 'planificarRuta', { mes: 2, sitio: 'S1' });
     afirmar(e.ruta.mes === 2 && planDe(e, D).perdida === false && verificar(e, D).comprobaciones.find((c) => c.id === 'mesLanzamiento').ok, 'plan inicial');
-    agotarEventos(e);
-    afirmar(e.fase === 'verificacion' && e.reloj.mes >= 4, `preparación: ${e.fase}, mes ${e.reloj.mes}`);
+    while (e.reloj.mes < 3 && e.fase === 'diseno') ticar(e); // el mes 2 se pierde con el tiempo real
+    ok(e, 'jvuelo', 'pedirRevision', {});
+    afirmar(e.fase === 'verificacion' && e.reloj.mes >= 3, `preparación: ${e.fase}, mes ${e.reloj.mes}`);
     afirmar(planDe(e, D).perdida === true && resumen(e, D).plan.perdida === true, 'el mes 2 ya pasó: plan perdido');
     const v = verificar(e, D);
     afirmar(!v.pasa && v.comprobaciones.find((c) => c.id === 'mesLanzamiento').ok === false, 'la verificación no ve la ventana perdida');
@@ -799,7 +824,7 @@ const pruebas = {
     agotarEventos(e);
     ok(e, 'jvuelo', 'cambiarFase', { fase: 'diseno' });
     e.reloj.mes = 19; // plazo 8: retraso 11
-    ok(e, 'jvuelo', 'pedirRevision', {}); // +2 → retraso 13
+    ok(e, 'jvuelo', 'tic', { mes: 19 }); ok(e, 'jvuelo', 'tic', { mes: 20 }); // +2 → retraso 13 (un evento con meses puede cancelar antes)
     afirmar(e.fase === 'informe' && e.resultado?.cancelada === true && e.resultado.veredicto === 'fallida', `no se canceló: ${e.fase}`);
     afirmar(e.resultado.causas.some((c) => c.tipo === 'cancelada' && c.es && c.en), 'falta la causa de la cancelación');
     const lineas = explicarCausas(e.resultado, D, 'en');
@@ -822,7 +847,7 @@ const pruebas = {
       const suma = f.desglose.reduce((s, x) => s + x.dp, 0);
       casi(suma, f.pCruda - f.pBase, `${f.id}: Σ desglose`);
       if (f.pCruda > 0 && f.pCruda < 1) casi(f.p, f.pCruda, `${f.id}: p sin recortar`);
-      afirmar(f.desglose.every((x) => ['base', 'pieza', 'contingencia', 'ruta', 'sitio', 'mes', 'clima', 'espacio', 'conjuncion'].includes(x.fuente)), 'fuente desconocida');
+      afirmar(f.desglose.every((x) => ['base', 'pieza', 'contingencia', 'ruta', 'sitio', 'mes', 'clima', 'espacio', 'conjuncion', 'tolerancia'].includes(x.fuente)), 'fuente desconocida');
     }
     const fuentes = (id) => r.fases.find((f) => f.id === id).desglose.map((x) => x.fuente).join();
     afirmar(fuentes('F1') === 'clima', `F1: ${fuentes('F1')}`);
@@ -895,11 +920,11 @@ const pruebas = {
     const e = montarBueno(enDiseno('T-CAL', 'facil')); // plazo 8, mesMax 30, reloj 0
     const info = mesesPlanificables(e, D);
     afirmar(info.meses.length === 31 && info.meses[0].mes === 0 && info.meses[30].mes === 30, `meses ${info.meses.length}`);
-    afirmar(info.meses[0].esAhora && info.meses[0].motivo === 'pronto' && info.meses[1].motivo === 'pronto' && info.meses[2].motivo === null, 'las 2 primeras son demasiado pronto');
+    afirmar(info.meses[0].esAhora && info.meses[0].motivo === 'pronto' && info.meses[1].motivo === null, 'solo el mes actual es demasiado pronto');
     afirmar(info.meses.filter((x) => x.esPlazo).map((x) => x.mes).join() === '8', 'marca del plazo');
     afirmar(info.limite === 20 && info.meses[20].motivo === null && info.meses[21].motivo === 'tarde', `límite ${info.limite}: los inversores no esperan más de 12 meses`);
     // Lo mismo que valida planificarRuta.
-    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 1 }, /Too soon/);
+    rechaza(e, 'jvuelo', 'planificarRuta', { mes: 0 }, /Too soon/);
     rechaza(e, 'jvuelo', 'planificarRuta', { mes: 21 }, /will not wait/);
     ok(e, 'jvuelo', 'planificarRuta', { mes: 20 });
     afirmar(mesesPlanificables(e, D).meses.find((x) => x.mes === 20).esElegido && !mesesPlanificables(e, D).perdida, 'mes elegido');
@@ -954,19 +979,13 @@ const pruebas = {
     ok(e, 'jvuelo', 'marcarPizarra', { id: 'tareas' });
     afirmar(e.ruta.mes === null && !('ventana' in e.ruta) && e.ruta.sitio === 'S1', `ruta: ${JSON.stringify(e.ruta)}`);
     afirmar(e.reloj.mes === 0 && e.mision.plazo === null, `reloj ${JSON.stringify(e.reloj)}, plazo ${e.mision.plazo}`);
-    afirmar(estadoInicial().reloj.mes === 0 && estadoInicial().ruta.mes === null, 'estado inicial v4');
+    afirmar(estadoInicial().reloj.mes === 0 && estadoInicial().reloj.corriendo === false && estadoInicial().ruta.mes === null, 'estado inicial v5');
   },
 };
 
 function condicionesMesDe(e) { return resumen(e, D).plan.cond; }
 
-function agotarEventos2(e, quien) {
-  while (e.fase === 'diseno') {
-    const antes = e.diseno.eventos.length;
-    ok(e, quien, 'pedirRevision', {});
-    if (e.diseno.eventos.length === antes) break;
-  }
-}
+const agotarEventos2 = agotarEventos;
 
 // ---------- Ejecutor ----------
 const lista = document.getElementById('resultados-reglas');

@@ -41,7 +41,9 @@
 .mc-informe { height: 100%; overflow: auto; background: #f3ead6; padding: 14px; border-radius: 3px; color: var(--lp-tinta); }
 
 /* ---------- Planificador ---------- */
-.pl { height: 100%; display: grid; grid-template-columns: 340px 1fr 340px; gap: var(--e-3); }
+.pl { height: 100%; display: grid; grid-template-columns: 300px 1fr 360px; grid-template-rows: auto minmax(0, 1fr); gap: var(--e-3); }
+.pl > .pl-tiempo { grid-column: 1 / -1; }
+.pl-centro-col { overflow: auto; }
 .pl-izq, .pl-der { overflow: auto; display: flex; flex-direction: column; gap: var(--e-3); }
 .pl-sola { max-width: 600px; margin: 0 auto; }
 .pl-rutas { display: flex; flex-direction: column; gap: var(--e-2); }
@@ -165,3 +167,67 @@
 .pl-fila dd { margin: 0; display: flex; flex-direction: column; font-size: var(--t-meta); line-height: 1.35; }
 .pl-fila dd .tenue { color: var(--mc-tenue); }
 .pl-izq > .mc-panel, .pl-der > .mc-panel { flex: none; }
+
+/* Línea de tiempo del mes de lanzamiento (a todo el ancho; la ven todos los roles) */
+.pl-tiempo { padding: var(--e-2) var(--e-3); }
+.pl-lt-cab { display: flex; align-items: center; gap: var(--e-3); flex-wrap: wrap; }
+.pl-lt-cab h3 { margin: 0; }
+.pl-lt-esp { flex: 1; }
+.pl-lt-fijado { font: 600 var(--t-cuerpo) var(--lp-ui); color: var(--mc-tenue); }
+.pl-lt-fijado.ok { color: var(--mc-ambar); } .pl-lt-fijado.mal { color: var(--mc-rojo); }
+.pl-lt-cab .boton { padding: 4px 12px; min-height: 32px; }
+.pl-lt-zona { position: relative; margin: var(--e-1) 10px 0; touch-action: none; user-select: none; }
+.pl-lt-marcas { position: relative; height: 14px; }
+.pl-lt-marcas.dos { height: 26px; }
+.pl-lt-marca { position: absolute; top: 0; transform: translateX(-50%); font: var(--t-meta)/12px var(--lp-ui); white-space: nowrap; color: var(--mc-cian); }
+.pl-lt-marca.l1 { top: 13px; }
+.pl-lt-marca.plazo { color: var(--mc-cian); } .pl-lt-marca.ahora { color: #fff; }
+.pl-lt-marca.fijado { color: var(--mc-ambar); } .pl-lt-marca.fijado.perdido { color: var(--mc-rojo); text-decoration: line-through; }
+.pl-lt-rango { display: block; width: calc(100% + 20px); margin: 0 -10px; height: 22px; background: transparent; cursor: pointer; accent-color: var(--mc-ambar); }
+.pl-lt-graf { position: relative; height: 44px; border: 1px solid var(--mc-borde); background: #091729; cursor: crosshair; }
+.pl-lt-banda { position: absolute; top: 0; bottom: 0; pointer-events: none; }
+.pl-lt-banda.pasado { background: repeating-linear-gradient(135deg, #1b2330 0 4px, #131a25 4px 8px); opacity: 0.92; z-index: 2; }
+.pl-lt-banda.pronto { background: repeating-linear-gradient(135deg, rgba(127, 152, 179, 0.25) 0 4px, transparent 4px 8px); z-index: 2; }
+.pl-lt-banda.demora { background: rgba(242, 184, 68, 0.1); }
+.pl-lt-banda.ventana { background: rgba(95, 224, 138, 0.28); border-left: 1px solid var(--mc-verde); border-right: 1px solid var(--mc-verde); }
+.pl-lt-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.pl-lt-rej { stroke: rgba(255, 255, 255, 0.06); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.pl-lt-rej.anio { stroke: rgba(255, 255, 255, 0.25); }
+.pl-lt-area { fill: rgba(98, 198, 255, 0.14); stroke: none; }
+.pl-lt-curva { fill: none; stroke: var(--mc-cian); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.pl-lt-scrub { fill: none; stroke: #d9c2ff; stroke-width: 1.5; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.pl-lt-linea { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 2px solid; pointer-events: none; z-index: 3; }
+.pl-lt-linea.ahora { border-color: #fff; } .pl-lt-linea.plazo { border-color: var(--mc-cian); border-left-style: dashed; }
+.pl-lt-linea.fijado { border-color: var(--mc-ambar); } .pl-lt-linea.fijado.perdido { border-color: var(--mc-rojo); border-left-style: dotted; }
+.pl-lt-linea.cand { border-color: var(--mc-verde); border-left-width: 3px; }
+.pl-lt-linea.hover { border-color: rgba(255, 255, 255, 0.55); border-left-width: 1px; }
+.pl-lt-linea[hidden] { display: none; }
+.pl-lt-eje { position: relative; height: 14px; font: var(--t-meta)/14px var(--lp-ui); color: var(--mc-tenue); }
+.pl-lt-eje span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.pl-lt-eje span.anio { color: var(--mc-tinta); font-weight: 600; }
+.pl-lt-lectura { display: flex; flex-wrap: wrap; gap: var(--e-1) var(--e-3); margin-top: var(--e-1); }
+.pl-lt-chip { display: flex; flex-direction: column; min-width: 110px; font-size: var(--t-meta); line-height: 1.25; }
+.pl-lt-chip small { color: var(--mc-tenue); text-transform: uppercase; letter-spacing: 0.3px; }
+.pl-lt-chip b { font-size: var(--t-cuerpo); color: var(--mc-tinta); }
+.pl-lt-chip em { font-style: normal; margin-left: 6px; padding: 0 5px; border: 1px solid var(--mc-borde); border-radius: 3px; color: var(--mc-tenue); }
+.pl-lt-chip.ancho { flex: 1; } .pl-lt-chip.mal { color: var(--mc-ambar); }
+.pl-lt-delta { padding: 1px var(--e-2); border: 1px dashed var(--mc-borde); border-radius: 3px; font-size: var(--t-meta); }
+.pl-lt-delta[hidden] { display: none; }
+.pl-lt-delta .mal { color: var(--mc-ambar); } .pl-lt-delta .bien { color: var(--mc-verde); }
+.pl-lt-dnota { margin: 0; color: var(--mc-tenue); }
+.pl-lt-ley { display: flex; flex-wrap: wrap; gap: var(--e-1) var(--e-3); margin: var(--e-1) 0 0; font-size: var(--t-meta); color: var(--mc-tenue); }
+.pl-lt-ley .nota { flex-basis: 100%; }
+.pl-lt-ley .nota::before { display: none; }
+.pl-lt-ley span:not(.nota)::before { content: ''; display: inline-block; width: 14px; height: 8px; margin-right: 5px; vertical-align: baseline; border: 1px solid var(--mc-borde); }
+.pl-lt-ley .cur::before { background: var(--mc-cian); border-color: var(--mc-cian); height: 2px; }
+.pl-lt-ley .scr::before { border: 0; border-top: 2px dotted #d9c2ff; height: 0; }
+.pl-lt-ley .ven::before { background: rgba(95, 224, 138, 0.4); border-color: var(--mc-verde); }
+.pl-lt-ley .pas::before { background: #1b2330; }
+.pl-lt-ley .rev::before { background: repeating-linear-gradient(135deg, rgba(127, 152, 179, 0.5) 0 2px, transparent 2px 4px); }
+.pl-lt-ley .dem::before { background: rgba(242, 184, 68, 0.3); }
+.pl-lt-nota { margin-top: var(--e-1); }
+.pl-tiempo .pl-perdida { margin: var(--e-1) 0 0; }
+
+/* Aviso de bloqueo por rol: texto visible junto al control desactivado (y como tooltip) */
+.mc-bloqueo { margin: var(--e-1) 0 0; padding: var(--e-1) var(--e-2); border: 1px solid var(--mc-ambar, #d89a1e); border-radius: 3px; background: rgba(242, 184, 68, 0.1);
+  color: var(--mc-ambar, #d89a1e); font-size: var(--t-meta, 12px); line-height: 1.3; }

@@ -2,7 +2,7 @@
 // No sabe nada de la red: recibe un "transporte" (ver transporte-mqtt.js y transporte-memoria.js).
 // Sin peerId, transporte.enviar difunde a todos los pares.
 import {
-  VERSION_PROTOCOLO, MAX_JUGADORES, estadoInicial, reducir, marcarDesconectado, ganaEtiqueta, conectados, pesoDe,
+  VERSION_PROTOCOLO, MAX_JUGADORES, estadoInicial, reducir, marcarDesconectado, ganaEtiqueta, conectados, pesoDe, sincronizarReloj,
 } from './protocolo.js';
 
 const TIEMPOS = {
@@ -10,6 +10,7 @@ const TIEMPOS = {
   reintento: 2000,    // reenvío de saludos e intenciones sin confirmar
   esperaRelevo: 6000, // si el sucesor no aparece, se descarta y se elige al siguiente
   sinSaludo: 8000,    // un par que nunca saluda es de otra versión (o está roto)
+  reloj: 1000,        // cada cuánto el anfitrión mira si toca avanzar el reloj de misión (un mes dura 60–105 s)
 };
 
 export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora = Date.now, aleatorio = Math.random, version = VERSION_PROTOCOLO }) {
@@ -245,6 +246,22 @@ export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora =
     }
   }, T.reintento));
   timers.push(setTimeout(() => { if (!sincronizado) hacermeHost(1); }, T.esperaHost));
+  // Reloj de misión en tiempo real: solo el anfitrión lo hace avanzar, con la acción validada `tic` ({ mes } = el mes que ve, para no
+  // contar dos veces). También pone al día corriendo / msPorMes cuando cambian la fase o los jugadores conectados.
+  timers.push(setInterval(() => {
+    if (!soyHost() || !sincronizado || !estado) return;
+    const t = ahora();
+    let cambio = sincronizarReloj(estado, t);
+    const r = estado.reloj;
+    if (r?.corriendo) {
+      if (r.inicioMes > t + r.msPorMes) { r.inicioMes = t; cambio = true; } // reloj de otro equipo adelantado: se empieza el mes ahora
+      else if (t - r.inicioMes >= r.msPorMes) {
+        reducir(estado, jugadorId, { id: nuevoId(), tipo: 'tic', payload: { mes: r.mes } }, { ...ctx(), reloj: true });
+        cambio = true;
+      }
+    }
+    if (cambio) publicar();
+  }, T.reloj));
 
   // ---------- API pública ----------
   return {

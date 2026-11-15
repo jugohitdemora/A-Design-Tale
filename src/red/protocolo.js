@@ -2,14 +2,17 @@
 // Este archivo es puro (sin red, sin Three.js) para poder probarlo con un transporte simulado.
 // Ver PROTOCOLO.md para el diseño completo y mecanicas-del-juego.md §9 para las acciones de juego.
 import {
-  resumen, cumple, verificar, motivoRestriccion, aplicarCambio, misionDe, piezaEnMision, siguienteEventoDiseno,
+  resumen, cumple, verificar, motivoRestriccion, aplicarCambio, misionDe, piezaEnMision, sortearEventoDiseno,
   DIFICULTADES, MAX_CONTINGENCIAS, relojDe, plazosDe, plazoPorDefecto, mesMaxDe, planDe,
-  MESES_REVISION, MESES_REDISENO, RETRASO_CANCELA,
+  MARGEN_LANZAMIENTO, MESES_REDISENO, RETRASO_CANCELA, FASES_RELOJ, relojCorre, msPorMes,
 } from '../reglas/motor.js';
 import { simular, resultadoCancelado } from '../reglas/despliegue.js';
 import { prng, derivar, barajar } from '../reglas/azar.js';
 
-export const VERSION_PROTOCOLO = 4; // 4: reloj de misión (estado.reloj, mision.plazo, ruta.mes)
+// 4: reloj de misión (estado.reloj, mision.plazo, ruta.mes)
+// 5: reloj en tiempo real: reloj = { mes, msPorMes, inicioMes, corriendo }, acción `tic` del anfitrión, eventos de diseño por tic,
+//    la revisión ya no suma meses y la tolerancia (≤ +20 %) pasa a verificación.
+export const VERSION_PROTOCOLO = 5;
 export const MAX_JUGADORES = 4;
 export const ROLES_IDS = ['vuelo', 'ciencia', 'potencia', 'comms'];
 // Si su dueño se desconecta, un rol queda reservado este tiempo (así una recarga no lo pierde).
@@ -96,7 +99,20 @@ const talleresIniciales = () => Object.fromEntries(ROLES_IDS.map((r) => [r, tall
 const disenoInicial = () => ({ revisiones: 0, eventos: [], ultima: null });
 const firmasIniciales = () => Object.fromEntries(ROLES_IDS.map((r) => [r, false]));
 const rutaInicial = () => ({ mes: null, sitio: null });
-const relojInicial = () => ({ mes: 0 });
+// { mes, msPorMes (ms que dura un mes con los jugadores actuales), inicioMes (Date.now() del anfitrión al empezar el mes), corriendo }
+const relojInicial = () => ({ mes: 0, msPorMes: msPorMes(4), inicioMes: 0, corriendo: false });
+const jugadoresConRol = (e) => conectados(e).filter(([, j]) => j.rol).length;
+// Pone al día corriendo / msPorMes / inicioMes según la fase y los jugadores. → true si algo cambió (el anfitrión debe publicar).
+export function sincronizarReloj(e, ahora) {
+  if (!e.reloj || typeof e.reloj !== 'object') e.reloj = relojInicial();
+  const r = e.reloj, t = Number.isFinite(ahora) ? ahora : 0;
+  let cambio = false;
+  const corre = relojCorre(e), ms = msPorMes(jugadoresConRol(e));
+  if (r.corriendo !== corre) { r.corriendo = corre; if (corre) r.inicioMes = t; cambio = true; }
+  if (corre && r.msPorMes !== ms) { r.msPorMes = ms; cambio = true; } // parado no importa: así el lobby no publica por esto
+  if (!Number.isFinite(r.inicioMes)) { r.inicioMes = t; cambio = true; }
+  return cambio;
+}
 
 export function estadoInicial() {
   return {
@@ -112,7 +128,7 @@ export function estadoInicial() {
     resultado: null,        // lo que devuelve simular() al lanzar
     vista: { paso: 0, activadas: [] }, // pasos del vuelo ya revelados y contingencias activadas en la sala de control
     ruta: rutaInicial(),    // planificación en la sala de control: { mes: meses desde el inicio de la misión, sitio }
-    reloj: relojInicial(),  // { mes }: meses de diseño transcurridos desde el inicio de la misión (contrato-reloj.md)
+    reloj: relojInicial(),  // { mes, msPorMes, inicioMes, corriendo }: meses transcurridos desde el inicio de la misión; corre en tiempo real (contrato-reloj.md)
     registro: [],           // eventos que el anfitrión ya resolvió (fases futuras)
   };
 }
@@ -525,9 +541,37 @@ export const ACCIONES = {
     aplicar(e, id, p) { taller(e, 'comms'); aplicarCambio(e.porRol, { tipo: 'contingencia', id: p.id, on: !!p.on }); borrarFirmas(e); },
   },
 
+  // El reloj de misión avanza 1 mes. Solo lo manda el anfitrión (ctx.reloj = true) cuando se cumple msPorMes; un cliente no puede.
+  // { mes }: tiene que ser estado.reloj.mes (evita dobles tics). Tras avanzar (y puede cancelar a los inversores), el anfitrión sortea
+  // un evento de diseño con la semilla y el mes (motor.sortearEventoDiseno): diseno.ultima = { tipo: 'evento', id, mes }.
+  tic: {
+    fases: FASES_RELOJ,
+    validar(e, id, p, ctx) {
+      if (!ctx?.reloj) return 'Only the host clock can do that';
+      const D = datosDe(ctx);
+      if (!D) return sinDatos;
+      if (!misionDe(e, D)) return 'Choose a mission first';
+      if (p.mes !== (Number.isInteger(e.reloj?.mes) ? e.reloj.mes : 0)) return 'Clock already advanced';
+      return null;
+    },
+    aplicar(e, id, p, ctx) {
+      const D = datosDe(ctx);
+      if (avanzarReloj(e, 1, D)) return;
+      e.reloj.inicioMes = Number.isFinite(ctx.ahora) ? ctx.ahora : 0;
+      const sig = sortearEventoDiseno(e, D);
+      if (!sig) return;
+      e.diseno.eventos.push({ id: sig });
+      e.diseno.ultima = { tipo: 'evento', id: sig, mes: e.reloj.mes, revision: e.diseno.revisiones };
+      borrarFirmas(e); // un evento cambia límites o presupuesto: hay que volver a firmar
+      const extra = Math.floor(Number(D.EVENTOS_DISENO?.[sig]?.efecto?.meses));
+      if (extra > 0) avanzarReloj(e, extra, D); // salta el reloj (puede cancelar la misión)
+    },
+  },
+
   // MEC-10, MEC-11, MEC-12. { revision? }: si viene, tiene que ser estado.diseno.revisiones (evita dobles clics).
-  // Mientras queden eventos de diseño, sale uno en vez de la revisión. Después se evalúa y se va a la fase que toque.
-  // El resultado queda en estado.diseno.ultima = { tipo: 'evento', id } | { tipo: 'revision', nivel, barras }.
+  // Evalúa el diseño y va a la fase que toque: dentro o tolerancia (≤ +20 %) → verificación; fuera → se queda en diseño.
+  // La revisión ya no cuesta meses ni saca eventos (eso lo hace el reloj en tiempo real, acción tic).
+  // El resultado queda en estado.diseno.ultima = { tipo: 'revision', nivel, barras, revision, mes }.
   pedirRevision: {
     fases: ['diseno', 'restricciones'],
     validar(e, id, p, ctx) {
@@ -541,23 +585,9 @@ export const ACCIONES = {
     aplicar(e, id, p, ctx) {
       const D = datosDe(ctx);
       const n = ++e.diseno.revisiones;
-      // Cada revisión cuesta MESES_REVISION; un evento con `meses` (p. ej. un proveedor que se retrasa) suma los suyos.
-      if (e.fase === 'diseno') {
-        const sig = siguienteEventoDiseno(e, D);
-        if (sig) {
-          e.diseno.eventos.push({ id: sig });
-          e.diseno.ultima = { tipo: 'evento', id: sig, revision: n };
-          const extra = Number(D.EVENTOS_DISENO?.[sig]?.efecto?.meses);
-          avanzarReloj(e, MESES_REVISION + (Number.isFinite(extra) ? extra : 0), D);
-          return;
-        }
-      }
-      if (avanzarReloj(e, MESES_REVISION, D)) return;
       const c = cumple(resumen(e, D));
-      e.diseno.ultima = { tipo: 'revision', nivel: c.nivel, barras: c.barras, revision: n };
-      if (c.nivel === 'dentro') e.fase = 'verificacion';
-      else if (c.nivel === 'tolerancia') e.fase = 'restricciones';
-      else e.fase = 'diseno';
+      e.diseno.ultima = { tipo: 'revision', nivel: c.nivel, barras: c.barras, revision: n, mes: e.reloj?.mes ?? 0 };
+      e.fase = c.nivel === 'fuera' ? 'diseno' : 'verificacion'; // la tolerancia ya no obliga a recortar: solo sube el riesgo
     },
   },
 
@@ -607,6 +637,7 @@ export const ACCIONES = {
     validar(e, id, p, ctx) {
       if (!e.jugadores[id]?.rol) return 'You need a role';
       if (p.paso != null && p.paso !== (e.vista?.paso ?? 0)) return 'Already advanced';
+      if (e.resultado?.pasos?.[0]?.ok === false) return null; // el cohete no despegó: no hay contingencias que activar
       const falta = contingenciaPendiente(e);
       if (falta) {
         const D = datosDe(ctx);
@@ -617,7 +648,8 @@ export const ACCIONES = {
     aplicar(e) {
       const total = e.resultado?.pasos?.length ?? 0;
       const paso = e.vista?.paso ?? 0;
-      if (paso >= total - 1) e.fase = 'informe';
+      // Si falló el lanzamiento la misión nunca voló: se va directo al informe.
+      if (paso >= total - 1 || e.resultado?.pasos?.[0]?.ok === false) e.fase = 'informe';
       else e.vista = { ...e.vista, paso: paso + 1 };
     },
   },
@@ -641,7 +673,7 @@ export const ACCIONES = {
   // { mes?: meses desde el inicio de la misión (entero), sitio?: id del sitio } (`ventana` se acepta como nombre antiguo de `mes`).
   // El mes lo fija Vuelo y Mecánica; el sitio, Vuelo y Mecánica o Ciencia (que lee las capas de datos).
   // Reglas del mes: dentro de 0..mesMax de la planificación; no antes del mes actual (ya pasó); en diseño y restricciones, no antes
-  // de reloj.mes + MESES_REVISION (la revisión que falta consume esos meses); nunca más de RETRASO_CANCELA meses tras el plazo.
+  // de reloj.mes + MARGEN_LANZAMIENTO (1: el reloj corre en tiempo real); nunca más de RETRASO_CANCELA meses tras el plazo.
   // En Restricciones y Verificación no puede subir ninguna barra que acabe fuera de su límite, salvo para rehacer un plan perdido.
   planificarRuta: {
     fases: ['diseno', 'restricciones', 'verificacion'],
@@ -662,7 +694,7 @@ export const ACCIONES = {
       if (mes != null && D && m) {
         const rl = relojDe(e, D);
         if (mes < rl.mes) return 'Launch month already passed';
-        if (e.fase !== 'verificacion' && mes < rl.mes + MESES_REVISION) return `Too soon: the design review takes ${MESES_REVISION} months`;
+        if (e.fase !== 'verificacion' && mes < rl.mes + MARGEN_LANZAMIENTO) return `Too soon: launch at least ${MARGEN_LANZAMIENTO} month after the current one`;
         if (rl.activo && mes - rl.plazo > RETRASO_CANCELA) return 'Investors will not wait that long';
       }
       if ((e.fase === 'restricciones' || e.fase === 'verificacion') && D && !planDe(e, D)?.perdida) {
@@ -719,6 +751,7 @@ export const ACCIONES = {
         e.diseno.ultima = null;
         if (!e.reloj || typeof e.reloj !== 'object') e.reloj = relojInicial();
         e.reloj.mes = (Number.isInteger(e.reloj.mes) ? e.reloj.mes : 0) + MESES_REDISENO;
+        e.reloj.inicioMes = Number.isFinite(ctx?.ahora) ? ctx.ahora : 0; // sincronizarReloj lo vuelve a poner al reanudar
       }
       if (p.fase === 'lobby') {
         e.mision = null;
@@ -757,6 +790,7 @@ export function reducir(e, jugadorId, intencion, ctx) {
   else if (intencion.tipo !== 'unirse' && !j) motivo = 'No estás en la sala';
   else motivo = accion.validar(e, jugadorId, intencion.payload || {}, ctx);
   if (!motivo) accion.aplicar(e, jugadorId, intencion.payload || {}, ctx);
+  sincronizarReloj(e, ctx?.ahora); // la fase o los jugadores pueden haber cambiado: el reloj corre, se para o cambia de velocidad
   if (e.jugadores[jugadorId]) e.jugadores[jugadorId].ultimaIntencion = Math.max(e.jugadores[jugadorId].ultimaIntencion, intencion.id);
   return motivo;
 }
@@ -785,7 +819,11 @@ function completarEstado(e) {
   if (!e.ruta || typeof e.ruta !== 'object') e.ruta = rutaInicial();
   if (!Number.isInteger(e.ruta.mes)) { e.ruta.mes = null; delete e.ruta.ventana; }
   if (e.ruta.sitio === undefined) e.ruta.sitio = null;
+  // v5: reloj = { mes, msPorMes, inicioMes, corriendo }; un estado antiguo con solo { mes } se completa sin perder el mes.
   if (!e.reloj || typeof e.reloj !== 'object' || !Number.isInteger(e.reloj.mes) || e.reloj.mes < 0) e.reloj = relojInicial();
+  if (!(e.reloj.msPorMes > 0)) e.reloj.msPorMes = msPorMes(4);
+  if (!Number.isFinite(e.reloj.inicioMes)) e.reloj.inicioMes = 0;
+  e.reloj.corriendo = !!e.reloj.corriendo;
   // Partida anterior sin plazo: queda sin compromiso (la regla de inversores no se aplica) hasta comprometerPlazo.
   if (e.mision && typeof e.mision === 'object' && e.mision.plazo === undefined) e.mision.plazo = null;
 }

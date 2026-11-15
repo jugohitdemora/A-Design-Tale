@@ -68,18 +68,18 @@ export const T = textos({
   reviewHint: 'Una revisión puede traer un evento de diseño.',
   lastReview: (nivel, barras) => ({
     fuera: `Revisión rechazada. Más del 20 % sobre el límite: ${barras}.`,
-    tolerancia: `Revisión en tolerancia. Sobre el límite: ${barras}.`,
+    tolerancia: `Revisión en tolerancia: pasa, pero sube el riesgo de fallo. Sobre el límite: ${barras}.`,
     dentro: 'Revisión aprobada: todo dentro de los límites.',
     evento: 'Llegó un evento de diseño. Ajusta el diseño y pide otra revisión.',
   })[nivel] ?? '',
-  designStatus: { dentro: 'Todo dentro de los límites.', tolerancia: 'Hasta 20 % sobre el límite: recorta en Restricciones.', fuera: 'Más del 20 % sobre el límite: reduce el diseño.' },
+  designStatus: { dentro: 'Todo dentro de los límites.', tolerancia: 'Hasta 20 % sobre el límite: pasa la revisión, pero sube el riesgo de fallo de una etapa.', fuera: 'Más del 20 % sobre el límite: reduce el diseño.' },
 
   // panel global
   globalPanel: 'Estado global',
   categories: { actitud: 'control de actitud', antena: 'antena', bateria: 'batería', camara: 'cámara', computador: 'computador', estructura: 'estructura', guiado: 'guiado', instrumento: 'instrumento', memoria: 'almacenamiento de datos', navegacion: 'navegación', paneles: 'paneles solares', polvo: 'control de polvo', propulsion: 'propulsión', proteccion: 'blindaje', sondas: 'sondas', termica: 'térmica', tierra: 'segmento terrestre' },
   bars: { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Enlace de datos', presupuesto: 'Presupuesto', volumen: 'Volumen' },
   units: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/día', presupuesto: 'M USD', volumen: 'L' },
-  barState: { ok: 'OK', tolerancia: 'Sobre el límite (tolerancia)', exceso: 'Muy por encima' },
+  barState: { ok: 'OK', tolerancia: 'Tolerancia: más riesgo de fallo', exceso: 'Muy por encima' },
   marker100: '100%', marker120: '120%',
   clock: 'Reloj', bonusTag: 'por el plazo', investorCut: 'recorte de inversores',
   budgetHint: 'Dinero usado frente al límite. Los inversores pagan la rapidez y recortan por cada mes de retraso.',
@@ -260,18 +260,18 @@ export const T = textos({
   reviewHint: 'A review can bring a design event.',
   lastReview: (nivel, barras) => ({
     fuera: `Review rejected. More than 20% over the limit: ${barras}.`,
-    tolerancia: `Review within tolerance. Over the limit: ${barras}.`,
+    tolerancia: `Review within tolerance: passes, with higher failure risk. Over the limit: ${barras}.`,
     dentro: 'Review passed: all bars within limits.',
     evento: 'A design event arrived. Adjust the design and request a new review.',
   })[nivel] ?? '',
-  designStatus: { dentro: 'All bars within limits.', tolerancia: 'Up to 20% over the limit: trim in Constraints.', fuera: 'More than 20% over the limit: reduce the design.' },
+  designStatus: { dentro: 'All bars within limits.', tolerancia: 'Up to 20% over the limit: passes the review, but raises the failure risk of a mission stage.', fuera: 'More than 20% over the limit: reduce the design.' },
 
   // global panel
   globalPanel: 'Global status',
   categories: { actitud: 'attitude control', antena: 'antenna', bateria: 'battery', camara: 'camera', computador: 'computer', estructura: 'structure', guiado: 'guidance', instrumento: 'instrument', memoria: 'data storage', navegacion: 'navigation', paneles: 'solar panels', polvo: 'dust control', propulsion: 'propulsion', proteccion: 'shielding', sondas: 'probes', termica: 'thermal', tierra: 'ground segment' },
   bars: { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data link', presupuesto: 'Budget', volumen: 'Volume' },
   units: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/day', presupuesto: 'M USD', volumen: 'L' },
-  barState: { ok: 'OK', tolerancia: 'Over limit (tolerance)', exceso: 'Too far over' },
+  barState: { ok: 'OK', tolerancia: 'Tolerance: higher failure risk', exceso: 'Too far over' },
   marker100: '100%', marker120: '120%',
   clock: 'Clock', bonusTag: 'for the deadline', investorCut: 'investor cut',
   budgetHint: 'Money used against the limit. Investors pay for speed and cut funding for each month of delay.',

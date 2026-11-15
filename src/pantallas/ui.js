@@ -1,6 +1,7 @@
 // Shared helpers for all screens. No state here.
 import { T } from '../textos.js';
 import { tx, depto, idioma } from '../i18n.js';
+import { fechaDeMes, NOMBRE_MES } from '../datos/calendario.js';
 
 export const ROLES_IDS = ['vuelo', 'ciencia', 'potencia', 'comms'];
 export const ROL_COLOR = { vuelo: '#d9822b', ciencia: '#3fa66b', potencia: '#e0c040', comms: '#4a7fd0' };
@@ -99,3 +100,101 @@ export function fuenteLink(c, id) {
   const url = typeof f?.url === 'string' && /^https?:\/\//.test(f.url) ? f.url : null;
   return { id, titulo: f?.titulo ?? id, url, agencia: f?.agencia ?? '' };
 }
+
+// ---------- Reloj de misión (estado.reloj = { mes, msPorMes, inicioMes, corriendo }) ----------
+// Un solo widget (.rm) en el portátil, la sala de control y la tarjeta de la sala. Un temporizador de 250 ms rellena la barra del mes.
+const TR = {
+  es: { vel: (s, n) => `1 mes ≈ ${s} s · ${n} ${n === 1 ? 'tripulante' : 'tripulantes'}`, velC: (s) => `≈ ${s} s/mes`, pausa: '⏸ en pausa',
+    plazo: 'Plazo inversores', plazoC: 'Plazo', quedan: (n) => (n === 1 ? 'queda 1 mes' : `quedan ${n} meses`), quedanC: (n) => `${n} m`, ultimo: 'último mes',
+    pasado: (n) => `pasado ${n} ${n === 1 ? 'mes' : 'meses'}`, pasadoC: (n) => `+${n} m tarde`,
+    recorte: (p) => `recorte −${p} %`, lanz: 'Lanzamiento', lanzNo: 'Mes de lanzamiento sin fijar: lo elige el Director de Vuelo en la sala de control', lanzNoC: 'sin fijar',
+    perdido: 'ya pasó: elige otro', cancel: 'los inversores se retiran',
+    tictac: (f) => `Pasó un mes: ${f}`, alPlazo: (f, p) => `¡Plazo de los inversores superado (${f})! Recorte del presupuesto: −${p} %`,
+    alLanz: (f) => `El mes de lanzamiento (${f}) ya pasó: elige otro en la sala de control` },
+  en: { vel: (s, n) => `1 month ≈ ${s} s · ${n} crew`, velC: (s) => `≈ ${s} s/mo`, pausa: '⏸ paused',
+    plazo: 'Investor deadline', plazoC: 'Deadline', quedan: (n) => `${n} ${n === 1 ? 'month' : 'months'} left`, quedanC: (n) => `${n} mo left`, ultimo: 'last month',
+    pasado: (n) => `${n} ${n === 1 ? 'month' : 'months'} late`, pasadoC: (n) => `${n} mo late`,
+    recorte: (p) => `budget cut −${p} %`, lanz: 'Launch', lanzNo: 'Launch month not set — Flight Director picks it in the control room', lanzNoC: 'not set',
+    perdido: 'missed: pick another', cancel: 'investors withdraw',
+    tictac: (f) => `A month passed — ${f}`, alPlazo: (f, p) => `Investor deadline passed (${f})! Budget cut: −${p} %`,
+    alLanz: (f) => `The launch month (${f}) has passed — pick another in the control room` },
+};
+const tr = () => TR[idioma() === 'es' ? 'es' : 'en'];
+const ent = (x) => (x !== null && x !== '' && x !== undefined && Number.isFinite(Number(x)) ? Math.floor(Number(x)) : null);
+export const fechaTxt = (abs) => {
+  const f = fechaDeMes(abs), n = (NOMBRE_MES[idioma() === 'es' ? 'es' : 'en'] ?? NOMBRE_MES.en)[f.mes - 1] ?? '';
+  return `${n.charAt(0).toUpperCase()}${n.slice(1)} ${f.anio}`;
+};
+
+// → null si no hay reloj; si no { mes, inicio, abs, plazo, lanz, left, retraso, recorte, cancelada, lanzTarde, ms, ini, corriendo, crew, nivel, fase }.
+// Los meses de plazo y de lanzamiento cuentan desde el inicio del diseño (misión.reloj.inicio), como en motor.relojDe.
+export function datosReloj(c) {
+  const e = c?.e, r = e?.reloj;
+  if (!r || typeof r !== 'object') return null;
+  const mes = Math.max(0, ent(r.mes) ?? 0);
+  const inicio = Math.max(0, ent(c.mision?.reloj?.inicio ?? r.inicio) ?? 0);
+  const plazo = ent(e.mision?.plazo), lanz = ent(e.ruta?.mes);
+  let rl = null; try { rl = c.motor?.relojDe ? c.motor.relojDe(e, c.D) : null; } catch { rl = null; }
+  const retraso = rl?.retraso ?? (plazo == null ? 0 : Math.max(0, Math.max(mes, lanz ?? mes) - plazo));
+  const recorte = rl?.recorte ?? Math.min(0.4, 0.04 * Math.max(0, retraso - 1));
+  const ms = Number(r.msPorMes) > 0 ? Number(r.msPorMes) : 60000;
+  const crew = Math.min(4, Math.max(1, Math.round(4 - (ms - 60000) / 15000)));
+  const left = plazo == null ? null : plazo - mes;
+  const lanzTarde = lanz != null && lanz < mes && e.fase !== 'mision' && e.fase !== 'informe';
+  let nivel = 'ok';
+  if ((left != null && left <= 3) || lanzTarde) nivel = 'aviso';
+  if ((left != null && left < 0) || rl?.cancelada) nivel = 'mal';
+  return { mes, inicio, abs: inicio + mes, plazo, lanz, left, retraso, recorte, cancelada: !!rl?.cancelada, lanzTarde, ms, ini: Number(r.inicioMes), corriendo: r.corriendo === true, crew, nivel, fase: e.fase };
+}
+
+const relojVivo = { ms: 60000, ini: NaN, corriendo: false, mes: -1, frac: 0 };
+let relojTimer = null, tickEn = 0;
+function pintarBarras() {
+  const v = relojVivo;
+  if (v.corriendo && Number.isFinite(v.ini)) v.frac = Math.min(1, Math.max(0, (Date.now() - v.ini) / v.ms));
+  const pc = Math.round(v.frac * 100);
+  document.querySelectorAll('.rm-barra').forEach((b) => { if (b.firstChild) b.firstChild.style.width = pc + '%'; b.setAttribute('aria-valuenow', String(pc)); });
+}
+export function marcarTick() {
+  tickEn = Date.now();
+  document.querySelectorAll('.rm').forEach((n) => { n.classList.remove('tick'); void n.offsetWidth; n.classList.add('tick'); });
+}
+export function relojMision(c) {
+  const d = datosReloj(c); if (!d) return null;
+  const t = tr();
+  if (d.mes !== relojVivo.mes) relojVivo.frac = 0;
+  Object.assign(relojVivo, { ms: d.ms, ini: d.ini, corriendo: d.corriendo, mes: d.mes });
+  if (!relojTimer) relojTimer = setInterval(pintarBarras, 250);
+  const par = (largo, corto) => [h('span', { class: 'rm-l' }, largo), h('span', { class: 'rm-c' }, corto)];
+  const pct = Math.round(d.recorte * 100);
+  let plazoL = null, plazoC = null;
+  if (d.plazo != null) {
+    const f = fechaTxt(d.inicio + d.plazo);
+    const est = d.left > 1 ? [t.quedan(d.left), t.quedanC(d.left)] : d.left === 1 ? [t.quedan(1), t.quedanC(1)] : d.left === 0 ? [t.ultimo, t.ultimo] : [t.pasado(-d.left), t.pasadoC(-d.left)];
+    plazoL = `${t.plazo}: ${f} · ${est[0]}${pct > 0 ? ` · ${t.recorte(pct)}` : ''}${d.cancelada ? ` · ${t.cancel}` : ''}`;
+    plazoC = `${t.plazoC} ${f} · ${est[1]}${pct > 0 ? ` · −${pct} %` : ''}`;
+  }
+  let lanzL = null, lanzC = null;
+  if (d.lanz != null) { const f = fechaTxt(d.inicio + d.lanz); lanzL = `${t.lanz}: ${f}${d.lanzTarde ? ` (${t.perdido})` : ''}`; lanzC = `${t.lanz} ${f}${d.lanzTarde ? ' ⚠' : ''}`; }
+  else if (d.fase === 'diseno' || d.fase === 'restricciones' || d.fase === 'verificacion') { lanzL = t.lanzNo; lanzC = `${t.lanz}: ${t.lanzNoC}`; }
+  const vel = t.vel(Math.round(d.ms / 1000), d.crew);
+  const el = h('div', { class: `rm ${d.nivel}${d.corriendo ? '' : ' pausa'}${Date.now() - tickEn < 1400 ? ' tick' : ''}`, role: 'group', 'aria-label': fechaTxt(d.abs), title: [vel, plazoL, lanzL].filter(Boolean).join('\n') },
+    h('div', { class: 'rm-fecha' }, h('b', { class: 'rm-mes' }, fechaTxt(d.abs)), d.corriendo ? null : h('span', { class: 'rm-pausa' }, t.pausa),
+      h('span', { class: 'rm-vel' }, ...par(vel, t.velC(Math.round(d.ms / 1000))))),
+    h('div', { class: 'rm-barra', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0' }, h('i')),
+    h('div', { class: 'rm-linea' },
+      plazoL ? h('span', { class: 'rm-plazo' }, ...par(plazoL, plazoC)) : null,
+      lanzL ? h('span', { class: 'rm-lanz' + (d.lanz == null || d.lanzTarde ? ' falta' : '') }, ...par(lanzL, lanzC)) : null));
+  pintarBarras();
+  return el;
+}
+
+// Aviso breve arriba al centro (vive en <body>: no depende de la guía, que se repinta).
+let toastTimer = null;
+export function toastReloj(txt, nivel = 'ok') {
+  let n = document.getElementById('rm-toast');
+  if (!n) { n = h('div', { id: 'rm-toast', class: 'rm-toast', role: 'status', 'aria-live': 'polite' }); document.body.append(n); }
+  n.textContent = txt; n.className = 'rm-toast ' + nivel; void n.offsetWidth; n.classList.add('ver');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => n.classList.remove('ver'), nivel === 'ok' ? 3500 : 7000);
+}
+export const textosReloj = () => tr();

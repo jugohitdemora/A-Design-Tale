@@ -4,8 +4,12 @@ import { idioma, tx, textos } from '../i18n.js';
 import { h, en, lista, redondear, resumenSeguro } from './ui.js';
 import { explicarPuntos } from '../reglas/explicar.js';
 import { panelGlobal } from './panel-global.js';
+import { lanzamientoFallido, olvidarLanzamiento } from '../laptop/camara-lanzamiento.js';
 
-const TI = textos({ es: { suerte: 'Mala suerte', decision: 'Decisión' }, en: { suerte: 'Bad luck', decision: 'Decision' } });
+const TI = textos({
+  es: { suerte: 'Mala suerte', decision: 'Decisión', sinLanz: 'El cohete nunca llegó al espacio: el lanzamiento falló y las fases siguientes no se volaron.' },
+  en: { suerte: 'Bad luck', decision: 'Decision', sinLanz: 'The rocket never reached space: the launch failed and the following phases were not flown.' },
+});
 
 function recogerFuentes(c, set) {
   const m = c.mision; if (!m) return;
@@ -36,6 +40,8 @@ export function pantallaInforme(c) {
     const vd = r.veredicto;
     raiz.append(h('div', { class: 'veredicto v-' + vd }, h('b', {}, r.cancelada ? T.cancelledTitle : (T.verdicts[vd] ?? '—')), h('span', {}, r.cancelada ? T.cancelledText : (T.verdictText[vd] ?? '')),
       r.puntos != null ? h('small', {}, `${T.points}: ${redondear(Number(r.puntos), 0)}`) : null));
+    if (lanzamientoFallido(r)) raiz.append(h('p', { class: 'sin-vuelo' }, '✖ ', TI.sinLanz));
+    olvidarLanzamiento();
     raiz.append(h('h4', {}, T.causes));
     let causas = [];
     try { causas = explicarPuntos(r, c.D, idioma()); } catch (err) { console.error('explicarPuntos', err); }

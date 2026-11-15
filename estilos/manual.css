@@ -154,3 +154,10 @@
 @media (prefers-reduced-motion: no-preference) {
   .sop-tab, .sop-ind { transition: opacity 0.12s, background 0.12s; }
 }
+
+/* Manual de juego: pestaña propia y enlaces a capítulos */
+.sop-tab-juego { min-width: 120px; --rc: var(--lp-acento); }
+.sop-call.ver { border-left-color: var(--lp-acento); background: var(--lp-panel-2); margin-left: 0; }
+.sop-call.ver .sop-call-etq { min-width: 0; font-family: var(--lp-ui); font-size: var(--t-cuerpo); line-height: 1.2; }
+.sop-ver { display: inline; padding: 0 4px; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.sop-juego .sop-p, .sop-juego .sop-ul { max-width: 80ch; }

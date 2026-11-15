@@ -3,6 +3,7 @@
 // explicarPuntos(resultado, D, idioma) → [{ tipo: 'suerte'|'decision'|'info', causa, decision, evitar, texto }]: de 1 a 5 puntos de causas y,
 //   si hay reloj, uno final de presupuesto y plazo (tipo 'info'). 'suerte' = el fallo no dependía de una decisión (p. ej. un lanzamiento
 //   que falló con un 95 % de éxito); 'decision' = había algo que el jugador pudo hacer distinto. `texto` = "causa → decisión → evitar".
+//   Las barras en tolerancia (resultado.tolerancia) salen como puntos 'info': "Mass was 12 % over the limit: Launch failure chance +6 pp".
 // explicarCausas(resultado, D, idioma) → [texto]: solo los textos (los usa el informe de papel).
 const obj = (x) => (x && typeof x === 'object' && !Array.isArray(x) ? x : {});
 const arr = (x) => (Array.isArray(x) ? x : []);
@@ -24,13 +25,16 @@ const T = {
     espacio: (mes, k, dp) => `volar en ${mes}, con un ${k} de probabilidad de tormenta Kp ≥ 7: ${dp}`,
     conjuncion: (mes, a, d, dp) => `lanzar en ${mes}, con el ángulo Sol–Tierra–destino en ${a}° (${d} días por debajo de 5°): ${dp}`,
     sitio: (s, dp) => `el sitio ${s}: ${dp}`, ruta: (r, dp) => `la ruta ${r}: ${dp}`, otro: (r, dp) => `${r}: ${dp}`,
+    tolerancia: (b, o, pp, f) => `${b} pasó un ${o} % del límite: probabilidad de fallo ${f ? `en ${f} ` : ''}+${pp} pp`,
+    barra: { masa: 'La masa', potencia: 'La potencia', bateria: 'La batería', datos: 'El enlace de datos', presupuesto: 'El presupuesto', volumen: 'El volumen' },
+    todasFases: 'todas las fases',
     suerte: (fallo) => `mala suerte: la fase tenía un ${fallo} de fallar`,
     sinMejora: (n, dp) => `se voló sin ${n} (${dp})`,
     lanzSuerte: (mes, s, ll) => `lanzar en ${mes} desde ${s} (lluvia ${ll} mm/día)`,
     evitar: {
       mesSeco: 'un mes con menos lluvia y viento en el sitio de lanzamiento', mesSolCalmo: 'un mes con el Sol más tranquilo',
       sinConjuncion: 'un mes sin el Sol entre la Tierra y el destino', otroSitio: 'un sitio con menos riesgo', otraRuta: 'otra ruta',
-      suerte: 'nada: siempre queda algo de riesgo', enlace: 'una antena mayor o más horas de enlace', plazo: 'lanzar dentro del plazo comprometido',
+      recortar: 'dejar esa barra dentro de su límite', suerte: 'nada: siempre queda algo de riesgo', enlace: 'una antena mayor o más horas de enlace', plazo: 'lanzar dentro del plazo comprometido',
       mejora: (n) => `montar ${n}`, ct: (n) => `la contingencia ${n}`,
     },
     evento: (f, ev) => `${f}: ${ev}, sin mitigar`, sinCt: (n) => `no se llevó ${n}`, sinCtNinguna: 'ninguna contingencia lo cubre',
@@ -49,13 +53,16 @@ const T = {
     espacio: (mes, k, dp) => `fly in ${mes}, with ${k} odds of a Kp ≥ 7 storm: ${dp}`,
     conjuncion: (mes, a, d, dp) => `launch in ${mes}, with the Sun–Earth–target angle at ${a}° (${d} days under 5°): ${dp}`,
     sitio: (s, dp) => `the site ${s}: ${dp}`, ruta: (r, dp) => `the route ${r}: ${dp}`, otro: (r, dp) => `${r}: ${dp}`,
+    tolerancia: (b, o, pp, f) => `${b} was ${o} % over the limit: ${f ? `${f} ` : ''}failure chance +${pp} pp`,
+    barra: { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data link', presupuesto: 'Budget', volumen: 'Volume' },
+    todasFases: 'every phase',
     suerte: (fallo) => `bad luck: the phase had a ${fallo} chance of failing`,
     sinMejora: (n, dp) => `flew without ${n} (${dp})`,
     lanzSuerte: (mes, s, ll) => `launch in ${mes} from ${s} (rain ${ll} mm/day)`,
     evitar: {
       mesSeco: 'a month with less rain and wind at the launch site', mesSolCalmo: 'a month with a quieter Sun',
       sinConjuncion: 'a month without the Sun between Earth and the target', otroSitio: 'a less risky site', otraRuta: 'another route',
-      suerte: 'nothing: some risk always remains', enlace: 'a bigger antenna or more link hours', plazo: 'launching within the commitment',
+      recortar: 'keeping that bar within its limit', suerte: 'nothing: some risk always remains', enlace: 'a bigger antenna or more link hours', plazo: 'launching within the commitment',
       mejora: (n) => `mounting ${n}`, ct: (n) => `the ${n} contingency`,
     },
     evento: (f, ev) => `${f}: ${ev}, not mitigated`, sinCt: (n) => `${n} was not on board`, sinCtNinguna: 'no contingency covers it',
@@ -102,8 +109,11 @@ export function explicarPuntos(resultado, D, idioma = 'en') {
     return typeof E[cod] === 'string' ? E[cod] : E.suerte;
   };
   // Un aporte del desglose [fuente, ref, dp] con su decisión.
-  const aporte = ([fuente, ref, dp], dec) => {
+  const ppTxt = (dp) => Math.round(Math.abs(Number(dp) || 0) * 1000) / 10;
+  const aporte = ([fuente, ref, dp], dec, faseId) => {
     const d = obj(dec), x = dpTxt(dp);
+    // dp = 0,5 · (ratio − 1) (el presupuesto, la cuarta parte): se recupera cuánto se pasó la barra.
+    if (fuente === 'tolerancia') return t.tolerancia(t.barra[ref] ?? ref, Math.round(Math.abs(dp) * (ref === 'presupuesto' ? 8 : 2) * 100), ppTxt(dp), faseId ? fase(faseId) : null);
     if (fuente === 'clima') return t.clima(nombreMes(d.mes), sitioLanz(d.sitio ?? ref), d.lluvia ?? '?', d.viento50 ?? '?', x);
     if (fuente === 'espacio') return t.espacio(nombreMes(d.mes ?? Number(ref)), pct(d.pKp7), x);
     if (fuente === 'conjuncion') return t.conjuncion(nombreMes(d.mes ?? Number(ref)), d.elong ?? '?', d.dias ?? '?', x);
@@ -121,15 +131,15 @@ export function explicarPuntos(resultado, D, idioma = 'en') {
       const causa = (f.critica ? t.fase : t.faseLeve)(fase(f.fase), pct(f.p), f.tirada ?? '?');
       let decision;
       if (des.length && f.evitar !== 'suerte' && !String(f.evitar).startsWith('mejora:')) {
-        decision = des.map((x) => aporte(x, f.decision)).join('; ');
+        decision = des.map((x) => aporte(x, f.decision, f.fase)).join('; ');
       } else if (String(f.evitar).startsWith('mejora:')) {
         // Una mejora de la fase sin montar habría bastado.
-        decision = [t.sinMejora(cosa(f.evitar.slice(7)), dpTxt(f.decision?.dpMejora ?? 0)), ...des.map((x) => aporte(x, f.decision))].join('; ');
+        decision = [t.sinMejora(cosa(f.evitar.slice(7)), dpTxt(f.decision?.dpMejora ?? 0)), ...des.map((x) => aporte(x, f.decision, f.fase))].join('; ');
       } else {
         // Fase que falló sin una mala decisión detrás: mala suerte, más los factores que hubo.
         const d = obj(f.decision);
         decision = [t.suerte(pct(1 - (Number(f.p) || 0))), d.mes != null && d.lluvia != null && !des.some((x) => x[0] === 'clima') ? t.lanzSuerte(nombreMes(d.mes), sitioLanz(d.sitio), d.lluvia) : null,
-          ...des.map((x) => aporte(x, f.decision))].filter(Boolean).join('; ');
+          ...des.map((x) => aporte(x, f.decision, f.fase))].filter(Boolean).join('; ');
       }
       punto(f.evitar === 'suerte' || f.evitar == null ? 'suerte' : 'decision', causa, decision, evitar(f.evitar));
     } else if (f.codigo === 'evento') {
@@ -145,6 +155,10 @@ export function explicarPuntos(resultado, D, idioma = 'en') {
     }
   }
   if (!puntos.length) punto('info', t.nada, null, null);
+  // Barras que pasaron la revisión en tolerancia: cuánto subieron el riesgo (también si la fase no llegó a fallar).
+  for (const x of arr(r.tolerancia).filter((y) => y && typeof y === 'object')) {
+    punto('info', t.tolerancia(t.barra[x.barra] ?? x.barra, Math.round(((Number(x.ratio) || 1) - 1) * 100), ppTxt(x.dp), x.todas ? t.todasFases : fase(x.fase)), null, null);
+  }
   const rl = r.reloj;
   if (rl && typeof rl === 'object') punto('info', t.reloj(rl.mes, rl.lanzamiento ?? null, rl.plazo, rl.retraso ?? 0, pct(rl.recorte), rl.bono ? dpTxt(rl.bono) : ''), null, null);
   return puntos;

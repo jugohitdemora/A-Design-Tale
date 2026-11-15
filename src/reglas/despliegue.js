@@ -11,7 +11,9 @@
 // - Un evento mitigado por una contingencia comprada se anula.
 // - Un evento positivo sube ciencia o días (como mucho × FACTOR_MAX_EVENTO).
 import { prng, derivar } from './azar.js';
-import { resumen, misionDe, montadas, contingenciasCompradas, num, clamp01, textoEn } from './motor.js';
+import { resumen, misionDe, montadas, contingenciasCompradas, num, clamp01, textoEn, NOMBRE_BARRA } from './motor.js';
+
+const NOMBRE_BARRA_ES = { masa: 'La masa', potencia: 'La potencia', bateria: 'La batería', datos: 'El enlace de datos', presupuesto: 'El presupuesto', volumen: 'El volumen' };
 
 export const FACTOR_DEGRADA = 0.75;
 export const FACTOR_GOLPE_CRITICO = 0.5;
@@ -41,7 +43,8 @@ function esNegativo(ev) {
 //     puntos, veredicto: 'total'|'parcial'|'fallida', causas: [{ en, es, tipo, fase? }],
 //     puntuacion, cienciaTotal, diasPrevistos, diasConseguidos, perdida, golpes,
 //     mision, fallos: [{ codigo, fase, p?, tirada?, desglose?, decision?, evitar }], lanzamiento: { mes, sitio, scrub, tormenta } | null,
-//     reloj: { mes, plazo, retraso, recorte, bono, cancelada } | null, cometa }
+//     reloj: { mes, plazo, retraso, recorte, bono, cancelada } | null, cometa,
+//     tolerancia: [{ barra, ratio, fase|null, dp, todas? }] }  (barras que pasaron la revisión en tolerancia: ver motor.riesgoTolerancia)
 //   pasos[i].tirada solo en las fases que fallan. `fallos` es lo que explicar.js convierte en "Causa → Decisión → Qué lo evitaba".
 export function simular(estado, D) {
   const m = misionDe(estado, D);
@@ -50,7 +53,7 @@ export function simular(estado, D) {
       pasos: [], hallazgos: [], datos: { generadosMB: 0, bajadosMB: 0, perdidosMB: 0 }, ciencia: [], puntos: 0,
       veredicto: 'fallida', causas: [{ en: 'No mission was chosen.', es: 'No se eligió ninguna misión.', tipo: 'veredicto' }],
       puntuacion: null, cienciaTotal: 0, diasPrevistos: 0, diasConseguidos: 0, perdida: false, golpes: 0,
-      mision: null, fallos: [], lanzamiento: null, reloj: null, cometa: null,
+      mision: null, fallos: [], lanzamiento: null, reloj: null, cometa: null, tolerancia: [],
     };
   }
   const semilla = estado?.semilla ?? 0;
@@ -138,6 +141,17 @@ export function simular(estado, D) {
     paso.golpe = golpesAqui > 0;
     pasos.push(paso);
   });
+
+  // Barras en tolerancia (≤ +20 %): ya restaron probabilidad a su fase (res.fases, desglose 'tolerancia'); aquí se dejan dicho en el informe.
+  const tolerancia = [];
+  for (const t of arr(res.tolerancia)) {
+    if (t.todas && tolerancia.some((x) => x.barra === t.barra)) continue; // el presupuesto va una sola vez (todas las fases)
+    tolerancia.push({ barra: t.barra, ratio: r3(t.ratio), fase: t.todas ? null : t.fase, dp: r3(t.dp), ...(t.todas ? { todas: true } : {}) });
+    const sobre = Math.round((t.ratio - 1) * 100), pp = r1(t.dp * 100);
+    const fn = t.todas ? 'every phase' : textoEn(t.faseNombre, t.fase), fe = t.todas ? 'todas las fases' : textoEs(t.faseNombre, t.fase);
+    causas.push({ en: `${NOMBRE_BARRA[t.barra]} was ${sobre} % over the limit (tolerated): failure chance +${pp} pp in ${fn}.`,
+      es: `${NOMBRE_BARRA_ES[t.barra]} pasó un ${sobre} % del límite (tolerado): la probabilidad de fallo sube ${pp} pp en ${fe}.`, tipo: 'tolerancia', ...(t.todas ? {} : { fase: t.fase }) });
+  }
 
   // Condiciones del mes (contrato-reloj.md §2, §4). Sorteos propios por mes ('clima', 'reloj'): no tocan la secuencia de 'mision'.
   let lanzamiento = null;
@@ -242,12 +256,13 @@ export function simular(estado, D) {
     perdida, golpes,
     // Explicación compacta (contrato §6): códigos que src/reglas/explicar.js traduce al pintar.
     mision: m.id, fallos, lanzamiento, reloj: relojCompacto(res.reloj), cometa: res.plan?.cometa ?? null,
+    tolerancia, // [{ barra, ratio, fase (null = todas), dp, todas? }]: barras que pasaron en tolerancia y la probabilidad de fallo que sumaron
   };
 }
 
 const relojCompacto = (rl) => (rl?.activo ? { mes: rl.mes, plazo: rl.plazo, lanzamiento: rl.lanzamiento ?? null, retraso: rl.retraso, recorte: r3(rl.recorte), bono: rl.bono, cancelada: !!rl.cancelada } : null);
-const DECISION_DE = { clima: 1, espacio: 1, conjuncion: 1, sitio: 1, ruta: 1 }; // aportes que vienen de una decisión del equipo
-const EVITAR_DE = { clima: 'mesSeco', espacio: 'mesSolCalmo', conjuncion: 'sinConjuncion', sitio: 'otroSitio', ruta: 'otraRuta' };
+const DECISION_DE = { clima: 1, espacio: 1, conjuncion: 1, sitio: 1, ruta: 1, tolerancia: 1 }; // aportes que vienen de una decisión del equipo
+const EVITAR_DE = { clima: 'mesSeco', espacio: 'mesSolCalmo', conjuncion: 'sinConjuncion', sitio: 'otroSitio', ruta: 'otraRuta', tolerancia: 'recortar' };
 
 // Fallo de una fase: p, tirada y los 3 aportes más negativos, con la decisión que los causó y qué lo habría evitado.
 // desglose: [[fuente, ref, dp]] (compacto). decision: datos de la decisión del aporte más negativo (mes, sitio, lluvia…).
@@ -265,6 +280,7 @@ function falloDeFase(f, i, tirada, m, cond) {
   if (peor && DECISION_DE[peor.fuente] && tirada < clamp01(pCruda - negDecision)) {
     evitar = EVITAR_DE[peor.fuente];
     if (peor.fuente === 'sitio' || peor.fuente === 'ruta') decision[peor.fuente] = peor.ref;
+    if (peor.fuente === 'tolerancia') decision.barra = peor.ref;
   } else {
     const puestas = new Set(arr(f.desglose).map((x) => x.ref));
     const def = arr(m?.fases).find((x) => x?.id === f.id);

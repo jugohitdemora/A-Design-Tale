@@ -7,7 +7,7 @@
 import { T } from '../textos.js';
 import { textos, tx } from '../i18n.js';
 import { traducirMotivo } from '../motivos.js';
-import { h, en, lista, nombreRol, resumenSeguro, ROLES_IDS } from './ui.js';
+import { h, en, lista, nombreRol, resumenSeguro, ROLES_IDS, relojMision, datosReloj, marcarTick, toastReloj, textosReloj, fechaTxt } from './ui.js';
 import { pantallaLaptop, alCargarApps } from './laptop.js';
 import { expedienteCompleto, expedienteMini } from './expediente.js';
 import { pantallaControl } from '../control/index.js';
@@ -111,10 +111,14 @@ function calcularGuia(c, fase) {
 // Fases como puntos (hecho / actual / pendiente) con el nombre de la actual. Se usa en el portátil, la sala de control y el HUD.
 export function pasosFase(guia) {
   if (!guia) return null;
-  return h('div', { class: 'g-pasos', title: FASES_JUEGO.map((f) => T.phases[f]).join(' › ') },
+  const pasos = h('div', { class: 'g-pasos', title: FASES_JUEGO.map((f) => T.phases[f]).join(' › ') },
     h('ol', { 'aria-label': guia.nombre }, FASES_JUEGO.map((f, k) => h('li', { class: k === guia.i ? 'actual' : k < guia.i ? 'hecho' : '', ...(k === guia.i ? { 'aria-current': 'step' } : {}) }))),
     h('span', { class: 'g-fase' }, `${guia.i + 1}/${guia.total} · ${guia.nombre}`));
+  let reloj = null;
+  try { reloj = cReloj ? relojMision(cReloj) : null; } catch (err) { console.warn('reloj', err); }
+  return reloj ? h('div', { class: 'g-bloque' }, pasos, reloj) : pasos; // .g-bloque es display: contents
 }
+let cReloj = null; // contexto de la pantalla que se está pintando (lo fija dibujar)
 // Línea "Siguiente: …" que va dentro de cada pantalla.
 export function lineaGuia(guia, extra = '') {
   if (!guia?.texto) return null;
@@ -128,7 +132,7 @@ async function cargarModulos(simulado) {
     return { motor: { resumen: s.resumen, cumple: s.cumple, verificar: s.verificar, num: s.num }, D: s.DATOS };
   }
   const [motor, datos] = await Promise.all([import('../reglas/motor.js'), import('../datos/index.js')]);
-  return { motor: { resumen: motor.resumen, cumple: motor.cumple, verificar: motor.verificar, num: motor.num, estadoDeRatio: motor.estadoDeRatio }, D: datos.DATOS };
+  return { motor: { resumen: motor.resumen, cumple: motor.cumple, verificar: motor.verificar, num: motor.num, estadoDeRatio: motor.estadoDeRatio, relojDe: motor.relojDe }, D: datos.DATOS };
 }
 
 let appManual = null;
@@ -185,6 +189,23 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
           h('button', { class: 'boton f-salir', type: 'button', onclick: () => ultimo?.volverAlLobby?.() }, TV.lobby))));
     }
     franja.replaceChildren(...nodos);
+  }
+
+  // ---- paso de los meses: pulso en el reloj y aviso; más fuerte al pasar el plazo o el mes de lanzamiento elegido ----
+  let mesVisto = null;
+  function revisarMes(e) {
+    if (e.fase === 'lobby' || !e.reloj) { mesVisto = null; return; }
+    const mes = Math.max(0, Math.floor(Number(e.reloj.mes) || 0));
+    if (mesVisto == null || mes < mesVisto) { mesVisto = mes; return; }
+    if (mes === mesVisto) return;
+    mesVisto = mes;
+    const d = datosReloj(c);
+    if (!d || !['diseno', 'restricciones', 'verificacion', 'mision'].includes(e.fase)) return;
+    const t = textosReloj(), f = fechaTxt(d.abs);
+    marcarTick();
+    if (d.plazo != null && d.left === -1) toastReloj(t.alPlazo(f, Math.round(d.recorte * 100)), 'mal');
+    else if (d.lanzTarde && d.lanz === mes - 1) toastReloj(t.alLanz(fechaTxt(d.inicio + d.lanz)), 'mal');
+    else toastReloj(t.tictac(f), d.nivel);
   }
 
   // ---- eventos de diseño (modal) ----
@@ -264,7 +285,9 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     c.e = e; c.rol = p.rol; c.id = p.jugadorId; c.nick = p.nick; c.vista = vista;
     c.mision = c.D?.MISIONES?.[e.mision?.id] ?? null;
     c.guia = c.D && c.motor ? calcularGuia(c, e.fase) : null;
+    cReloj = c;
     revisarEventos();
+    revisarMes(e);
 
     const nueva = JSON.stringify([e, p.rol, p.enLinea, !!c.D, errorCarga, c.ui, vista, conPantalla, p.lugar]);
     if (!forzar && nueva === firma) return;

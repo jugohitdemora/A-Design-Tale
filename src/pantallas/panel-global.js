@@ -9,20 +9,31 @@ export function unaVez(clave, ms = 1200) { const t = Date.now(); if (t - (ultimo
 const ORDEN = ['masa', 'potencia', 'bateria', 'datos', 'volumen']; // el presupuesto va aparte, en la cabecera con el reloj
 const ESCALA = 1.5; // the track shows 0..150 %, so the 100 % and 120 % markers sit at 66.7 % and 80 %
 
+const COLOR_OTROS = '#7d8590'; // gris neutro: parte del uso sin departamento
 function barra(c, id, b) {
-  const ratio = Number.isFinite(b?.ratio) ? b.ratio : (b?.limite > 0 ? b.usado / b.limite : (b?.usado > 0 ? 9 : 0));
+  const usado = Number(b?.usado) || 0, limite = Number(b?.limite) || 0;
+  const ratio = Number.isFinite(b?.ratio) ? b.ratio : (limite > 0 ? usado / limite : (usado > 0 ? 9 : 0));
   const est = b?.estado ?? 'ok';
   const pct = Math.min(ratio, ESCALA) / ESCALA * 100;
-  const porRol = {};
-  for (const p of lista(b?.partes)) porRol[p.rol ?? '?'] = (porRol[p.rol ?? '?'] ?? 0) + (Number(p.v) || 0);
-  const detalle = Object.entries(porRol).map(([r, v]) => `${T.roles[r] ?? r}: ${redondear(v, 1)}`).join(' | ');
+  const cant = (v) => (id === 'presupuesto' ? dinero(v) : `${redondear(v, 1)} ${T.units[id]}`);
+  // Tramos apilados: cada departamento ocupa su parte del límite (v / límite); lo que no tiene departamento va en gris.
+  const porRol = Object.fromEntries(ROLES_IDS.map((r) => [r, 0]));
+  for (const p of lista(b?.partes)) if (ROLES_IDS.includes(p.rol)) porRol[p.rol] += Number(p.v) || 0;
+  const otros = Math.max(0, usado - Object.values(porRol).reduce((s, v) => s + v, 0));
+  const tramo = (v, nombre, color, clase = '') => {
+    const porLimite = limite > 0 ? ` (${redondear(v / limite * 100, 0)} %)` : '';
+    return h('i', { class: 'seg-rol' + clase, style: `width:${v / (usado || 1) * 100}%;background:${color}`, title: `${nombre}: ${cant(v)}${porLimite}` });
+  };
+  const segs = ROLES_IDS.filter((r) => porRol[r] > 0).map((r) => tramo(porRol[r], nombreRol(r), ROL_COLOR[r]));
+  if (otros > 1e-9) segs.push(tramo(otros, en({ es: 'Otros', en: 'Other' }), COLOR_OTROS, ' otros'));
+  const detalle = ROLES_IDS.filter((r) => porRol[r] > 0).map((r) => `${nombreRol(r)}: ${cant(porRol[r])}`).join(' | ');
   return h('div', { class: 'barra ' + est + (id === 'presupuesto' ? ' barra-dinero' : ''), title: detalle || undefined },
     h('div', { class: 'barra-cab' },
       h('span', { class: 'barra-nombre' }, T.bars[id]),
       h('span', { class: 'barra-num' }, id === 'presupuesto' ? `${dinero(b?.usado)} / ${dinero(b?.limite)}` : `${redondear(b?.usado, 1)} / ${redondear(b?.limite, 1)} ${T.units[id]}`),
       h('span', { class: 'barra-estado' }, `${redondear(ratio * 100, 0)}%`)),
     h('div', { class: 'pista' },
-      h('div', { class: 'relleno-barra', style: `width:${pct}%` }),
+      h('div', { class: 'relleno-barra apilado', style: `width:${pct}%` }, segs),
       h('i', { class: 'marca m100', title: T.marker100 }),
       h('i', { class: 'marca m120', title: T.marker120 })),
     h('span', { class: 'sr', }, T.barState[est] ?? est));
@@ -66,7 +77,9 @@ export function panelGlobal(c, res, opts = {}) {
   if (cab) raiz.append(cab);
   const barras = h('div', { class: 'barras' });
   for (const id of ORDEN) barras.append(barra(c, id, res.barras?.[id]));
-  raiz.append(barras, h('div', { class: 'leyenda tenue' }, '| ', T.marker100, '  | ', T.marker120));
+  raiz.append(barras, h('div', { class: 'leyenda tenue' }, '| ', T.marker100, '  | ', T.marker120),
+    h('div', { class: 'leyenda-roles tenue' }, [...ROLES_IDS.map((r) => h('span', { class: 'lr' }, h('i', { style: `background:${ROL_COLOR[r]}` }), nombreRol(r))),
+      h('span', { class: 'lr' }, h('i', { style: `background:${COLOR_OTROS}` }), en({ es: 'Otros', en: 'Other' }))]));
 
   raiz.append(h('h4', {}, T.science));
   const objs = lista(c.mision?.objetivos);

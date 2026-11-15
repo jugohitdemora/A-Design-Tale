@@ -1,10 +1,13 @@
 // Sala de control · planificación de ruta (fases de diseño): ruta, mes de lanzamiento y sitio/órbita sobre mapas con capas de datos
 // satelitales. Vuelo y Mecánica elige ruta y mes; el sitio lo eligen Vuelo y Mecánica o Ciencia.
-// El selector de mes enseña los meses entre el reloj y el límite de los inversores. Al pasar el ratón por un mes se leen sus CONDICIONES
-// como datos con su fuente (clima del sitio de lanzamiento, tormentas geomagnéticas, conjunción solar, ΔV, llegada al cometa): ninguna
-// etiqueta dice qué mes es bueno ni los colorea por calidad; el mejor mes cambia con el reloj y se puede perder.
-// Estado local: c.ui.plan = { capas: [ids activas], foco: id de capa de la leyenda, verSitio: id, mesVer: mes visto sin elegir }.
-import { h, lista, valor, redondear, puedoPor, resumenSeguro, nombreRol } from '../pantallas/ui.js';
+// Mes de lanzamiento: una línea de tiempo a todo el ancho (la ven los cuatro roles; solo Vuelo y Mecánica fija el mes) con un deslizador,
+// la curva de propelente extra (ΔV) y de riesgo de aplazar por clima debajo, el reloj ("ahora"), el plazo de los inversores, los meses pasados
+// en gris y las mejores ventanas en verde (botón "Ir a la mejor ventana"). Al pasar el ratón o mover el deslizador se leen fecha, propelente
+// extra (kg y % sobre el mejor mes), riesgo por clima, retraso y recorte; y, si ya había un mes fijado, lo que cuesta cambiarlo.
+// Las CONDICIONES completas del mes (con su fuente) salen en la columna derecha. El reloj corre: un mes fijado puede quedar atrás.
+// Estado local: c.ui.plan = { capas: [ids activas], foco: id de capa de la leyenda, verSitio: id, mesVer: mes candidato sin fijar }.
+import { h, lista, valor, redondear, dinero, puedoPor, resumenSeguro, nombreRol } from '../pantallas/ui.js';
+import { avisoBloqueo } from './bloqueo.js';
 import { textos, tx, depto, idioma } from '../i18n.js';
 import { lienzoCapa, valorEn, color } from './capas.js';
 import { relojDe, mesMaxDe, condicionesMes, misionDe, coheteDe, rutaDe, num, diaDeMes, MESES_REVISION, RETRASO_CANCELA, GRACIA_RETRASO, RECORTE_MES, RECORTE_MAX } from '../reglas/motor.js';
@@ -13,8 +16,10 @@ import { NOMBRE_MES, ANIO0 } from '../datos/calendario.js';
 const T = textos({
   es: {
     titulo: 'PLANIFICACIÓN DE RUTA', ruta: 'RUTA', mesTit: 'MES DE LANZAMIENTO', cond: 'CONDICIONES', mapa: 'SITIO / ÓRBITA', efectos: 'EFECTOS EN EL DISEÑO', sitio: 'SITIO', cambiarSitio: 'Cambiar sitio',
-    dias: 'días', soloVuelo: `Solo ${depto('vuelo')} elige la ruta y el mes.`,
-    soloSitio: `Solo ${depto('vuelo')} o ${depto('ciencia')} eligen el sitio.`,
+    dias: 'días',
+    soloMes: () => `Solo ${depto('vuelo')} puede cambiar el mes de lanzamiento (o cualquiera si ese puesto está vacante). Tú puedes explorar el calendario.`,
+    soloRuta: () => `Solo ${depto('vuelo')} puede cambiar la ruta (o cualquiera si ese puesto está vacante).`,
+    soloSitio: () => `Solo ${depto('vuelo')} o ${depto('ciencia')} pueden elegir el sitio.`,
     capas: 'CAPAS DE DATOS', real: 'dato real', juego: '≈ juego', calculada: 'calculada', elegir: 'ELEGIR SITIO', elegido: 'ELEGIDO',
     sinSitio: 'Pasa el ratón para leer las capas. Haz clic en un sitio u órbita.',
     fasesTit: 'Probabilidad por fase', ciencia: 'Cobertura de objetivos', masa: 'Masa', sombra: 'Horas de sombra por ciclo',
@@ -24,8 +29,8 @@ const T = textos({
     inc: (i) => `inclinación ${i}°`, quien: 'Decide', ok: 'Listo para verificación', falta: 'Falta: mes y sitio', faltaMes: 'Falta: mes de lanzamiento', faltaSitio: 'Falta: sitio',
     // Selector de mes
     ahora: 'ahora', plazo: 'plazo', elegidoMes: 'elegido', hoy: 'Ahora', plazoComp: 'Plazo', sinPlazo: 'sin plazo',
-    perdida: (m) => `El mes elegido (${m}) ya pasó. Elige un mes nuevo.`,
-    pronto: (n, m) => `Cada revisión de diseño cuesta ${n} meses: no se puede lanzar antes de ${m}.`,
+    perdida: (m, s) => `El mes fijado (${m}) ya pasó: el reloj avanza.${s ? ` Siguiente buena opción: ${s}.` : ''} Elige un mes nuevo.`,
+    pronto: (n, m) => `El reloj corre en tiempo real: hay que dejar al menos ${n} mes de margen, no se puede lanzar antes de ${m}.`,
     tarde: (m) => `Pasado ${m} los inversores se retiran.`,
     recorte: (p, max) => `Desde el segundo mes de retraso, cada mes recorta un ${p} % la financiación (hasta un ${max} %).`,
     sinMeses: 'No quedan meses para planificar.',
@@ -38,12 +43,28 @@ const T = textos({
     cometa: 'Cometa 67P', llegada: 'Llegada con la ruta elegida', perihelio: 'Perihelio más cercano', sinRutaCometa: 'Elige una ruta para estimar la llegada.',
     antes: (n) => `${n} ${n === 1 ? 'mes' : 'meses'} antes del perihelio`, despues: (n) => `${n} ${n === 1 ? 'mes' : 'meses'} después del perihelio`,
     plazoFila: 'Respecto al plazo', aTiempo: 'dentro del plazo', retraso: (n, r) => `${n} ${n === 1 ? 'mes' : 'meses'} de retraso${r > 0 ? `, financiación −${r} %` : ''}`,
-    sinCond: 'Esta misión no tiene calendario de condiciones.', soloVer: 'Solo lectura: elige el mes quien lleva la ruta.',
+    sinCond: 'Esta misión no tiene calendario de condiciones.',
+    fijado: (m) => `Mes fijado: ${m}`, sinFijar: 'Mes aún sin fijar', saltar: '★ Ir a la mejor ventana', sinVentana: 'No hay ventana libre',
+    saltarTip: 'Mueve el selector al primer mes de la mejor ventana: poco propelente extra y poco riesgo de aplazar por clima (franjas verdes).',
+    leyCurva: 'Curva: propelente extra (ΔV)', leyScrub: 'Puntos: riesgo de aplazar por clima', leyVentana: 'Mejor ventana', leyPasado: 'Pasado', leyRevision: 'Revisión de diseño', leyDemora: 'Retraso: recorte de financiación',
+    fecha: 'Fecha', riesgo: 'Riesgo por clima', plazoChip: 'Plazo y retraso', recorteChip: 'Recorte de presupuesto', sinRecorte: 'sin recorte',
+    mejorMes: 'es el mejor mes (0 kg extra)', mejorMesPct: 'es el mejor mes (ΔV mínimo)',
+    extraKg: (kg, p) => `+${kg} kg de propelente · +${p} % sobre el mejor mes`, extraPct: (f, p) => `ΔV × ${f} · +${p} % sobre el mejor mes (elige ruta para ver los kg)`,
+    scrubTxt: (p, s) => `${p} % de aplazar el intento${s ? ` (${s})` : ''}`,
+    mPasado: 'Ese mes ya pasó.', mFase: 'Ahora no se puede fijar el mes.',
+    fijarMes: (m) => `Fijar ${m}`, yaFijado: '✓ Mes fijado', soloPrevio: 'vista previa',
+    cambio: 'Cambio respecto al mes fijado',
+    delta: (dm, kg, pres) => `${dm > 0 ? '+' : '−'}${Math.abs(dm)} ${Math.abs(dm) === 1 ? 'mes' : 'meses'} ${dm > 0 ? 'de retraso' : 'antes'} → ${kg}, ${pres}`,
+    deltaKg: (s) => `${s} kg de propelente`, deltaPct: (s) => `ΔV ${s} %`, deltaPres: (s) => `presupuesto ${s}`, mismoMes: 'Es el mes ya fijado.',
+    notaRetraso: 'Retrasar no es gratis: cada mes cambia la geometría (ΔV y propelente extra) y, pasado el plazo, los inversores recortan la financiación.',
+    marcaAhora: 'ahora', marcaPlazo: 'plazo', marcaFijado: 'fijado',
   },
   en: {
     titulo: 'ROUTE PLANNING', ruta: 'ROUTE', mesTit: 'LAUNCH MONTH', cond: 'CONDITIONS', mapa: 'SITE / ORBIT', efectos: 'EFFECTS ON THE DESIGN', sitio: 'SITE', cambiarSitio: 'Change site',
-    dias: 'days', soloVuelo: `Only ${depto('vuelo')} can choose the route and month.`,
-    soloSitio: `Only ${depto('vuelo')} or ${depto('ciencia')} can choose the site.`,
+    dias: 'days',
+    soloMes: () => `Only ${depto('vuelo')} can change the launch month (or anyone if that seat is vacant). You can still explore the calendar.`,
+    soloRuta: () => `Only ${depto('vuelo')} can change the route (or anyone if that seat is vacant).`,
+    soloSitio: () => `Only ${depto('vuelo')} or ${depto('ciencia')} can choose the site.`,
     capas: 'DATA LAYERS', real: 'real data', juego: '≈ game', calculada: 'computed', elegir: 'CHOOSE SITE', elegido: 'CHOSEN',
     sinSitio: 'Hover over the map to read layers. Click a site or orbit.',
     fasesTit: 'Probability per phase', ciencia: 'Goal coverage', masa: 'Mass', sombra: 'Shadow hours per cycle',
@@ -52,8 +73,8 @@ const T = textos({
     noPlan: 'This mission has no route planning.', bajo: 'low', alto: 'high', leyenda: 'Legend',
     inc: (i) => `inclination ${i}°`, quien: 'Decides', ok: 'Ready for verification', falta: 'Missing: month and site', faltaMes: 'Missing: launch month', faltaSitio: 'Missing: site',
     ahora: 'now', plazo: 'deadline', elegidoMes: 'chosen', hoy: 'Now', plazoComp: 'Deadline', sinPlazo: 'no deadline',
-    perdida: (m) => `The chosen month (${m}) has passed. Choose a new month.`,
-    pronto: (n, m) => `Each design review takes ${n} months: you cannot launch before ${m}.`,
+    perdida: (m, s) => `The set month (${m}) has already passed: the clock keeps running.${s ? ` Next good option: ${s}.` : ''} Choose a new month.`,
+    pronto: (n, m) => `The clock runs in real time: leave at least ${n} month of margin, you cannot launch before ${m}.`,
     tarde: (m) => `After ${m} the investors pull out.`,
     recorte: (p, max) => `From the second month of delay, each month cuts funding by ${p} % (up to ${max} %).`,
     sinMeses: 'No months left to plan.',
@@ -65,7 +86,21 @@ const T = textos({
     cometa: 'Comet 67P', llegada: 'Arrival with the chosen route', perihelio: 'Nearest perihelion', sinRutaCometa: 'Choose a route to estimate the arrival.',
     antes: (n) => `${n} ${n === 1 ? 'month' : 'months'} before perihelion`, despues: (n) => `${n} ${n === 1 ? 'month' : 'months'} after perihelion`,
     plazoFila: 'Against the deadline', aTiempo: 'within the deadline', retraso: (n, r) => `${n} ${n === 1 ? 'month' : 'months'} late${r > 0 ? `, funding −${r} %` : ''}`,
-    sinCond: 'This mission has no conditions calendar.', soloVer: 'Read only: whoever holds the route chooses the month.',
+    sinCond: 'This mission has no conditions calendar.',
+    fijado: (m) => `Launch month set: ${m}`, sinFijar: 'Launch month not set yet', saltar: '★ Jump to best window', sinVentana: 'No free window',
+    saltarTip: 'Moves the selector to the first month of the best window: little extra propellant and low weather scrub risk (green bands).',
+    leyCurva: 'Curve: extra propellant (ΔV)', leyScrub: 'Dots: weather scrub risk', leyVentana: 'Best window', leyPasado: 'Past', leyRevision: 'Design review', leyDemora: 'Delay: funding cut',
+    fecha: 'Date', riesgo: 'Weather scrub risk', plazoChip: 'Deadline and delay', recorteChip: 'Budget cut', sinRecorte: 'no cut',
+    mejorMes: 'is the best month (0 kg extra)', mejorMesPct: 'is the best month (lowest ΔV)',
+    extraKg: (kg, p) => `+${kg} kg of propellant · +${p} % over the best month`, extraPct: (f, p) => `ΔV × ${f} · +${p} % over the best month (choose a route to see kg)`,
+    scrubTxt: (p, s) => `${p} % chance the attempt slips${s ? ` (${s})` : ''}`,
+    mPasado: 'That month has already passed.', mFase: 'The month cannot be set right now.',
+    fijarMes: (m) => `Set ${m}`, yaFijado: '✓ Month set', soloPrevio: 'preview',
+    cambio: 'Change versus the set month',
+    delta: (dm, kg, pres) => `${dm > 0 ? '+' : '−'}${Math.abs(dm)} ${Math.abs(dm) === 1 ? 'month' : 'months'} ${dm > 0 ? 'delay' : 'earlier'} → ${kg}, ${pres}`,
+    deltaKg: (s) => `${s} kg propellant`, deltaPct: (s) => `ΔV ${s} %`, deltaPres: (s) => `budget ${s}`, mismoMes: 'This is the month already set.',
+    notaRetraso: 'Delay is not free: every month changes the geometry (ΔV and extra propellant) and, past the deadline, investors cut funding.',
+    marcaAhora: 'now', marcaPlazo: 'deadline', marcaFijado: 'set',
   },
 });
 
@@ -137,7 +172,54 @@ export function condicionesDeMes(e, D, mes) {
     dv: dvMin > 0 && cond ? dvMin * factor : null, factor, extraKg: laRuta && cond ? num(laRuta.masa) * (factor - 1) : null, retraso, recorte, cometa };
 }
 
-// ---------- Selector de mes e interfaz de condiciones ----------
+// ---------- Análisis de la línea de tiempo (lógica pura: se puede probar sin DOM) ----------
+const TOL_DV = 0.03;      // un mes está en la mejor ventana si su ΔV está a menos de 0,03 del mínimo…
+const TOL_SCRUB = 0.04;   // …y su riesgo de aplazar por clima a menos de 4 puntos del mejor de esos meses.
+
+// → null sin planificación; si no { info (mesesPlanificables), filas: [0..limite], masa (kg de propelente de la ruta o null), fMin, mejor, optimos: Set, grupos: [[mes..]] }.
+// fila = { mes, mesAbs, libre, motivo ('pasado' | 'pronto' | 'tarde' | 'fase' | null), factor, extraKg, scrub, retraso, recorte, recorteM, kgSobreMejor, pctSobreMejor }.
+// Mejor ventana: entre los meses fijables, los de ΔV mínimo (±TOL_DV) y, de esos, los de menor riesgo de aplazar por clima (±TOL_SCRUB).
+export function analisisMeses(e, D) {
+  const info = mesesPlanificables(e, D);
+  if (!info) return null;
+  const rl = info.reloj, m = misionDe(e, D), laRuta = rutaDe(e, D);
+  const masa = laRuta ? num(laRuta.masa) : null;
+  const base = num(m?.presupuesto?.v ?? m?.presupuesto?.juego ?? m?.presupuesto) * (1 + (rl.bono ?? 0));
+  const filas = [];
+  for (let mes = 0; mes <= info.limite; mes++) {
+    const k = condicionesDeMes(e, D, mes);
+    const x = info.meses.find((y) => y.mes === mes);
+    filas.push({ mes, mesAbs: rl.inicio + mes, libre: !!x && !x.motivo, motivo: mes < rl.mes ? 'pasado' : x?.motivo ?? null,
+      factor: k?.factor ?? 1, extraKg: k?.extraKg ?? null, scrub: k?.cond?.pScrub ?? null, retraso: k?.retraso ?? 0, recorte: k?.recorte ?? 0, recorteM: base * (k?.recorte ?? 0) });
+  }
+  const libres = filas.filter((f) => f.libre);
+  const fMin = libres.length ? Math.min(...libres.map((f) => f.factor)) : 1;
+  for (const f of filas) {
+    f.pctSobreMejor = fMin > 0 ? (f.factor / fMin - 1) * 100 : 0;
+    f.kgSobreMejor = masa != null ? masa * (f.factor - fMin) : null;
+  }
+  const a = libres.filter((f) => f.factor <= fMin + TOL_DV);
+  const sMin = a.length ? Math.min(...a.map((f) => f.scrub ?? 0)) : 0;
+  const optimas = a.filter((f) => (f.scrub ?? 0) <= sMin + TOL_SCRUB);
+  const grupos = [];
+  for (const f of optimas) {
+    const g = grupos[grupos.length - 1];
+    if (g && g[g.length - 1] === f.mes - 1) g.push(f.mes); else grupos.push([f.mes]);
+  }
+  return { info, filas, masa, fMin, mejor: optimas[0] ?? null, optimos: new Set(optimas.map((f) => f.mes)), grupos };
+}
+
+// Lo que cuesta pasar del mes `a` (fijado) al mes `b` (candidato). kg es null si aún no hay ruta.
+export function deltaMes(a, b) {
+  if (!a || !b) return null;
+  return { meses: b.mes - a.mes, kg: a.extraKg != null && b.extraKg != null ? b.extraKg - a.extraKg : null, pct: (b.factor / (a.factor || 1) - 1) * 100, recorteM: b.recorteM - a.recorteM };
+}
+
+const NS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, a) => { const el = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(a ?? {})) el.setAttribute(k, v); return el; };
+const signo = (x, d = 0) => { const r = Math.round(x * 10 ** d) / 10 ** d; return r === 0 ? '0' : `${r > 0 ? '+' : '−'}${n1(Math.abs(r), d)}`; };
+
+// ---------- Línea de tiempo del mes de lanzamiento e interfaz de condiciones ----------
 function marcas(info, x) {
   return [x.esAhora ? T.ahora : null, x.esPlazo ? T.plazo : null, x.esElegido ? T.elegidoMes : null].filter(Boolean);
 }
@@ -169,65 +251,165 @@ function condicionesNodos(c, info, x) {
   return [cab, h('dl', { class: 'pl-datos' }, filas), k.hayCohete ? null : h('p', { class: 'mc-nota tenue' }, T.sinCohete)];
 }
 
-// Devuelve las dos tarjetas: el selector (columna izquierda) y las condiciones del mes visto (columna derecha).
+// Devuelve las dos tarjetas: la línea de tiempo (a todo el ancho, arriba) y las condiciones del mes visto (columna derecha).
 function panelMeses(c, u) {
-  const D = c.D, info = mesesPlanificables(c.e, D);
+  const D = c.D, A = analisisMeses(c.e, D);
   const puedo = puedoPor(c, 'vuelo');
-  const picker = h('section', { class: 'mc-panel pl-meses' }, h('h3', {}, T.mesTit));
+  const tiempo = h('section', { class: 'mc-panel pl-tiempo' });
   const cond = h('section', { class: 'mc-panel pl-cond' });
-  if (!info) return { picker, cond: null };
-  const rl = info.reloj;
-  const libres = info.meses.filter((x) => !x.motivo);
-  const porDefecto = () => (Number.isInteger(u.mesVer) && u.mesVer >= rl.mes ? u.mesVer : info.elegido != null && !info.perdida ? info.elegido : libres[0]?.mes ?? rl.mes);
-  const pintar = (mes) => {
-    const x = info.meses.find((y) => y.mes === mes) ?? info.meses[0];
-    if (x) cond.replaceChildren(...condicionesNodos(c, info, x).filter(Boolean));
+  if (!A) { tiempo.append(h('h3', {}, T.mesTit), h('p', { class: 'mc-nota tenue' }, T.sinCond)); return { tiempo, cond: null }; }
+  const { info, filas } = A, rl = info.reloj;
+  const N = Math.max(1, info.limite);
+  const nombre = (mes, larga = false) => etiquetaMes(D, rl.inicio + mes, { larga });
+  const pos = (mes) => `${(mes / N) * 100}%`;
+  const libres = filas.filter((f) => f.libre);
+  const elegidoOk = info.elegido != null && !info.perdida && filas[info.elegido]?.libre;
+  const cercano = (mes) => libres.reduce((b, f) => (b == null || Math.abs(f.mes - mes) < Math.abs(b.mes - mes) ? f : b), null)?.mes ?? rl.mes;
+  let cand = Number.isInteger(u.mesVer) && filas[u.mesVer]?.libre ? u.mesVer : elegidoOk ? info.elegido : A.mejor?.mes ?? libres[0]?.mes ?? rl.mes;
+  u.mesVer = cand;
+  let hover = null;
+
+  // --- cabecera: título, mes fijado (lo ven todos), saltar a la mejor ventana y fijar ---
+  const fijado = h('span', { class: 'pl-lt-fijado' + (info.elegido != null && !info.perdida ? ' ok' : info.perdida ? ' mal' : '') },
+    info.elegido != null ? T.fijado(nombre(info.elegido, true)) : T.sinFijar);
+  const saltar = h('button', { class: 'boton texto pl-lt-saltar', type: 'button', title: T.saltarTip, disabled: !A.mejor, onclick: () => { if (A.mejor) { cand = A.mejor.mes; hover = null; u.mesVer = cand; act(); } } },
+    A.mejor ? T.saltar : T.sinVentana);
+  const fijar = puedo ? h('button', { class: 'boton primario pl-lt-fijar', type: 'button', onclick: () => c.enviar('planificarRuta', { mes: cand }) }) : null;
+  const leyenda = h('p', { class: 'pl-lt-ley' },
+    h('span', { class: 'cur' }, T.leyCurva), h('span', { class: 'scr' }, T.leyScrub), h('span', { class: 'ven' }, T.leyVentana),
+    h('span', { class: 'pas' }, T.leyPasado), h('span', { class: 'rev' }, T.leyRevision), rl.activo ? h('span', { class: 'dem' }, T.leyDemora) : null,
+    h('span', { class: 'nota' }, T.notaRetraso, info.limite < info.max ? ` ${T.tarde(nombre(info.limite, true))}` : ''));
+  const delta = h('div', { class: 'pl-lt-delta' });
+  tiempo.append(h('div', { class: 'pl-lt-cab' }, h('h3', {}, T.mesTit), fijado, delta, h('span', { class: 'pl-lt-esp' }), saltar, fijar));
+
+  // --- marcas (ahora, plazo, fijado) en dos carriles para que no se pisen ---
+  const lista_ = [{ mes: rl.mes, txt: `▸ ${T.marcaAhora}`, cls: 'ahora' }];
+  if (rl.activo && rl.plazo <= info.limite) lista_.push({ mes: rl.plazo, txt: `⚑ ${T.marcaPlazo}`, cls: 'plazo' });
+  if (info.elegido != null && info.elegido <= info.limite) lista_.push({ mes: info.elegido, txt: `● ${T.marcaFijado}`, cls: 'fijado' + (info.perdida ? ' perdido' : '') });
+  lista_.sort((a, b) => a.mes - b.mes);
+  const carril = [];
+  const marcasNodos = lista_.map((mk, i) => {
+    const lane = i > 0 && mk.mes - lista_[i - 1].mes < Math.max(4, N / 10) && !(carril[i - 1]) ? 1 : 0;
+    carril[i] = lane;
+    return h('span', { class: `pl-lt-marca ${mk.cls} l${lane}`, style: `left:${pos(mk.mes)}` }, mk.txt);
+  });
+  const fila_marcas = h('div', { class: 'pl-lt-marcas' + (carril.includes(1) ? ' dos' : '') }, marcasNodos);
+
+  // --- deslizador ---
+  const input = h('input', { type: 'range', class: 'pl-lt-rango', min: 0, max: N, step: 1, value: cand, 'aria-label': T.mesTit });
+  input.addEventListener('input', () => { cand = cercano(Number(input.value)); u.mesVer = cand; act(); });
+
+  // --- gráfico: franjas, curvas y líneas verticales ---
+  const graf = h('div', { class: 'pl-lt-graf' });
+  const banda = (a, b, cls, title) => {
+    const l = Math.max(0, (a - 0.5) / N), r = Math.min(1, (b + 0.5) / N);
+    return r > l ? h('i', { class: 'pl-lt-banda ' + cls, style: `left:${l * 100}%;width:${(r - l) * 100}%`, title: title ?? '' }) : null;
   };
-  pintar(porDefecto());
+  if (rl.activo && rl.plazo < info.limite) graf.append(banda(rl.plazo + 1, info.limite, 'demora', T.recorte(Math.round(RECORTE_MES * 100), Math.round(RECORTE_MAX * 100))));
+  if (rl.mes > 0) graf.append(banda(0, rl.mes - 1, 'pasado', T.mPasado));
+  if (info.minimo > rl.mes) graf.append(banda(rl.mes, Math.min(info.minimo - 1, N), 'pronto', T.pronto(MESES_REVISION, nombre(info.minimo, true))));
+  for (const g of A.grupos) graf.append(banda(g[0], g[g.length - 1], 'ventana', `${T.leyVentana}: ${nombre(g[0])}${g.length > 1 ? ` – ${nombre(g[g.length - 1])}` : ''}`));
+  const svg = svgEl('svg', { viewBox: `0 0 ${N} 100`, preserveAspectRatio: 'none', class: 'pl-lt-svg' });
+  for (let i = 0; i <= N; i++) svg.append(svgEl('line', { x1: i, x2: i, y1: 0, y2: 100, class: 'pl-lt-rej' + ((rl.inicio + i) % 12 === 0 ? ' anio' : '') }));
+  const fs = filas.map((f) => f.factor), fLo = Math.min(...fs), fHi = Math.max(...fs);
+  const yDv = (f) => (fHi - fLo > 1e-9 ? 92 - ((f - fLo) / (fHi - fLo)) * 78 : 86);
+  const ss = filas.map((f) => f.scrub ?? 0), sLo = Math.min(...ss), sHi = Math.max(...ss);
+  const yScr = (s) => (sHi - sLo > 1e-9 ? 92 - ((s - sLo) / (sHi - sLo)) * 78 : 86);
+  const trazo = filas.map((f, i) => `${i ? 'L' : 'M'}${f.mes} ${yDv(f.factor)}`).join(' ');
+  svg.append(svgEl('path', { d: `${trazo} L${filas[filas.length - 1].mes} 100 L0 100 Z`, class: 'pl-lt-area' }), svgEl('path', { d: trazo, class: 'pl-lt-curva' }));
+  if (sHi - sLo > 1e-9) svg.append(svgEl('path', { d: filas.map((f, i) => `${i ? 'L' : 'M'}${f.mes} ${yScr(f.scrub ?? 0)}`).join(' '), class: 'pl-lt-scrub' }));
+  graf.append(svg);
+  graf.append(h('i', { class: 'pl-lt-linea ahora', style: `left:${pos(rl.mes)}` }));
+  if (rl.activo && rl.plazo <= info.limite) graf.append(h('i', { class: 'pl-lt-linea plazo', style: `left:${pos(rl.plazo)}` }));
+  if (info.elegido != null && info.elegido <= info.limite) graf.append(h('i', { class: 'pl-lt-linea fijado' + (info.perdida ? ' perdido' : ''), style: `left:${pos(info.elegido)}` }));
+  const lCand = h('i', { class: 'pl-lt-linea cand' }), lHover = h('i', { class: 'pl-lt-linea hover' });
+  graf.append(lHover, lCand);
 
-  const nombre = (abs) => etiquetaMes(D, abs);
-  picker.append(h('p', { class: 'pl-reloj', title: rl.activo ? T.recorte(Math.round(RECORTE_MES * 100), Math.round(RECORTE_MAX * 100)) : null },
-    h('span', {}, `${T.hoy}: `, h('b', {}, nombre(rl.inicio + rl.mes))),
-    h('span', {}, `${T.plazoComp}: `, h('b', {}, rl.activo ? nombre(rl.inicio + rl.plazo) : T.sinPlazo))));
-  if (info.perdida) picker.append(h('p', { class: 'mc-nota aviso pl-perdida', role: 'alert' }, T.perdida(nombre(rl.inicio + info.elegido))));
+  // --- eje: año en enero, mes cada trimestre ---
+  const eje = h('div', { class: 'pl-lt-eje' });
+  for (let i = 0; i <= N; i++) {
+    const abs = rl.inicio + i, mm = abs % 12;
+    if (mm % 3 !== 0) continue;
+    const e0 = etiquetaMes(D, abs);
+    eje.append(h('span', { class: mm === 0 ? 'anio' : '', style: `left:${pos(i)}` }, mm === 0 ? e0.split(' ')[1] : e0.split(' ')[0]));
+  }
 
-  const porAnio = new Map();
-  for (const x of info.meses) {
-    if (x.motivo === 'tarde') continue;
-    if (!porAnio.has(x.anio)) porAnio.set(x.anio, []);
-    porAnio.get(x.anio).push(x);
+  const zona = h('div', { class: 'pl-lt-zona' }, fila_marcas, input, graf, eje);
+  const mesBajoRaton = (ev) => { const r = graf.getBoundingClientRect(); return Math.min(N, Math.max(0, Math.round(((ev.clientX - r.left) / r.width) * N))); };
+  zona.addEventListener('pointermove', (ev) => {
+    const mes = mesBajoRaton(ev);
+    if (ev.buttons & 1) { if (ev.target !== input) { cand = cercano(mes); u.mesVer = cand; } hover = null; } else hover = mes;
+    act();
+  });
+  zona.addEventListener('pointerleave', () => { hover = null; act(); });
+  graf.addEventListener('click', (ev) => { cand = cercano(mesBajoRaton(ev)); u.mesVer = cand; act(); });
+
+  const lectura = h('div', { class: 'pl-lt-lectura', 'aria-live': 'polite' });
+  tiempo.append(zona, lectura, leyenda);
+  if (info.perdida) {
+    const sug = A.mejor ?? libres[0];
+    tiempo.append(h('p', { class: 'mc-nota aviso pl-perdida', role: 'alert' }, T.perdida(nombre(info.elegido, true), sug ? nombre(sug.mes, true) : null)));
   }
-  const grid = h('div', { class: 'pl-anios', role: 'group', 'aria-label': T.mesTit });
-  for (const [anio, xs] of porAnio) {
-    grid.append(h('div', { class: 'pl-anio' }, h('b', {}, anio), h('div', { class: 'pl-meses-fila' }, xs.map((x) => {
-      const m = marcas(info, x);
-      const largo = [etiquetaMes(D, x.mesAbs, { larga: true }), ...m].join(' · ');
-      return h('button', {
-        type: 'button', class: 'pl-mes' + (x.esAhora ? ' ahora' : '') + (x.esPlazo ? ' plazo' : '') + (x.esElegido ? ' elegido' : '') + (puedo ? '' : ' ver'),
-        disabled: !!x.motivo, 'aria-pressed': x.esElegido ? 'true' : 'false', 'aria-label': largo, title: largo,
-        onmouseenter: () => pintar(x.mes), onfocus: () => pintar(x.mes),
-        onmouseleave: () => pintar(porDefecto()), onblur: () => pintar(porDefecto()),
-        onclick: () => { if (puedo) c.enviar('planificarRuta', { mes: x.mes }); else { u.mesVer = x.mes; c.repintar(); } },
-      }, h('span', {}, nombre(x.mesAbs).split(' ')[0]), x.esAhora || x.esPlazo || x.esElegido ? h('i', { 'aria-hidden': 'true' }, [x.esAhora ? '▸' : '', x.esPlazo ? '⚑' : '', x.esElegido ? '●' : ''].join('')) : null);
-    }))));
-  }
-  picker.append(porAnio.size ? grid : h('p', { class: 'mc-nota tenue' }, T.sinMeses));
-  picker.append(h('p', { class: 'pl-leyenda-mes' }, h('span', {}, '▸ ', T.ahora), h('span', {}, '⚑ ', T.plazo), h('span', {}, '● ', T.elegidoMes)));
-  if (info.limite < info.max) picker.append(h('p', { class: 'mc-nota tenue' }, T.tarde(nombre(rl.inicio + info.limite))));
-  if (!puedo) picker.append(h('p', { class: 'mc-nota tenue' }, T.soloVuelo));
-  if (!c.e?.porRol?.vuelo?.ruta) picker.append(h('p', { class: 'mc-nota aviso' }, T.sinRuta));
-  return { picker, cond };
+  if (!c.e?.porRol?.vuelo?.ruta) tiempo.append(h('p', { class: 'mc-nota aviso' }, T.sinRuta));
+  if (!puedo) tiempo.append(avisoBloqueo(T.soloMes()));
+
+  const chip = (etq, ...cuerpo) => h('div', { class: 'pl-lt-chip' }, h('small', {}, etq), h('span', {}, ...cuerpo));
+  const xDe = (mes) => info.meses.find((y) => y.mes === mes) ?? { mes, mesAbs: rl.inicio + mes, esAhora: false, esPlazo: rl.activo && mes === rl.plazo, esElegido: mes === info.elegido };
+  const leer = (mes) => {
+    const f = filas[mes], x = xDe(mes);
+    const m = [...marcas(info, x), A.optimos.has(mes) ? T.leyVentana : null].filter(Boolean);
+    const fecha = chip(T.fecha, h('b', {}, nombre(mes, true)), m.map((t) => h('em', {}, t)));
+    if (!f.libre) {
+      const por = f.motivo === 'pasado' ? T.mPasado : f.motivo === 'pronto' ? T.pronto(MESES_REVISION, nombre(info.minimo, true)) : f.motivo === 'tarde' ? T.tarde(nombre(info.limite, true)) : T.mFase;
+      return [fecha, h('div', { class: 'pl-lt-chip ancho mal' }, h('span', {}, por))];
+    }
+    const dv = f.pctSobreMejor < 0.05 ? (A.masa != null ? T.mejorMes : T.mejorMesPct)
+      : A.masa != null ? T.extraKg(n1(f.kgSobreMejor, 0), n1(f.pctSobreMejor, 0)) : T.extraPct(nf(f.factor), n1(f.pctSobreMejor, 0));
+    const sitio = condicionesDeMes(c.e, D, mes)?.sitioLanz;
+    const riesgo = f.scrub == null ? '—' : T.scrubTxt(n1(f.scrub * 100, 0), sitio ? tx(sitio.nombre).replace(/\s*\(.*?\)/, '') : '');
+    const plazoTxt = !rl.activo ? T.sinPlazo : f.retraso > 0 ? T.retraso(f.retraso, 0) : T.aTiempo;
+    const recTxt = f.recorte > 0 ? `−${Math.round(f.recorte * 100)} % · ${dinero(f.recorteM)}` : T.sinRecorte;
+    return [fecha, chip(T.propelente, dv), chip(T.riesgo, riesgo), chip(T.plazoChip, plazoTxt), chip(T.recorteChip, recTxt)];
+  };
+  const deltaNodos = () => {
+    if (!elegidoOk || cand === info.elegido) return cand === info.elegido && elegidoOk ? [h('p', { class: 'pl-lt-dnota' }, T.mismoMes)] : [];
+    const d = deltaMes(filas[info.elegido], filas[cand]);
+    if (!d) return [];
+    const kg = d.kg != null ? T.deltaKg(signo(d.kg)) : T.deltaPct(signo(d.pct));
+    const pres = T.deltaPres(`${signo(-d.recorteM, 1)} M USD`);
+    const peor = (d.kg ?? d.pct) > 0.5 || d.recorteM > 0.05, mejor = (d.kg ?? d.pct) < -0.5 || d.recorteM < -0.05;
+    return [h('b', {}, T.cambio, ': '), h('span', { class: peor && !mejor ? 'mal' : mejor && !peor ? 'bien' : '' }, T.delta(d.meses, kg, pres))];
+  };
+  const act = () => {
+    const v = hover ?? cand;
+    input.value = String(cand);
+    lectura.replaceChildren(...leer(v));
+    delta.replaceChildren(...deltaNodos());
+    delta.hidden = !delta.childNodes.length;
+    lCand.style.left = pos(cand);
+    lHover.style.left = pos(v);
+    lHover.hidden = hover == null || hover === cand;
+    if (fijar) {
+      const ya = elegidoOk && cand === info.elegido;
+      fijar.disabled = ya || !filas[cand]?.libre;
+      fijar.textContent = ya ? T.yaFijado : T.fijarMes(nombre(cand));
+    }
+    cond.replaceChildren(...condicionesNodos(c, info, xDe(v)).filter(Boolean));
+  };
+  act();
+  return { tiempo, cond };
 }
 
 function panelRutas(c) {
   const rutas = lista(c.mision?.rutas);
   const elegida = c.e?.porRol?.vuelo?.ruta;
   const puedo = puedoPor(c, 'vuelo');
-  return h('section', { class: 'mc-panel' }, h('h3', {}, T.ruta),
+  return h('section', { class: 'mc-panel', title: puedo ? null : T.soloRuta() }, h('h3', {}, T.ruta),
+    puedo ? null : avisoBloqueo(T.soloRuta()),
     h('div', { class: 'pl-rutas' }, rutas.map((r) => {
       const fase = lista(c.mision.fases).find((f) => f.id === r.efecto?.fase);
       const es = r.id === elegida;
-      const tip = [r.efecto && fase ? `${tx(fase.nombre)}: ${r.efecto.dp > 0 ? '+' : ''}${Math.round(r.efecto.dp * 100)} %` : '', `${T.precio}: ${valor(c, r.precio, 'M USD').textContent}`].filter(Boolean).join(' · ');
+      const tip = [puedo ? '' : `🔒 ${T.soloRuta()}`, r.efecto && fase ? `${tx(fase.nombre)}: ${r.efecto.dp > 0 ? '+' : ''}${Math.round(r.efecto.dp * 100)} %` : '', `${T.precio}: ${valor(c, r.precio, 'M USD').textContent}`].filter(Boolean).join(' · ');
       return h('button', {
         class: 'pl-ruta' + (es ? ' elegida' : ''), type: 'button', disabled: !puedo || es, title: tip,
         onclick: () => c.enviar('elegirRuta', { id: r.id }),
@@ -341,7 +523,7 @@ function mapa(c, P, u) {
     h('i', { style: `background:linear-gradient(90deg,${[0, 0.2, 0.4, 0.6, 0.8, 1].map((t) => `rgb(${color(t).join(',')})`).join(',')})` }),
     h('span', {}, T.alto), h('small', {}, tx(foco.nota))) : null;
   return h('section', { class: 'mc-panel pl-centro-col' }, h('h3', {}, T.mapa),
-    botones, escenario, ficha, leyenda, puedoSitio ? null : h('p', { class: 'mc-nota tenue' }, T.soloSitio));
+    botones, escenario, ficha, leyenda, puedoSitio ? null : avisoBloqueo(T.soloSitio()));
 }
 
 function fichaSitio(c, P, u, res) {
@@ -367,7 +549,8 @@ function fichaSitio(c, P, u, res) {
       h('b', {}, tx(sitio.nombre)), sitio.inc != null ? h('small', {}, T.inc(sitio.inc)) : sitio.lat != null ? h('small', {}, `${sitio.lat}°, ${sitio.lon}°`) : null,
       h('p', {}, tx(sitio.nota)), filas.length ? h('ul', { class: 'mc-lista' }, filas) : h('p', { class: 'tenue' }, T.sinEfectos),
       // Elegido: el borde verde de la tarjeta ya lo dice; no hace falta un botón apagado.
-      elegido ? null : h('button', { class: 'boton primario ancho', type: 'button', disabled: !puedo, onclick: () => c.enviar('planificarRuta', { sitio: sitio.id }) }, T.elegir)));
+      elegido ? null : h('button', { class: 'boton primario ancho', type: 'button', disabled: !puedo, title: puedo ? null : `🔒 ${T.soloSitio()}`, onclick: () => c.enviar('planificarRuta', { sitio: sitio.id }) }, T.elegir),
+      elegido || puedo ? null : avisoBloqueo(T.soloSitio())));
   }
   const chips = h('div', { class: 'pl-lista-sitios' }, lista(P.sitios).map((s) => h('button', {
     class: 'boton texto' + (s.id === id ? ' on' : ''), type: 'button',
@@ -393,9 +576,10 @@ export function pantallaPlanificador(c) {
   if (!P) return h('div', { class: 'mc-vacio' }, h('p', {}, T.noPlan), h('div', { class: 'pl-sola' }, panelRutas(c)));
   const u = (c.ui.plan ??= { capas: ['color'], foco: null, verSitio: null, mesVer: null });
   const res = resumenSeguro(c);
-  const { picker, cond } = panelMeses(c, u);
+  const { tiempo, cond } = panelMeses(c, u);
   return h('div', { class: 'pl' },
-    h('div', { class: 'pl-izq', 'data-scroll': 'pl-izq' }, panelRutas(c), picker),
+    tiempo,
+    h('div', { class: 'pl-izq', 'data-scroll': 'pl-izq' }, panelRutas(c)),
     mapa(c, P, u),
     h('div', { class: 'pl-der', 'data-scroll': 'pl-der' }, cond, fichaSitio(c, P, u, res)));
 }

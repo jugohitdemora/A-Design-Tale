@@ -1,6 +1,13 @@
 // Route tab: the mission's routes as cards. Flight (or anyone if vacant) selects.
 import { T } from '../textos.js';
 import { h, en, lista, valor, panelVacio, puedoPor, nombreRol } from './ui.js';
+import { textos } from '../i18n.js';
+import { avisoBloqueo } from '../control/bloqueo.js';
+
+const L = textos({
+  es: { solo: (r) => `Solo ${r} puede cambiar la ruta (o cualquiera si ese puesto está vacante).` },
+  en: { solo: (r) => `Only ${r} can change the route (or anyone if that seat is vacant).` },
+});
 
 export function pestanaRuta(c) {
   const rutas = lista(c.mision?.rutas);
@@ -19,10 +26,11 @@ export function pestanaRuta(c) {
         h('dt', {}, T.price), h('dd', {}, valor(c, r.precio, 'M USD'))),
       h('button', {
         class: 'btn-plano primario', type: 'button', disabled: !puedo || es,
-        title: puedo ? undefined : T.onlyRole(nombreRol('vuelo')),
+        title: puedo ? undefined : `🔒 ${L.solo(nombreRol('vuelo'))}`,
         onclick: () => c.enviar('elegirRuta', { id: r.id }),
       }, es ? T.selected : T.select)));
   }
+  if (!puedo) raiz.append(avisoBloqueo(L.solo(nombreRol('vuelo'))));
   raiz.append(tarjetas);
   return raiz;
 }

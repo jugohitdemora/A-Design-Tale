@@ -1,7 +1,9 @@
 // App del portátil "Manual SOP": carpeta de procedimientos operativos, uno por departamento (Vuelo, Ciencia, Energía, Comunicaciones).
 // Contrato del host: appManual(c, { rol }) devuelve el nodo raíz (100 % de su contenedor, scroll interno en la página con data-scroll="sop-<rol>").
 // También se muestra dentro del modal de la carpeta física de la mesa 3D.
-// Estado local: c.ui.manual = { rol, seccion, base }   (rol = departamento que se lee; base = rol con el que se abrió).
+// appManualJuego(c) es la segunda app: el Manual de juego (tutorial general en capítulos). Los SOP solo llevan lo propio de cada rol
+// y enlazan a los capítulos del Manual de juego; el SOP también tiene una pestaña "Manual de juego".
+// Estado local: c.ui.manual = { rol, seccion, base, vista, cap }   (rol = departamento que se lee; base = rol con el que se abrió; vista 'rol' | 'juego'; cap = capítulo).
 // Los números y fórmulas salen de reglas/motor.js y reglas/despliegue.js; el anexo de misión sale de c.mision / c.D.
 import { textos, tx, idioma, depto } from '../i18n.js';
 import { h, valor, dinero, lista, redondear, resumenSeguro, ROL_COLOR } from '../pantallas/ui.js';
@@ -52,7 +54,13 @@ const CAPBAJ = { tex: String.raw`C_{\text{baj}}\,[\text{MB/día}] = \sum_j b_j\,
   leg: [['C_{\\text{baj}}', 'capacidad de bajada por día', 'downlink capacity per day'], ['b_j', 'kbps de bajada de la antena j', 'downlink kbps of antenna j'], ['t_{\\text{enlace}}', 'horas de enlace con la Tierra al día', 'link hours with Earth per day']] };
 const EQ = {
   ratio: { tex: String.raw`r = \dfrac{U}{L}`, leg: [['r', 'razón de la barra (1,00 = justo en el límite)', 'bar ratio (1.00 = exactly at the limit)'], ['U', 'lo que usa el diseño', 'what the design uses'], ['L', 'el límite de esa barra', 'the limit of that bar']] },
-  tol: { tex: [String.raw`1 < r \le r_{\text{tol}} = 1{,}2`, String.raw`1 < r \le r_{\text{tol}} = 1.2`], leg: [['r_{\\text{tol}}', 'tolerancia: hasta un 20 % por encima del límite', 'tolerance: up to 20 % above the limit']] },
+  tol: { tex: [String.raw`1 < r \le r_{\text{tol}} = 1{,}2`, String.raw`1 < r \le r_{\text{tol}} = 1.2`], leg: [['r_{\\text{tol}}', 'tolerancia: hasta un 20 % por encima del límite; por encima, la revisión falla', 'tolerance: up to 20 % above the limit; above it, the review fails']] },
+  tolProb: { tex: [String.raw`\Delta p_{\text{fallo}} = 0{,}5\ \text{pp} \times 100\,(r - 1) \;\le\; 10\ \text{pp}`, String.raw`\Delta p_{\text{fail}} = 0.5\ \text{pp} \times 100\,(r - 1) \;\le\; 10\ \text{pp}`],
+    leg: [['r', 'razón de la barra (entre 1,00 y 1,20)', 'bar ratio (between 1.00 and 1.20)'], ['\\Delta p_{\\text{fallo}}', 'puntos porcentuales que se suman a la probabilidad de fallo de la etapa relacionada', 'percentage points added to the failure probability of the related stage'], ['\\text{pp}', 'punto porcentual', 'percentage point']] },
+  retraso: { tex: [String.raw`B' = B\,\big(1 - 0{,}04\,\max(0,\ \ell - 1)\big) \qquad \ell > 12 \Rightarrow \text{sin inversores}`, String.raw`B' = B\,\big(1 - 0.04\,\max(0,\ \ell - 1)\big) \qquad \ell > 12 \Rightarrow \text{investors pull out}`],
+    leg: [['B,\\ B\'', 'presupuesto original y presupuesto tras el retraso', 'original budget and budget after the delay'], ['\\ell', 'meses de retraso sobre el plazo de los inversores', 'months late past the investor deadline'], ['0{,}04', 'recorte del 4 % por mes (pasado el primer mes de gracia)', '4 % cut per month (after the first month of grace)']] },
+  propRetraso: { tex: [String.raw`m_{\text{prop}}(k) = m_{\text{prop}}(k_{\text{ópt}}) + \delta m \cdot |k - k_{\text{ópt}}|`, String.raw`m_{\text{prop}}(k) = m_{\text{prop}}(k_{\text{opt}}) + \delta m \cdot |k - k_{\text{opt}}|`],
+    leg: [['k,\\ k_{\\text{ópt}}', 'mes elegido y mes de la ventana óptima', 'chosen month and month of the optimal window'], ['m_{\\text{prop}}', 'propelente (kg) que cuenta en la barra de masa', 'propellant (kg) counted in the mass bar'], ['\\delta m', 'kg extra por mes de desvío (depende del destino y del mes)', 'extra kg per month of deviation (depends on the destination and month)']] },
   dif: { tex: [String.raw`\text{eventos} = \begin{cases} 1 & N = 0 \\ 2 & N = 1 \\ 3 & N \ge 2 \end{cases}`, String.raw`\text{events} = \begin{cases} 1 & N = 0 \\ 2 & N = 1 \\ 3 & N \ge 2 \end{cases}`],
     leg: [['N', 'objetivos secundarios marcados', 'secondary goals ticked']] },
   pfase: { tex: String.raw`p_f = \min\!\Big(1,\ \max\!\big(0,\ p_{0,f} + \textstyle\sum_k \Delta p_k\big)\Big)`,
@@ -133,9 +141,12 @@ const T = textos({
     punt: { datos: 'Órbita: ciencia por vida útil conseguida', cadena: 'Aterrizaje: ciencia por días en superficie', oculto: 'Exploración: ciencia y hallazgos por energía gastada' },
     unidadBarra: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/día', presupuesto: 'M USD', volumen: 'vol.' },
     nombreBarra: { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Enlace de datos', presupuesto: 'Presupuesto', volumen: 'Volumen' },
-    cienciaTotal: 'Ciencia cubierta', ok: 'dentro', tolerancia: 'tolerancia (+20 %)', exceso: 'fuera de límite',
+    cienciaTotal: 'Ciencia cubierta', ok: 'dentro', tolerancia: 'tolerancia (100–120 %: pasa, más riesgo)', exceso: 'fuera de límite',
     ciencia: 'ciencia', diasEf: 'días', falla: 'fallo crítico', critica: 'crítica', noCritica: 'no crítica',
     glosario: 'Término', etiq: { check: 'COMPROBAR', cuidado: 'CUIDADO', nota: 'NOTA' },
+    juego: 'MANUAL DE JUEGO', juegoTab: 'Manual de juego', juegoCab: 'MANUAL DE JUEGO', capitulo: 'Capítulo', verCap: 'Ver Manual de juego ›', glosGen: 'Términos generales del juego.',
+    contSop: 'Las reglas generales de compra y activación de contingencias están en el Manual de juego › capítulo 9. Aquí, las de tu departamento.', abrirCap: 'Abrir capítulo',
+    glosSop: 'Términos de tu departamento. Los términos generales del juego (fase crítica, tolerancia, contingencia, margen) están en el Manual de juego › capítulo 13.',
   },
   en: {
     titulo: 'STANDARD OPERATING PROCEDURES (SOP)', indice: 'CONTENTS', doc: 'Document', rev: 'Rev.', depto: 'Department',
@@ -160,9 +171,12 @@ const T = textos({
     punt: { datos: 'Orbit: science by useful life achieved', cadena: 'Landing: science by surface days', oculto: 'Exploration: science and findings per energy spent' },
     unidadBarra: { masa: 'kg', potencia: 'W', bateria: 'Wh', datos: 'MB/day', presupuesto: 'M USD', volumen: 'vol.' },
     nombreBarra: { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data link', presupuesto: 'Budget', volumen: 'Volume' },
-    cienciaTotal: 'Science covered', ok: 'within limits', tolerancia: 'tolerance (+20 %)', exceso: 'over the limit',
+    cienciaTotal: 'Science covered', ok: 'within limits', tolerancia: 'tolerance (100–120 %: passes, more risk)', exceso: 'over the limit',
     ciencia: 'science', diasEf: 'days', falla: 'critical failure', critica: 'critical', noCritica: 'not critical',
     glosario: 'Term', etiq: { check: 'CHECK', cuidado: 'CAUTION', nota: 'NOTE' },
+    juego: 'GAME MANUAL', juegoTab: 'Game manual', juegoCab: 'GAME MANUAL', capitulo: 'Chapter', verCap: 'See Game manual ›', glosGen: 'General game terms.',
+    contSop: 'The general rules for buying and activating contingencies are in the Game manual › chapter 9. Here, those of your department.', abrirCap: 'Open chapter',
+    glosSop: 'Terms of your department. General game terms (critical phase, tolerance, contingency, margin) are in the Game manual › chapter 13.',
   },
 });
 
@@ -179,59 +193,235 @@ const SECCIONES = [
 // ---------------------------------------------------------------------------------------------------------------------
 // Contenido estático. Bloques: ['p', es, en] · ['h', es, en] · ['paso', es, en] · ['check'|'cuidado'|'nota', es, en]
 //   ['f', fórmula, es, en] · ['tabla', cabecera[], filas[][]] (celda = texto o [es, en]) · ['lista', [[es, en], ...]]
+//   ['ver', capítulo, es, en] = enlace "ver Manual de juego › capítulo" (abre ese capítulo del Manual de juego).
 // ---------------------------------------------------------------------------------------------------------------------
-const FLUJO = [
-  ['h', 'El recorrido de la misión y qué toca en cada fase', 'The mission path and what happens in each phase'],
-  ['tabla', [['Fase', 'Phase'], ['Qué ocurre', 'What happens'], ['Quién actúa', 'Who acts']], [
-    [['1. Briefing', '1. Briefing'], ['Se lee el expediente, se marcan los objetivos (cada objetivo secundario marcado sube la dificultad) y todos pulsan "Listo".', 'Read the dossier, tick the goals (each secondary goal ticked raises difficulty) and everyone presses "Ready".'], ['Todos', 'Everyone']],
-    [['2. Diseño', '2. Design'], ['Cada departamento monta las piezas de su taller. Al pedir revisión puede saltar un evento de diseño (dinero, límites o cambio de prioridad) en vez de la revisión.', 'Each department mounts the parts of its workshop. When you request a review, a design event (money, limits or a change of priority) may fire instead of the review.'], ['Cada departamento', 'Each department']],
-    [['3. Restricciones', '3. Constraints'], ['Solo si alguna barra está entre 100 % y 120 %: se puede quitar, bajar horas de uso o cambiar a algo que no suba ninguna barra. No se puede añadir ni comprar contingencias.', 'Only if some bar is between 100 % and 120 %: you may remove parts, lower usage hours or swap to something that raises no bar. You cannot add parts or buy contingencies.'], ['Cada departamento', 'Each department']],
-    [['4. Verificación', '4. Verification'], ['Lista de comprobaciones. Cada departamento firma en la sala de control (votación GO / NO-GO). Un cambio de diseño borra las firmas. Con las cuatro firmas se lanza.', 'Checklist. Each department signs in the control room (GO / NO-GO poll). A design change clears the signatures. With all four signatures, launch.'], ['Todos firman', 'Everyone signs']],
-    [['5. Misión', '5. Mission'], ['Sala de control: el vuelo se revela fase a fase. Si sale un evento que una contingencia comprada mitiga, su departamento la activa.', 'Control room: the flight is revealed phase by phase. If an event appears that a bought contingency mitigates, its department activates it.'], ['Todos (cada uno activa sus contingencias)', 'Everyone (each department activates its own contingencies)']],
-    [['6. Informe', '6. Report'], ['Sala de control: veredicto (total / parcial / fallida), causas, hallazgos y datos perdidos. Se puede rediseñar y volver a lanzar.', 'Control room: verdict (full / partial / failed), causes, findings and lost data. You can redesign and launch again.'], ['Todos', 'Everyone']],
-  ]],
-  ['nota', 'Si un departamento no tiene jugador conectado (vacante), cualquiera puede operarlo y firmar por él. Si cambia de manos, hay que volver a firmar.', 'If a department has no connected player (vacant), anyone can operate it and sign for it. If it changes hands, sign again.'],
-  ['nota', 'Cada vez que se revisa el diseño: todas las barras ≤ 100 % pasa a Verificación; alguna entre 100 % y 120 % pasa a Restricciones; alguna por encima de 120 % vuelve a Diseño.', 'At each design review: all bars ≤ 100 % goes to Verification. Any bar between 100 % and 120 % goes to Constraints. Any bar above 120 % returns to Design.'],
+// MANUAL DE JUEGO: todo lo general (cómo se juega) vive aquí; los SOP de departamento solo llevan lo propio de cada rol.
+// ---------------------------------------------------------------------------------------------------------------------
+const CAPITULOS = [
+  { id: 'objetivo', t: ['1. Objetivo del juego', '1. Goal of the game'] },
+  { id: 'roles', t: ['2. Los cuatro departamentos', '2. The four departments'] },
+  { id: 'flujo', t: ['3. El recorrido, fase a fase', '3. The path, phase by phase'] },
+  { id: 'reloj', t: ['4. Reloj de misión y plazo', '4. Mission clock and deadline'] },
+  { id: 'barras', t: ['5. Barras, ratio y tolerancia', '5. Bars, ratio and tolerance'] },
+  { id: 'revisiones', t: ['6. Revisiones y GO / NO-GO', '6. Reviews and GO / NO-GO'] },
+  { id: 'eventos', t: ['7. Eventos', '7. Events'] },
+  { id: 'lanzamiento', t: ['8. Ventana de lanzamiento y propelente', '8. Launch window and propellant'] },
+  { id: 'contingencias', t: ['9. Contingencias', '9. Contingencies'] },
+  { id: 'vuelo', t: ['10. El vuelo y la sala de control', '10. The flight and the control room'] },
+  { id: 'puntuacion', t: ['11. Puntuación e informe', '11. Scoring and report'] },
+  { id: 'controles', t: ['12. Controles y navegación 3D', '12. Controls and 3D navigation'] },
+  { id: 'glosario', t: ['13. Glosario general', '13. General glossary'] },
 ];
 
-const COMUN_FORM = [
-  ['h', 'Reglas comunes a todos los departamentos', 'Rules common to all departments'],
-  ['f', 'ratio', 'Cada barra (masa, potencia, batería, datos, presupuesto, volumen) se mide así. ≤ 1,00 = dentro; hasta 1,20 = tolerancia; más = fuera.', 'Every bar (mass, power, battery, data, budget, volume) is measured this way. ≤ 1.00 = within limits, up to 1.20 = tolerance, more = out.'],
-  ['f', 'tol', 'Hasta un 20 % por encima del límite pasa la revisión, pero te manda a Restricciones: tendrás que recortar hasta volver a ≤ 100 %. Para verificar y firmar, todas las barras deben estar en ≤ 100 %.', 'Up to 20 % above the limit passes the review but sends you to Constraints: you must reduce it to ≤ 100 %. To verify and sign, every bar must be at ≤ 100 %.'],
-  ['f', 'dif', 'Los eventos de diseño llegan cuando pides una revisión. Más objetivos secundarios dan más eventos.', 'Design events arrive when you request a review. More secondary goals give more events.'],
-  ['f', 'pfase', 'Cada fase del vuelo tiene probabilidad base; sumas Δp por cada pieza, contingencia o ruta que la mejora y que esté a bordo (las piezas con uso > 0, o sin control de uso).', 'Each flight phase has a base probability. Add Δp for every part, contingency or route that improves it and is on board (parts with usage > 0, or with no usage control).'],
-  ['f', 'kbps', '1 000 bits/s × 3 600 s = 3,6 Mbit = 0,45 MB. Es la conversión que usa todo el juego para los datos.', '1,000 bits/s × 3,600 s = 3.6 Mbit = 0.45 MB. It is the conversion the whole game uses for data.'],
-  ['f', 'h24', 'Estructura, paneles, baterías, antena... están "siempre encendidas". Las que tienen control de uso (instrumentos) se ajustan entre un mínimo y un máximo de h/día.', 'Structure, panels, batteries, antenna... are "always on". Parts with a usage control (instruments) are adjusted between a minimum and a maximum of h/day.'],
-  ['h', 'Cómo se castiga o premia cada fase del vuelo', 'How each flight phase is penalised or rewarded'],
-  ['tabla', [['Situación', 'Situation'], ['Efecto', 'Effect'], ['Significa', 'Meaning']], [
-    [['Fase no crítica fallada', 'Failed non-critical phase'], ['× 0,75', '× 0.75'], ['La tirada falla: la ciencia baja a 75 %.', 'The roll fails: science drops to 75 %.']],
-    [['Primer fallo crítico', 'First critical failure'], ['× 0,5', '× 0.5'], ['Ciencia y días a la mitad; la misión sigue.', 'Science and days halved. The mission continues.']],
-    [['Fallos críticos para perder la nave', 'Critical failures to lose the spacecraft'], '2', ['El segundo fallo crítico pierde la nave: las fases siguientes no se juegan.', 'The second critical failure loses the spacecraft: later phases are not played.']],
-    [['Evento negativo sin mitigar', 'Unmitigated negative event'], ['≥ × 0,25', '≥ × 0.25'], ['Nunca baja un factor por debajo de 0,25.', 'It never takes a factor below 0.25.']],
-    [['Evento positivo', 'Positive event'], '≤ × 2', ['Sube la ciencia o los días como mucho al doble.', 'It raises science or days at most to double.']],
-    [['Éxito total', 'Full success'], '80 %', ['Objetivo prioritario conseguido y al menos 80 % de la ciencia. Si no, parcial; si falla el prioritario, fallida.', 'Priority goal achieved and at least 80 % of the science. Otherwise partial. If the priority goal fails, failed.']],
-  ]],
-];
+const JUEGO = {
+  objetivo: [
+    ['p', 'Sois un equipo de hasta cuatro personas que diseña una misión espacial real (órbita, aterrizaje o exploración) con un presupuesto, un cohete y un plazo. Cada jugador lleva un departamento. Ganáis si la nave sale, llega y devuelve a casa la ciencia que prometisteis.', 'You are a team of up to four people designing a real space mission (orbit, landing or exploration) with a budget, a rocket and a deadline. Each player runs one department. You win if the spacecraft launches, arrives and brings home the science you promised.'],
+    ['h', 'Lo que se juega en una partida', 'What a game consists of'],
+    ['lista', [
+      ['Diseñar: montar entre todos una nave que quepa en las seis barras de recursos (masa, volumen, potencia, batería, datos, presupuesto).', 'Design: build together a spacecraft that fits in the six resource bars (mass, volume, power, battery, data, budget).'],
+      ['Decidir: qué objetivos científicos aceptar, qué cohete, qué ruta, qué mes de lanzamiento y qué contingencias comprar.', 'Decide: which science goals to accept, which rocket, which route, which launch month and which contingencies to buy.'],
+      ['Aprobar: pasar la revisión del diseño y que los cuatro departamentos den su GO.', 'Approve: pass the design review and get a GO from all four departments.'],
+      ['Volar: ver cómo sale cada fase del vuelo, activar contingencias a tiempo y leer el informe.', 'Fly: watch each flight phase unfold, activate contingencies in time and read the report.'],
+      ['Aprender y repetir: el informe explica qué falló y por qué; se puede rediseñar y volver a lanzar.', 'Learn and repeat: the report explains what failed and why; you can redesign and launch again.'],
+    ]],
+    ['nota', 'Es cooperativo: nadie gana solo. Los números y las misiones están basados en datos reales de la NASA; cuando una cifra es estimada se marca con (≈).', 'It is cooperative: nobody wins alone. Numbers and missions are based on real NASA data; when a figure is estimated it is marked (≈).'],
+  ],
 
-const COMUN_CONT = [
-  ['h', 'Reglas de las contingencias', 'Contingency rules'],
-  ['lista', [
-    ['Una contingencia es un seguro: cuesta masa (kg) y dinero en el diseño, y si sale el evento que mitiga, lo anula por completo.', 'A contingency is insurance: it costs mass (kg) and money in the design, and if the event it mitigates fires, it cancels it completely.'],
-    ['Cada departamento compra y activa las suyas. El equipo entero puede tener como máximo 3 contingencias.', 'Each department buys and activates its own. The whole team can hold at most 3 contingencies.'],
-    ['Se compran en la app "Contingencias" durante el Diseño. En Restricciones solo se pueden quitar.', 'They are bought in the "Contingencies" app during Design. In Constraints they can only be removed.'],
-    ['Los eventos buenos (+) no se mitigan: son suerte. Los de signo ± se anulan por el lado malo y queda el bueno.', 'Good events (+) are not mitigated: they are luck. Events with sign ± lose their bad side and keep the good one.'],
-  ]],
-  ['h', 'SOP de compra (fase de Diseño)', 'Purchase SOP (Design phase)'],
-  ['paso', 'Abre "Contingencias" y mira el mazo de riesgos: cada evento muestra su fase, su probabilidad p y su efecto.', 'Open "Contingencies" and look at the risk deck: each event shows its phase, its probability p and its effect.'],
-  ['paso', 'Valora cada seguro: daño esperado ≈ p × (pérdida de ciencia o de días). Compáralo con los kg y el dinero que cuesta.', 'Value each insurance: expected damage ≈ p × (loss of science or days). Compare it with the kg and the money it costs.'],
-  ['paso', 'Acuerda con el equipo cuáles son las 3 compras. Pulsa Comprar en la que sea de tu departamento.', 'Agree with the team on the 3 purchases. Press Buy on the one that belongs to your department.'],
-  ['cuidado', 'Si eliges un evento con "falla" (fallo crítico) en una fase crítica, comprarla vale mucho más que una que solo resta un 15 % de ciencia.', 'If an event has "failure" (critical failure) in a critical phase, buying its insurance is worth far more than one that only costs 15 % of science.'],
-  ['h', 'SOP de activación (fase de Misión, Sala de control)', 'Activation SOP (Mission phase, Control room)'],
-  ['paso', 'El vuelo se revela paso a paso. Cuando el paso visible trae un evento que una contingencia comprada mitiga, la sala de control te pide que la actives.', 'The flight is revealed step by step. When the visible step has an event that a bought contingency mitigates, the control room asks you to activate it.'],
-  ['paso', 'El departamento dueño pulsa Activar. Mientras no se active, el equipo no puede avanzar al paso siguiente.', 'The owning department presses Activate. Until it is done, the team cannot advance to the next step.'],
-  ['paso', 'Lee el resultado: "mitigado" significa que el evento quedó anulado. Si no la compraste, se aplican sus factores (nunca por debajo de × 0,25).', 'Read the result: "mitigated" means the event was cancelled. If you did not buy it, its factors apply (never below × 0.25).'],
-  ['check', 'Si tu departamento está vacante, cualquier jugador puede activar por él. Si tiene jugador, solo él.', 'If your department is vacant, any player can activate for it. If it has a player, only that player can.'],
-];
+  roles: [
+    ['p', 'Cada asiento de la mesa es un departamento. Si falta un jugador, su departamento queda vacante y cualquiera puede operarlo y firmar por él (si cambia de manos, hay que volver a firmar).', 'Every seat at the table is a department. If a player is missing, their department is vacant and anyone can operate it and sign for it (if it changes hands, sign again).'],
+    ['tabla', [['Departamento', 'Department'], ['Responsable de', 'Responsible for'], ['Barras que más mueve', 'Bars it moves most']], [
+      [['Vuelo y Mecánica', 'Flight & Mechanics'], ['Cuerpo de la nave, cohete, ruta, mes de lanzamiento y sitio de descenso u órbita.', 'Spacecraft body, rocket, route, launch month and landing site or orbit.'], ['Masa, volumen, presupuesto', 'Mass, volume, budget']],
+      [['Ciencia', 'Science'], ['Instrumentos, horas de uso y qué objetivos se cubren; propone sitio u órbita.', 'Instruments, usage hours and which goals are covered; proposes the site or orbit.'], ['Datos, potencia, presupuesto', 'Data, power, budget']],
+      [['Energía', 'Power'], ['Paneles, baterías, térmica y polvo: energía durante todo el ciclo, incluida la sombra.', 'Panels, batteries, thermal and dust: power through the whole cycle, including the shadow.'], ['Potencia, batería, masa', 'Power, battery, mass']],
+      [['Comunicaciones y Operaciones', 'Communications & Operations'], ['Antenas, computador, navegación y segmento de tierra: que la ciencia llegue a casa.', 'Antennas, computer, navigation and ground segment: getting the science home.'], ['Datos, potencia, presupuesto', 'Data, power, budget']],
+    ]],
+    ['nota', 'Los departamentos se necesitan: Ciencia es el "cliente" que gasta vatios, datos y masa; Energía y Comunicaciones sostienen lo que Ciencia monta; Vuelo pone el límite de masa con el cohete. Hablad antes de montar.', 'The departments depend on each other: Science is the "customer" spending watts, data and mass; Power and Comms sustain what Science mounts; Flight sets the mass limit with the rocket. Talk before you mount.'],
+    ['p', 'El detalle de cada puesto (piezas, fórmulas, decisiones y contingencias propias) está en su Manual SOP, en la carpeta de anillas de la mesa o en la app "Manual SOP" del portátil.', 'The detail of each post (parts, formulas, decisions and own contingencies) is in its SOP manual, in the ring binder on the table or in the "SOP manual" app on the laptop.'],
+  ],
+
+  flujo: [
+    ['h', 'De la sala de espera al informe', 'From the waiting room to the report'],
+    ['tabla', [['Fase', 'Phase'], ['Qué ocurre', 'What happens'], ['Quién actúa', 'Who acts']], [
+      [['1. Lobby', '1. Lobby'], ['Ponéis nick y código de sala (hasta 4 jugadores) y cada uno elige un rol libre. "Iniciar misión" lleva a todos al briefing.', 'Enter a nick and the room code (up to 4 players) and each picks a free role. "Start mission" takes everyone to the briefing.'], ['Todos', 'Everyone']],
+      [['2. Briefing / Expediente', '2. Briefing / Dossier'], ['En la sala de briefing se elige el escenario y una de las misiones (carpetas). En el expediente se leen destino, presupuesto y plazo, y se marcan los objetivos: el prioritario es obligatorio y cada secundario sube la dificultad. Todos pulsan "Listo".', 'In the briefing room you choose the scenario and one of the missions (folders). In the dossier you read destination, budget and deadline and tick the goals: the priority goal is mandatory and every secondary one raises difficulty. Everyone presses "Ready".'], ['Todos', 'Everyone']],
+      [['3. Diseño en el portátil', '3. Design on the laptop'], ['Cada jugador usa su portátil: Constructor (taller con piezas de su rol, plano común y panel con las seis barras), Cámara de lanzamiento (cohete), Contingencias, Estado y Expediente. El reloj de misión corre en tiempo real.', 'Each player uses their laptop: Builder (workshop with the parts of their role, shared blueprint and panel with the six bars), Launch camera (rocket), Contingencies, Status and Dossier. The mission clock runs in real time.'], ['Cada departamento', 'Each department']],
+      [['4. Revisión del diseño', '4. Design review'], ['Cuando creéis que está listo, se pide una revisión: compara cada barra con su límite (capítulos 5 y 6). No cuesta meses.', 'When you think it is ready, request a review: it compares every bar with its limit (chapters 5 and 6). It costs no months.'], ['Cualquiera', 'Anyone']],
+      [['5. Restricciones y verificación', '5. Constraints and verification'], ['Si algo sobra, se recorta; si todo está bien, se verifica con la lista de comprobaciones. El reloj sigue corriendo. Cada departamento firma su GO en la sala de control.', 'If something is over, trim it; if all is fine, verify with the checklist. The clock keeps running. Each department signs its GO in the control room.'], ['Todos firman', 'Everyone signs']],
+      [['6. GO / NO-GO y lanzamiento', '6. GO / NO-GO and launch'], ['Con las cuatro firmas, "Lanzar". Un cambio de diseño, de mes o de sitio borra las firmas. Si el lanzamiento falla, la misión termina ahí.', 'With all four signatures, "Launch". Any change of design, month or site clears the signatures. If the launch fails, the mission ends there.'], ['Todos', 'Everyone']],
+      [['7. Sala de control', '7. Mission control'], ['El vuelo se revela fase a fase y todos ven lo mismo. Si sale un evento que una contingencia comprada mitiga, su departamento la activa; luego se pulsa "Next".', 'The flight is revealed phase by phase and everyone sees the same. If an event fires that a bought contingency mitigates, its department activates it; then press "Next".'], ['Todos', 'Everyone']],
+      [['8. Informe de vuelo', '8. Flight report'], ['Veredicto (total / parcial / fallida), pasos, ciencia conseguida, datos perdidos, hallazgos, causas y la misión real.', 'Verdict (full / partial / failed), steps, science achieved, lost data, findings, causes and the real mission.'], ['Todos', 'Everyone']],
+      [['9. Rediseño', '9. Redesign'], ['"Volver a volar" reabre el diseño con lo aprendido; "Nueva misión" empieza otra.', '"Fly again" reopens the design with what you learned; "New mission" starts another.'], ['Todos', 'Everyone']],
+    ]],
+    ['nota', 'El diseño no es lineal: si una revisión falla o un cambio invalida las firmas, vuelves a diseñar. El reloj no se detiene mientras tanto (capítulo 4).', 'Design is not linear: if a review fails or a change invalidates the signatures, you go back to design. The clock does not stop meanwhile (chapter 4).'],
+    ['h', 'Qué app usar en cada fase (portátil)', 'Which app to use in each phase (laptop)'],
+    ['lista', [
+      ['Briefing: Expediente y manuales. Diseño y restricciones: Constructor, Cámara de lanzamiento, Contingencias, Expediente y manuales.', 'Briefing: Dossier and manuals. Design and constraints: Builder, Launch camera, Contingencies, Dossier and manuals.'],
+      ['El icono "Sala de control" del dock lleva directamente a la sala de control: allí están la ventana de lanzamiento, el sitio, la votación GO / NO-GO, la misión y el informe.', 'The "Control room" icon in the dock takes you straight to the control room: launch window, site, GO / NO-GO poll, the mission and the report are there.'],
+    ]],
+  ],
+
+  reloj: [
+    ['p', 'La misión tiene un reloj en meses que corre en TIEMPO REAL mientras diseñáis, aplicáis restricciones y verificáis. Cuantos menos jugadores, más lento corre cada mes (cada uno hace más trabajo).', 'The mission has a clock in months that runs in REAL TIME while you design, apply constraints and verify. The fewer players, the slower each month runs (each person does more work).'],
+    ['tabla', [['Jugadores', 'Players'], ['Duración de 1 mes de misión', 'Length of 1 mission month']], [
+      ['4', ['1 minuto (60 s)', '1 minute (60 s)']],
+      ['3', '75 s'],
+      ['2', '90 s'],
+      ['1', '105 s'],
+    ]],
+    ['lista', [
+      ['Las revisiones ya no cuestan meses: pedir una revisión no mueve el reloj.', 'Reviews no longer cost months: requesting a review does not move the clock.'],
+      ['Los eventos de diseño aparecen mientras el reloj corre, no al pedir una revisión (capítulo 7).', 'Design events appear while the clock runs, not when you request a review (chapter 7).'],
+      ['Cambiar cohete, ruta o mes de lanzamiento tampoco detiene el reloj: se decide entre todos y rápido.', 'Changing rocket, route or launch month does not stop the clock either: decide together and quickly.'],
+    ]],
+    ['h', 'El plazo de los inversores', 'The investor deadline'],
+    ['p', 'Cada misión trae un plazo comprometido con los inversores. Si el reloj lo pasa, la financiación se recorta.', 'Every mission comes with a deadline committed to the investors. If the clock passes it, funding is cut.'],
+    ['f', 'retraso', 'Un mes de gracia sin penalización; después, un 4 % menos de presupuesto por cada mes de retraso. Pasados 12 meses de retraso, los inversores se retiran.', 'One month of grace with no penalty; after that, 4 % less budget for every month late. Beyond 12 months late, investors pull out.'],
+    ['cuidado', 'El recorte baja el límite de la barra de presupuesto: un diseño que ya cabía puede pasar a tolerancia o fallar la revisión. Si te acercas al plazo, recorta antes de seguir añadiendo.', 'The cut lowers the limit of the budget bar: a design that already fit may drop into tolerance or fail the review. When you near the deadline, trim before adding more.'],
+    ['nota', 'Retrasar el lanzamiento respecto a la ventana óptima también cuesta propelente y puede empujarte más allá del plazo (capítulo 8).', 'Delaying the launch against the optimal window also costs propellant and can push you past the deadline (chapter 8).'],
+  ],
+
+  barras: [
+    ['p', 'El panel global del Constructor y la app Estado muestran seis barras. Cada una compara lo que usa el diseño con un límite.', 'The Builder global panel and the Status app show six bars. Each compares what the design uses with a limit.'],
+    ['tabla', [['Barra', 'Bar'], ['Qué usa el diseño', 'What the design uses'], ['Límite', 'Limit']], [
+      [['Masa (kg)', 'Mass (kg)'], ['Piezas + ruta + contingencias + propelente', 'Parts + route + contingencies + propellant'], ['Capacidad del cohete al destino (y tope de misión)', 'Rocket capacity to the destination (and mission cap)']],
+      [['Volumen', 'Volume'], ['Lo que ocupan las piezas', 'What the parts take up'], ['El que da la estructura', 'What the structure provides']],
+      [['Potencia (W)', 'Power (W)'], ['Vatios de todo lo encendido', 'Watts of everything switched on'], ['Lo que dan los paneles (y tope)', 'What the panels give (and cap)']],
+      [['Batería (Wh)', 'Battery (Wh)'], ['Energía que gasta en la sombra lo que sigue encendido', 'Energy used in the shadow by what stays on'], ['Lo que guardan las baterías', 'What the batteries store']],
+      [['Enlace de datos (MB/día)', 'Data link (MB/day)'], ['Datos que generan las piezas por día', 'Data the parts generate per day'], ['Lo que cabe en la bajada por día', 'What fits in the downlink per day']],
+      [['Presupuesto (M USD)', 'Budget (M USD)'], ['Precio de piezas, cohete, ruta y contingencias', 'Price of parts, rocket, route and contingencies'], ['El de la misión (menos recortes por retraso)', 'The mission one (minus delay cuts)']],
+    ]],
+    ['f', 'ratio', 'Todas las barras se miden así. ≤ 1,00 = dentro del límite; entre 1,00 y 1,20 = tolerancia; más de 1,20 = fuera.', 'All bars are measured this way. ≤ 1.00 = within limits; between 1.00 and 1.20 = tolerance; above 1.20 = out.'],
+    ['f', 'margen', 'El margen es el hueco que queda. Los ingenieros reales dejan margen para lo que aún no saben.', 'Margin is the room left. Real engineers keep margin for what they do not yet know.'],
+    ['h', 'Tolerancia: pasa, pero con riesgo', 'Tolerance: it passes, but with risk'],
+    ['f', 'tol', 'Una barra entre 100 % y 120 % ya no obliga a recortar: pasa la revisión. Por encima de 120 % la revisión falla.', 'A bar between 100 % and 120 % no longer forces cuts: it passes the review. Above 120 % the review fails.'],
+    ['f', 'tolProb', 'Pasarte del límite se paga en el vuelo: sube la probabilidad de fallo de una etapa relacionada, unos 0,5 puntos porcentuales por cada 1 % de exceso, hasta +10 puntos a 120 %.', 'Going over the limit is paid for in flight: it raises the failure probability of a related stage, about 0.5 percentage points for every 1 % over, up to +10 points at 120 %.'],
+    ['tabla', [['Barra pasada', 'Bar over'], ['Etapa que se resiente', 'Stage that suffers']], [
+      [['Masa / Volumen', 'Mass / Volume'], ['Lanzamiento', 'Launch']],
+      [['Potencia / Batería', 'Power / Battery'], ['Crucero y operaciones', 'Cruise and operations']],
+      [['Datos', 'Data'], ['Bajada de datos y ciencia', 'Downlink and science']],
+      [['Presupuesto', 'Budget'], ['Pequeña penalización en todas las etapas', 'Small penalty on all stages']],
+    ]],
+    ['cuidado', 'Un exceso del 20 % en masa suma +10 puntos de fallo en el lanzamiento, y si el lanzamiento falla la misión termina allí. La tolerancia es una apuesta, no un margen gratis.', 'A 20 % excess in mass adds +10 failure points to launch, and if the launch fails the mission ends there. Tolerance is a gamble, not free margin.'],
+    ['nota', 'Cada departamento tiene en su SOP las fórmulas de las barras que mueve (sección 3).', 'Each department has the formulas for the bars it moves in its SOP (section 3).'],
+  ],
+
+  revisiones: [
+    ['h', 'La revisión del diseño', 'The design review'],
+    ['lista', [
+      ['Todas las barras ≤ 100 %: el diseño está limpio y puede pasar a verificar.', 'All bars ≤ 100 %: the design is clean and can go to verification.'],
+      ['Alguna entre 100 % y 120 %: pasa la revisión, pero con el sobrecoste de probabilidad de fallo del capítulo 5. Mejor recortar si hay tiempo.', 'Any between 100 % and 120 %: passes the review, but with the failure-probability cost of chapter 5. Better to trim if there is time.'],
+      ['Alguna por encima de 120 %: la revisión falla y hay que rediseñar.', 'Any above 120 %: the review fails and you must redesign.'],
+    ]],
+    ['p', 'La revisión no cuesta meses, pero el reloj sigue corriendo mientras rediseñáis (capítulo 4).', 'The review costs no months, but the clock keeps running while you redesign (chapter 4).'],
+    ['h', 'Restricciones (recortes)', 'Constraints (trimming)'],
+    ['p', 'En el modo Restricciones el taller es el mismo, pero no se pueden añadir piezas ni comprar contingencias: solo quitar, bajar horas de uso o cambiar a algo que no suba ninguna barra. Sirve para recortar sobrepasos antes de verificar.', 'In Constraints mode the workshop is the same, but you cannot add parts or buy contingencies: only remove, lower usage hours or swap to something that raises no bar. It is for trimming overruns before verifying.'],
+    ['h', 'Verificación y votación GO / NO-GO', 'Verification and GO / NO-GO poll'],
+    ['paso', 'Revisad la lista de comprobaciones: hay cohete y ruta, el objetivo prioritario tiene instrumentos encendidos, algo genera energía, algo envía datos a casa y se cumplen las comprobaciones propias de la misión.', 'Go through the checklist: there is a rocket and a route, the priority goal has instruments switched on, something generates power, something sends data home and the mission-specific checks hold.'],
+    ['paso', 'En la sala de control, cada departamento da su GO (clic en su consola o en el botón de la pared). Un NO-GO es un veto: se habla y se corrige.', 'In the control room, each department gives its GO (click your console or the button on the wall). A NO-GO is a veto: talk and fix.'],
+    ['paso', 'Con las cuatro firmas aparece "Lanzar". Cualquier cambio de diseño, mes de lanzamiento o sitio borra las firmas y hay que volver a firmar.', 'With all four signatures "Launch" appears. Any change of design, launch month or site clears the signatures and you must sign again.'],
+    ['nota', 'Si un departamento está vacante, cualquiera firma por él. Si cambia de manos, hay que volver a firmar.', 'If a department is vacant, anyone signs for it. If it changes hands, sign again.'],
+  ],
+
+  eventos: [
+    ['h', 'Eventos de diseño (en tiempo real)', 'Design events (in real time)'],
+    ['p', 'Mientras corre el reloj de misión saltan eventos aleatorios, sin que tengas que pedir nada. Salen como tarjeta modal y afectan a todo el equipo.', 'While the mission clock runs, random events fire without you asking for anything. They appear as a modal card and affect the whole team.'],
+    ['tabla', [['Tipo', 'Type'], ['Ejemplos', 'Examples'], ['Efecto', 'Effect']], [
+      [['Inversores', 'Investors'], ['Entra un inversor nuevo; se retira uno.', 'A new investor joins; one pulls out.'], ['Sube o baja el presupuesto', 'Raises or lowers the budget']],
+      [['Contratiempos y tragedias', 'Setbacks and tragedies'], ['Recorte de potencia, un fallo de proveedor, un cambio de prioridad del objetivo.', 'A power cut, a supplier failure, a change of goal priority.'], ['Recortan un límite (por ejemplo × 0,9 a la potencia) o cambian el objetivo prioritario', 'Cut a limit (for example × 0.9 to power) or change the priority goal']],
+      [['Golpes de suerte', 'Windfalls'], ['Un patrocinador, una pieza donada.', 'A sponsor, a donated part.'], ['Dinero o margen extra', 'Extra money or margin']],
+    ]],
+    ['f', 'dif', 'Más objetivos secundarios = misión más difícil = más eventos durante la partida.', 'More secondary goals = harder mission = more events during the game.'],
+    ['cuidado', 'Un evento puede cambiar un límite justo cuando estás al 100 %: deja margen, o un recorte te dejará en tolerancia o fuera.', 'An event can change a limit right when you are at 100 %: keep margin, or a cut will leave you in tolerance or out.'],
+    ['h', 'Eventos de vuelo', 'Flight events'],
+    ['p', 'Durante la misión (capítulo 10) cada fase puede traer un evento del mazo de la misión. Los negativos se pueden anular con una contingencia comprada; los buenos (+) son suerte y no se mitigan.', 'During the mission (chapter 10) each phase may bring an event from the mission deck. Negative ones can be cancelled with a bought contingency; good ones (+) are luck and are not mitigated.'],
+  ],
+
+  lanzamiento: [
+    ['p', 'El mes de lanzamiento se elige en la sala de control (lo gestiona Vuelo y Mecánica con el resto). Cada mes tiene sus condiciones, con datos de la NASA: clima del sitio, clima espacial, geometría del objetivo y ΔV.', 'The launch month is chosen in the control room (Flight & Mechanics handles it with the rest). Each month has its own conditions, with NASA data: launch-site weather, space weather, target geometry and ΔV.'],
+    ['lista', [
+      ['Hay una ventana óptima: el mes con menos ΔV, es decir, con menos propelente.', 'There is an optimal window: the month with the lowest ΔV, that is, with the least propellant.'],
+      ['Retrasar el lanzamiento respecto a esa ventana cuesta propelente extra (kg). Esos kg suben la barra de masa y pueden dejarte en tolerancia o fuera.', 'Delaying the launch against that window costs extra propellant (kg). Those kg raise the mass bar and can leave you in tolerance or out.'],
+      ['Además, el reloj sigue corriendo: un mes tardío puede empujarte más allá del plazo de los inversores (capítulo 4).', 'On top of that the clock keeps running: a late month can push you past the investor deadline (chapter 4).'],
+    ]],
+    ['f', 'propRetraso', 'El propelente extra es lo que cuesta no lanzar en la mejor ventana: cada mes de desvío añade kg.', 'The extra propellant is the price of not launching in the best window: every month of deviation adds kg.'],
+    ['cuidado', 'Si el lanzamiento falla, la misión termina ahí: no hay crucero, ni ciencia, ni segunda oportunidad en esa partida. Por eso el lanzamiento es la etapa donde más importa no pasarse de masa o volumen.', 'If the launch fails, the mission ends there: no cruise, no science, no second chance in that game. That is why launch is the stage where going over mass or volume matters most.'],
+    ['ver', 'vuelo', 'Ver también: capítulo 10 (fases del vuelo).', 'See also: chapter 10 (flight phases).'],
+  ],
+
+  contingencias: [
+    ['h', 'Reglas de las contingencias', 'Contingency rules'],
+    ['lista', [
+      ['Una contingencia es un seguro: cuesta masa (kg) y dinero en el diseño, y si sale el evento que mitiga, lo anula por completo.', 'A contingency is insurance: it costs mass (kg) and money in the design, and if the event it mitigates fires, it cancels it completely.'],
+      ['Cada departamento compra y activa las suyas. El equipo entero puede tener como máximo 3 contingencias.', 'Each department buys and activates its own. The whole team can hold at most 3 contingencies.'],
+      ['Se compran en la app "Contingencias" durante el Diseño. En Restricciones solo se pueden quitar.', 'They are bought in the "Contingencies" app during Design. In Constraints they can only be removed.'],
+      ['Los eventos buenos (+) no se mitigan: son suerte. Los de signo ± se anulan por el lado malo y queda el bueno.', 'Good events (+) are not mitigated: they are luck. Events with sign ± lose their bad side and keep the good one.'],
+    ]],
+    ['h', 'Cómo comprar (fase de Diseño)', 'How to buy (Design phase)'],
+    ['paso', 'Abre "Contingencias" y mira el mazo de riesgos: cada evento muestra su fase, su probabilidad p y su efecto.', 'Open "Contingencies" and look at the risk deck: each event shows its phase, its probability p and its effect.'],
+    ['paso', 'Valora cada seguro: daño esperado ≈ p × (pérdida de ciencia o de días). Compáralo con los kg y el dinero que cuesta.', 'Value each insurance: expected damage ≈ p × (loss of science or days). Compare it with the kg and the money it costs.'],
+    ['paso', 'Acuerda con el equipo cuáles son las 3 compras. Pulsa Comprar en la que sea de tu departamento.', 'Agree with the team on the 3 purchases. Press Buy on the one that belongs to your department.'],
+    ['cuidado', 'Si un evento trae "falla" (fallo crítico) en una fase crítica, su seguro vale mucho más que uno que solo resta un 15 % de ciencia.', 'If an event has "failure" (critical failure) in a critical phase, its insurance is worth far more than one that only costs 15 % of science.'],
+    ['h', 'Cómo activar (fase de Misión, sala de control)', 'How to activate (Mission phase, control room)'],
+    ['paso', 'El vuelo se revela paso a paso. Cuando el paso visible trae un evento que una contingencia comprada mitiga, la sala de control te pide que la actives.', 'The flight is revealed step by step. When the visible step has an event that a bought contingency mitigates, the control room asks you to activate it.'],
+    ['paso', 'El departamento dueño pulsa Activar. Mientras no se active, el equipo no puede avanzar al paso siguiente.', 'The owning department presses Activate. Until it is done, the team cannot advance to the next step.'],
+    ['paso', 'Lee el resultado: "mitigado" significa que el evento quedó anulado. Si no la compraste, se aplican sus factores (nunca por debajo de × 0,25).', 'Read the result: "mitigated" means the event was cancelled. If you did not buy it, its factors apply (never below × 0.25).'],
+    ['check', 'Si tu departamento está vacante, cualquier jugador puede activar por él. Si tiene jugador, solo él. Las contingencias propias de tu rol y sus tarjetas están en la sección 4 de tu SOP.', 'If your department is vacant, any player can activate for it. If it has a player, only that player can. The contingencies of your own role and their cards are in section 4 of your SOP.'],
+  ],
+
+  vuelo: [
+    ['p', 'Tras el GO y el lanzamiento, el vuelo se juega en la sala de control: las fases se revelan una a una y todos ven lo mismo. Pulsad "Next" para avanzar; un evento con contingencia pendiente bloquea el avance hasta activarla.', 'After GO and launch, the flight is played in the control room: phases are revealed one at a time and everyone sees the same. Press "Next" to advance; an event with a pending contingency blocks progress until it is activated.'],
+    ['f', 'pfase', 'Cada fase tiene una probabilidad de éxito base. Se suma Δp por cada pieza, contingencia o ruta a bordo que la mejora (las piezas con uso > 0 o sin control de uso). La tolerancia (capítulo 5) resta probabilidad a la etapa relacionada.', 'Each phase has a base success probability. Add Δp for every part, contingency or route on board that improves it (parts with usage > 0 or with no usage control). Tolerance (chapter 5) subtracts probability from the related stage.'],
+    ['h', 'Cómo se castiga o premia cada fase', 'How each phase is penalised or rewarded'],
+    ['tabla', [['Situación', 'Situation'], ['Efecto', 'Effect'], ['Significa', 'Meaning']], [
+      [['Lanzamiento fallado', 'Failed launch'], ['Fin', 'End'], ['La misión termina ahí: nada más se juega.', 'The mission ends there: nothing else is played.']],
+      [['Fase no crítica fallada', 'Failed non-critical phase'], ['× 0,75', '× 0.75'], ['La tirada falla: la ciencia baja a 75 %.', 'The roll fails: science drops to 75 %.']],
+      [['Primer fallo crítico', 'First critical failure'], ['× 0,5', '× 0.5'], ['Ciencia y días a la mitad; la misión sigue.', 'Science and days halved. The mission continues.']],
+      [['Fallos críticos para perder la nave', 'Critical failures to lose the spacecraft'], '2', ['El segundo fallo crítico pierde la nave: las fases siguientes no se juegan.', 'The second critical failure loses the spacecraft: later phases are not played.']],
+      [['Evento negativo sin mitigar', 'Unmitigated negative event'], ['≥ × 0,25', '≥ × 0.25'], ['Nunca baja un factor por debajo de 0,25.', 'It never takes a factor below 0.25.']],
+      [['Evento positivo', 'Positive event'], '≤ × 2', ['Sube la ciencia o los días como mucho al doble.', 'It raises science or days at most to double.']],
+    ]],
+    ['nota', 'Las fases críticas son las que pueden acabar la misión. El semáforo de cada fase del vuelo muestra su probabilidad actual.', 'Critical phases are the ones that can end the mission. The light of each flight phase shows its current probability.'],
+  ],
+
+  puntuacion: [
+    ['p', 'El informe da un veredicto y una puntuación según la regla de la misión (la ves en la ficha técnica de tu SOP):', 'The report gives a verdict and a score under the mission rule (you see it in the datasheet of your SOP):'],
+    ['tabla', [['Regla de puntuación', 'Scoring rule'], ['Cómo cuenta la ciencia', 'How science counts']], [
+      [['Retorno de datos (órbita)', 'Data return (orbit)'], ['Ciencia × fracción de vida útil conseguida: importa cuánto dura la misión.', 'Science × fraction of useful life achieved: how long the mission lasts matters.']],
+      [['Cadena de supervivencia (aterrizaje)', 'Survival chain (landing)'], ['Si la nave se pierde, cero. Si no, ciencia × fracción de días de superficie.', 'If the spacecraft is lost, zero. Otherwise science × fraction of surface days.']],
+      [['Descubrimiento (exploración)', 'Discovery (exploration)'], ['(Σ valor × conseguido + valor de hallazgos) / kWh por día gastados.', '(Σ value × achieved + value of findings) / kWh per day spent.']],
+    ]],
+    ['tabla', [['Veredicto', 'Verdict'], ['Condición', 'Condition']], [
+      [['Éxito total', 'Full success'], ['Objetivo prioritario conseguido y al menos 80 % de la ciencia.', 'Priority goal achieved and at least 80 % of the science.']],
+      [['Éxito parcial', 'Partial success'], ['Prioritario conseguido, pero con menos del 80 % de la ciencia.', 'Priority goal achieved, but with less than 80 % of the science.']],
+      [['Fallida', 'Failed'], ['Falla el objetivo prioritario, se pierde la nave o falla el lanzamiento.', 'The priority goal fails, the spacecraft is lost or the launch fails.']],
+    ]],
+    ['lista', [
+      ['Qué resta: datos que no caben en el enlace, fallos de fase, eventos sin mitigar, retrasos sobre el plazo (recortan el presupuesto) y excesos de tolerancia (suben la probabilidad de fallo).', 'What subtracts: data that does not fit in the link, phase failures, unmitigated events, delays past the deadline (they cut the budget) and tolerance overruns (they raise failure probability).'],
+      ['Qué suma: más objetivos secundarios cubiertos, hallazgos ocultos capturados y eventos positivos.', 'What adds: more secondary goals covered, hidden findings captured and positive events.'],
+    ]],
+    ['p', 'El informe explica las causas, los hallazgos y los datos perdidos, y compara con la misión real. Tras leerlo, "Volver a volar" te deja rediseñar con lo aprendido.', 'The report explains the causes, findings and lost data, and compares with the real mission. After reading it, "Fly again" lets you redesign with what you learned.'],
+  ],
+
+  controles: [
+    ['h', 'Moverse por la sala', 'Moving around the room'],
+    ['lista', [
+      ['Arrastrar con el ratón (o el dedo) para mirar alrededor. Sensibilidad, calidad gráfica y animación del fondo se cambian en Ajustes.', 'Drag with the mouse (or finger) to look around. Sensitivity, graphics quality and background animation are changed in Settings.'],
+      ['Clic en un objeto interactivo para usarlo: holograma del proyector (escenario), carpeta de misión (expediente), tu portátil, la carpeta de anillas (SOP), la pantalla central de la sala de control, tu consola (tu GO), la puerta (volver al briefing).', 'Click an interactive object to use it: projector hologram (scenario), mission folder (dossier), your laptop, the ring binder (SOP), the main screen of the control room, your console (your GO), the door (back to briefing).'],
+      ['Esc: levantarte del portátil o salir de la pantalla encuadrada y volver a mirar la sala.', 'Esc: stand up from the laptop or leave the framed screen and look at the room again.'],
+    ]],
+    ['h', 'El portátil', 'The laptop'],
+    ['lista', [
+      ['Clic en el portátil o botón "Portátil" para sentarte. La barra superior muestra la fase y la guía de lo siguiente; el dock tiene las apps de la fase.', 'Click the laptop or the "Laptop" button to sit down. The top bar shows the phase and the guide to what comes next; the dock holds the apps of the phase.'],
+      ['"Sala (Esc)" te levanta. El icono "Sala de control" del dock te lleva allí directamente.', '"Room (Esc)" stands you up. The "Control room" dock icon takes you there directly.'],
+      ['Con "Manual de juego" (este manual) y "Manual SOP" lees las reglas sin salir del portátil.', 'With "Game manual" (this manual) and "SOP manual" you read the rules without leaving the laptop.'],
+    ]],
+    ['h', 'Multijugador', 'Multiplayer'],
+    ['lista', [
+      ['Abre la misma URL en cada equipo (el código de sala va después de #). Ves a los demás con su nick y hacia dónde miran.', 'Open the same URL on every device (the room code goes after #). You see the others with their nick and where they look.'],
+      ['Todo lo que cambia el diseño lo ven todos al instante.', 'Everything that changes the design is seen by everyone instantly.'],
+    ]],
+  ],
+};
 
 // Contenido propio de cada departamento.
 const MAN = {
@@ -240,6 +430,7 @@ const MAN = {
     num: '001', rev: 'C',
     mision: ['Estructura, propulsión, actitud y guiado; elegir el cohete; planificar ruta, mes de lanzamiento y sitio de descenso u órbita.', 'Structure, propulsion, attitude and guidance. Choose the rocket. Plan route, launch month and landing site or orbit.'],
     proposito: [
+      ['ver', 'flujo', 'Cómo se juega (fases, reloj, revisiones, barras, puntuación, controles): Manual de juego.', 'How the game works (phases, clock, reviews, bars, scoring, controls): Game manual.'],
       ['p', 'El Departamento de Vuelo y Mecánica construye el "cuerpo" de la nave y decide cómo llega al destino. Tus piezas son las que más pesan en la barra de masa.', 'The Flight & Mechanics Department builds the "body" of the spacecraft and decides how it reaches its destination. Your parts weigh the most on the mass bar.'],
       ['h', 'Barras que mueves tú', 'Bars you drive'],
       ['tabla', [['Barra', 'Bar'], ['Qué mide', 'What it measures'], ['Tu palanca', 'Your lever']], [
@@ -251,7 +442,7 @@ const MAN = {
       ['tabla', [['Fase', 'Phase'], ['Qué haces', 'What you do']], [
         [['Briefing', 'Briefing'], ['Lees el destino y los días previstos; ayudas a decidir cuántos objetivos secundarios aceptar.', 'You read the destination and planned days. You help decide how many secondary goals to accept.']],
         [['Diseño', 'Design'], ['Montas estructura, propulsión y actitud. Eliges cohete (cámara de lanzamiento) y ruta. Planificas el mes de lanzamiento y el sitio en la sala de control.', 'You mount structure, propulsion and attitude. You choose the rocket (launch camera) and route. You plan the launch month and the site in the control room.']],
-        [['Restricciones', 'Constraints'], ['Recortas masa o dinero: cambiar a un cohete más barato solo vale si no sube ninguna barra.', 'You cut mass or money: swapping to a cheaper rocket only works if it raises no bar.']],
+        [['Recortes', 'Trimming'], ['Recortas masa o dinero: cambiar a un cohete más barato solo vale si no sube ninguna barra.', 'You cut mass or money: swapping to a cheaper rocket only works if it raises no bar.']],
         [['Verificación', 'Verification'], ['Compruebas que hay cohete y ruta, y firmas en la sala de control.', 'You check there is a rocket and a route, and sign in the control room.']],
         [['Misión', 'Mission'], ['Vigilas las fases críticas (despegue, crucero, inserción o aterrizaje) y activas tus contingencias.', 'You watch the critical phases (launch, cruise, insertion or landing) and activate your contingencies.']],
       ]],
@@ -259,15 +450,14 @@ const MAN = {
     procedimiento: [
       ['h', 'A. Briefing', 'A. Briefing'],
       ['paso', 'Abre el Expediente. Anota el destino, los días previstos y el objetivo prioritario.', 'Open the Dossier. Note the destination, the planned days and the priority goal.'],
-      ['paso', 'Con el equipo, marca los objetivos secundarios. 0 extra = fácil (1 evento de diseño), 1 = normal (2), 2 o más = difícil (3). Cuando todos pulsan "Listo", empieza el diseño.', 'With the team, tick the secondary goals. 0 extra = easy (1 design event), 1 = normal (2), 2 or more = hard (3). When everyone presses "Ready", design starts.'],
-      ['nota', 'Cambiar un objetivo borra todos los "Listo": vuelve a pulsarlo.', 'Changing a goal clears every "Ready": press it again.'],
+      ['ver', 'flujo', 'Marcar objetivos y pulsar "Listo": Manual de juego › capítulo 3.', 'Ticking goals and pressing "Ready": Game manual › chapter 3.'],
       ['h', 'B. Diseño del cuerpo de la nave', 'B. Designing the spacecraft body'],
       ['paso', 'Monta primero la estructura. Da el volumen donde cabrá todo lo demás y tiene masa propia.', 'Mount the structure first. It gives the volume where everything else must fit and has its own mass.'],
       ['paso', 'Monta propulsión y control de actitud. Mira las opciones de cada pieza: más ágil o más potente suele pesar y gastar más.', 'Mount propulsion and attitude control. Look at the options of each part: more agile or more powerful usually weighs and uses more.'],
       ['check', 'El control de actitud se mantiene encendido en la sombra: avisa a Energía de sus vatios, porque cuenta para la batería.', 'Attitude control stays on in the shadow: tell Power its watts, because they count for the battery.'],
       ['h', 'C. Elegir el cohete (app "Cámara de lanzamiento")', 'C. Choosing the rocket ("Launch camera" app)'],
       ['paso', 'Con las flechas ◀ ▶ recorre los cohetes. Cada ficha da operador, capacidad hasta tu destino y precio.', 'Use the ◀ ▶ arrows to browse the rockets. Each card gives operator, capacity to your destination and price.'],
-      ['paso', 'Mira el medidor de margen de masa: masa actual de la nave contra capacidad del cohete. Verde ≤ 100 %, ámbar hasta 120 %, rojo más.', 'Look at the mass margin meter: current spacecraft mass against rocket capacity. Green ≤ 100 %, amber up to 120 %, red above.'],
+      ['paso', 'Mira el medidor de margen de masa: masa actual de la nave contra capacidad del cohete. Verde ≤ 100 %, ámbar hasta 120 % (pasa, pero sube el riesgo de fallo en el lanzamiento), rojo más (falla la revisión).', 'Look at the mass margin meter: current spacecraft mass against rocket capacity. Green ≤ 100 %, amber up to 120 % (passes, but raises launch failure risk), red above (fails the review).'],
       ['paso', 'Mira también el impacto en el presupuesto "sin cohete / con este cohete". Pulsa SELECCIONAR.', 'Also look at the budget impact "no rocket / with this rocket". Press SELECT.'],
       ['f', 'masaProc', 'El cohete aporta el límite de masa; tu diseño lo consume. Si el cohete no tiene capacidad a ese destino (0), no sirve.', 'The rocket provides the mass limit. Your design consumes it. If the rocket has no capacity to that destination (0), it is useless.'],
       ['cuidado', 'Solo se ofrecen cohetes en servicio que ya hayan lanzado cargas de NASA. Un cohete barato con poca capacidad te obliga a recortar ciencia; uno enorme se come el presupuesto.', 'Only in-service rockets that have already launched NASA payloads are offered. A cheap rocket with low capacity forces you to cut science. A very large one uses most of the budget.'],
@@ -276,21 +466,21 @@ const MAN = {
       ['paso', 'Regla de bolsillo: un viaje directo y rápido gasta más propelente (más ΔV), así que pesa más y necesita un cohete mayor. Un viaje largo con sobrevuelos usa la gravedad de los planetas, gasta menos, pero expone la nave más tiempo.', 'Rule of thumb: a fast direct trip spends more propellant (more ΔV), so it weighs more and needs a bigger rocket. A long trip with flybys uses the gravity of planets, spends less, but exposes the spacecraft for longer.'],
       ['check', 'Pregúntate: ¿qué kg me ahorro? ¿cuánto dinero? ¿sube o baja la probabilidad de la fase afectada? Si el Δp es negativo en una fase crítica, piensa en comprar la contingencia correspondiente.', 'Ask yourself: how many kg do I save? How much money? Does the probability of the affected phase go up or down? If Δp is negative in a critical phase, think about buying the matching contingency.'],
       ['h', 'E. Sala de control: mes de lanzamiento y sitio', 'E. Control room: launch month and site'],
-      ['paso', 'Ve a la sala de control. Elige el mes de lanzamiento. Cada mes trae sus condiciones, con datos de la NASA: clima del sitio, clima espacial, geometría del objetivo y ΔV (propelente extra, más masa). Si el reloj pasa de ese mes, se pierde la ventana y hay que elegir otra.', 'Go to the control room. Pick the launch month. Each month brings its own conditions, from NASA data: launch-site weather, space weather, target geometry and ΔV (extra propellant, more mass). If the clock passes that month, the window is lost and you must choose again.'],
+      ['paso', 'Ve a la sala de control. Elige el mes de lanzamiento: lo ideal es la ventana óptima (menos ΔV). Cada mes de retraso sobre ella cuesta propelente extra (kg), que sube tu barra de masa y puede empujarte más allá del plazo (ver Manual de juego › capítulo 8).', 'Go to the control room. Pick the launch month: the optimal window (lowest ΔV) is ideal. Every month of delay past it costs extra propellant (kg), which raises your mass bar and can push you past the deadline (see Game manual › chapter 8).'],
       ['paso', 'Elige el sitio de descenso o la órbita usando las capas de datos satelitales (color, elevación, composición). Ciencia te propone sitios; tú compruebas que son alcanzables y seguros.', 'Pick the landing site or orbit using the satellite data layers (colour, elevation, composition). Science proposes sites. You check that they are reachable and safe.'],
       ['cuidado', 'Un sitio en una pendiente o con rocas es un riesgo para el aterrizaje (por ejemplo, una nave real se volcó en 2024 por aterrizar en una ladera). Cada cambio de mes o de sitio borra las firmas.', 'A site on a slope or with boulders is a landing risk (for example, a real lander tipped over in 2024 after landing on a slope). Every change of month or site clears the signatures.'],
-      ['h', 'F. Restricciones y verificación', 'F. Constraints and verification'],
-      ['paso', 'En Restricciones solo puedes quitar, bajar horas de uso o cambiar a algo que no suba ninguna barra. Si una barra ya está pasada, no puedes subirla más.', 'In Constraints you can only remove, lower usage hours or swap to something that raises no bar. If a bar is already over, you cannot raise it any further.'],
-      ['check', 'Verificación exige: todas las barras ≤ 100 %, cohete elegido, ruta elegida, objetivo prioritario con instrumentos, algo que genere energía, algo que envíe datos, y las comprobaciones propias de la misión. Luego firma en la sala de control.', 'Verification requires: all bars ≤ 100 %, rocket chosen, route chosen, priority goal with instruments, something that generates power, something that sends data, and the mission-specific checks. Then sign in the control room.'],
+      ['h', 'F. Recortes y verificación', 'F. Trimming and verification'],
+      ['paso', 'Si tu masa o tu dinero se pasan, recorta: quita piezas o cambia a algo que no suba ninguna barra. Una barra de masa pasada de 100 % sube el riesgo de fallo en el lanzamiento, y si falla, la misión termina ahí.', 'If your mass or money is over, trim: remove parts or swap to something that raises no bar. A mass bar over 100 % raises the launch failure risk, and if it fails, the mission ends there.'],
+      ['check', 'Tu parte de la verificación: cohete elegido, ruta elegida y masa dentro de lo razonable. Luego firma en la sala de control (ver Manual de juego › capítulo 6).', 'Your part of verification: rocket chosen, route chosen and mass within reason. Then sign in the control room (see Game manual › chapter 6).'],
       ['h', 'G. Durante la misión', 'G. During the mission'],
-      ['paso', 'Mira el semáforo de cada fase. Las fases críticas son las que pueden acabar la misión: un fallo crítico degrada a la mitad; el segundo pierde la nave.', 'Watch the light of each phase. Critical phases are the ones that can end the mission: one critical failure halves the result. The second loses the spacecraft.'],
+      ['paso', 'Mira el semáforo de las fases críticas de tu vuelo (despegue, crucero, inserción o aterrizaje). Cómo se castigan los fallos: Manual de juego › capítulo 10.', 'Watch the light of the critical phases of your flight (launch, cruise, insertion or landing). How failures are penalised: Game manual › chapter 10.'],
       ['paso', 'Cuando la sala de control pida una contingencia tuya, pulsa Activar (ver sección 4).', 'When the control room asks for one of your contingencies, press Activate (see section 4).'],
     ],
     formulas: [
       ['h', 'Fórmulas de Vuelo y Mecánica', 'Flight & Mechanics formulas'],
       ['f', 'masa', 'El motor suma la masa de todas las piezas montadas (con la opción elegida), de la ruta y de cada contingencia comprada.', 'The engine adds up the mass of every mounted part (with the chosen option), of the route and of every bought contingency.'],
       ['f', 'limMasa', 'Sin cohete elegido, la barra de masa no tiene límite y sale roja.', 'With no rocket chosen, the mass bar has no limit and shows red.'],
-      ['f', 'margen', 'Margen positivo: sobran kg. Ratio entre 1,00 y 1,20: tolerancia (hay que recortar).', 'Positive margin: kg to spare. Ratio between 1.00 and 1.20: tolerance (you must cut).'],
+      ['f', 'margen', 'Margen positivo: sobran kg. Ratio entre 1,00 y 1,20: tolerancia (pasa, pero sube el fallo en el lanzamiento: Manual de juego › capítulo 5).', 'Positive margin: kg to spare. Ratio between 1.00 and 1.20: tolerance (passes, but raises launch failure: Game manual › chapter 5).'],
       ['f', 'pres', 'Los eventos de diseño suman o restan presupuesto o multiplican un límite (por ejemplo × 0,9 a la potencia).', 'Design events add or subtract budget or multiply a limit (for example × 0.9 to power).'],
       ['f', 'dv', 'Por qué un poco más de ΔV cuesta mucho más propelente: crece de forma exponencial. La leyenda explica cada símbolo.', 'Why a bit more ΔV costs much more propellant: it grows exponentially. The legend explains each symbol.'],
       ['f', 'pfaseVuelo', 'Tu ruta puede subir o bajar la probabilidad de una fase concreta. El motor recorta el resultado a [0, 1].', 'Your route can raise or lower the probability of one specific phase. The engine clamps the result to [0, 1].'],
@@ -302,6 +492,7 @@ const MAN = {
     num: '002', rev: 'B',
     mision: ['Instrumentos, qué objetivos se cubren y propuesta de sitio u órbita con capas de datos satelitales.', 'Instruments, which goals are covered, and the site or orbit proposal using satellite data layers.'],
     proposito: [
+      ['ver', 'flujo', 'Cómo se juega (fases, reloj, revisiones, barras, puntuación, controles): Manual de juego.', 'How the game works (phases, clock, reviews, bars, scoring, controls): Game manual.'],
       ['p', 'El Departamento de Ciencia decide por qué vamos: qué instrumentos viajan, cuántas horas trabajan y qué objetivos quedan cubiertos. Al final, la nota depende de cuánta ciencia vuelve a casa.', 'The Science Department decides why we go: which instruments fly, how many hours they work and which goals are covered. In the end, the score depends on how much science comes home.'],
       ['h', 'Barras que mueves tú', 'Bars you drive'],
       ['tabla', [['Barra', 'Bar'], ['Qué mide', 'What it measures'], ['Tu palanca', 'Your lever']], [
@@ -313,7 +504,7 @@ const MAN = {
       ['tabla', [['Fase', 'Phase'], ['Qué haces', 'What you do']], [
         [['Briefing', 'Briefing'], ['Propones qué objetivos secundarios merecen la pena y cuáles encarecen demasiado.', 'You propose which secondary goals are worth it and which make things too expensive.']],
         [['Diseño', 'Design'], ['Montas instrumentos, ajustas sus horas, propones el sitio u órbita con las capas de datos y negocias con Energía y Comunicaciones.', 'You mount instruments, adjust their hours, propose the site or orbit with the data layers and negotiate with Power and Communications.']],
-        [['Restricciones', 'Constraints'], ['Bajas horas de uso o quitas instrumentos de menor valor.', 'You lower usage hours or remove lower-value instruments.']],
+        [['Recortes', 'Trimming'], ['Bajas horas de uso o quitas instrumentos de menor valor.', 'You lower usage hours or remove lower-value instruments.']],
         [['Verificación', 'Verification'], ['Compruebas que el objetivo prioritario tiene sus instrumentos encendidos, y firmas en la sala de control.', 'You check that the priority goal has its instruments switched on, and sign in the control room.']],
         [['Misión', 'Mission'], ['Esperas hallazgos y activas tus contingencias (por ejemplo, la protección de los instrumentos).', 'You wait for findings and activate your contingencies (for example, protection of the instruments).']],
       ]],
@@ -321,7 +512,7 @@ const MAN = {
     procedimiento: [
       ['h', 'A. Briefing: leer los objetivos', 'A. Briefing: reading the goals'],
       ['paso', 'Abre el Expediente y la tabla de objetivos (sección 5): cada objetivo tiene una pregunta y un valor. Léelos para deducir qué hay que medir.', 'Open the Dossier and the goals table (section 5): each goal has a question and a value. Read them to work out what has to be measured.'],
-      ['paso', 'El objetivo prioritario no se puede quitar y cuenta siempre. Cada secundario que marcas sube la dificultad (más eventos de diseño) pero también la nota posible.', 'The priority goal cannot be dropped and always counts. Each secondary goal you tick raises the difficulty (more design events) but also the possible score.'],
+      ['paso', 'El objetivo prioritario no se puede quitar y cuenta siempre. Tu consejo al equipo: qué secundarios merecen la pena (cada uno sube la dificultad y la nota posible; ver Manual de juego › capítulo 3).', 'The priority goal cannot be dropped and always counts. Your advice to the team: which secondary goals are worth it (each raises difficulty and the possible score; see Game manual › chapter 3).'],
       ['h', 'B. Diseño: cubrir objetivos', 'B. Design: covering goals'],
       ['paso', 'Monta primero los instrumentos que respondan a la pregunta del objetivo prioritario. Un instrumento puede servir a varios objetivos a la vez: son los más rentables.', 'Mount first the instruments that answer the priority goal question. One instrument can serve several goals at once: those are the most profitable.'],
       ['paso', 'Ajusta las horas de uso de cada instrumento mirando la ciencia cubierta en el estado de la sección 5. Menos horas que las que pide el objetivo = menos cobertura (proporcional). Más horas no dan nada extra y cuestan vatios y datos.', 'Set each instrument usage hours while watching the science covered in the status of section 5. Fewer hours than the goal asks for = less coverage (proportional). More hours give nothing extra and cost watts and data.'],
@@ -335,9 +526,9 @@ const MAN = {
       ['h', 'D. Elegir el sitio u órbita con capas de datos', 'D. Choosing the site or orbit with data layers'],
       ['paso', 'En la sala de control abre las capas de datos satelitales de tu cuerpo (color, elevación, composición química...). Cada capa viene de una misión real y su ficha indica la fuente.', 'In the control room, open the satellite data layers of your body (colour, elevation, chemical composition...). Each layer comes from a real mission and its card names the source.'],
       ['paso', 'Busca donde está lo que tus objetivos quieren (hielo en cráteres polares, una región con cierta composición, un terreno llano). Propón el sitio a Vuelo y Mecánica, que lo registra y comprueba que se puede llegar.', 'Look for where your goals want to be (ice in polar craters, a region with a given composition, flat terrain). Propose the site to Flight & Mechanics, who records it and checks it is reachable.'],
-      ['h', 'E. Cambios de prioridad y Restricciones', 'E. Priority changes and Constraints'],
-      ['paso', 'Un evento de diseño puede cambiar qué objetivo es el prioritario. Vuelve a revisar qué instrumentos necesita ahora.', 'A design event can change which goal is the priority. Re-check which instruments it needs now.'],
-      ['paso', 'En Restricciones solo puedes bajar horas o quitar instrumentos. Quita primero lo de menos valor por vatio o por MB.', 'In Constraints you can only lower hours or remove instruments. Remove first what has the least value per watt or per MB.'],
+      ['h', 'E. Cambios de prioridad y recortes', 'E. Priority changes and trimming'],
+      ['paso', 'Un evento (aparece en tiempo real, ver Manual de juego › capítulo 7) puede cambiar qué objetivo es el prioritario. Vuelve a revisar qué instrumentos necesita ahora.', 'An event (it appears in real time, see Game manual › chapter 7) can change which goal is the priority. Re-check which instruments it needs now.'],
+      ['paso', 'Para recortar solo puedes bajar horas o quitar instrumentos. Quita primero lo de menos valor por vatio o por MB.', 'To trim you can only lower hours or remove instruments. Remove first what has the least value per watt or per MB.'],
       ['check', 'Verificación: el objetivo prioritario tiene instrumentos a bordo y encendidos (cobertura > 0) y, si la misión lo pide, una cobertura mínima (por ejemplo 50 %).', 'Verification: the priority goal has instruments on board and switched on (coverage > 0) and, if the mission asks for it, a minimum coverage (for example 50 %).'],
     ],
     formulas: [
@@ -345,12 +536,8 @@ const MAN = {
       ['f', 'cov', 'Se calcula por objetivo. Si el objetivo no necesita instrumentos, vale 1.', 'Computed per goal. If the goal needs no instruments, it is 1.'],
       ['f', 'cienTot', 'Es la media ponderada por el valor de cada objetivo (los marcados en el expediente más el prioritario).', 'It is the average weighted by the value of each goal (those ticked in the dossier plus the priority one).'],
       ['f', 'datosGen', 'Mismo cálculo que hace Comunicaciones: tu tasa es su problema.', 'Same calculation Comms makes: your rate is their problem.'],
-      ['f', 'cienFin', 'f_S viene del vuelo (× 0,75 por fase no crítica fallada, × 0,5 por golpe crítico, factores de eventos). La fracción de datos significa que la ciencia que no cabe en el enlace se pierde.', 'f_S comes from the flight (× 0.75 per failed non-critical phase, × 0.5 per critical hit, event factors). The data fraction means science that does not fit in the link is lost.'],
-      ['tabla', [['Regla de puntuación', 'Scoring rule'], ['Cómo cuenta tu ciencia', 'How your science counts']], [
-        [['Retorno de datos (órbita)', 'Data return (orbit)'], ['Ciencia × fracción de vida útil conseguida: importa cuánto dura la misión.', 'Science × fraction of useful life achieved: how long the mission lasts matters.']],
-        [['Cadena de supervivencia (aterrizaje)', 'Survival chain (landing)'], ['Si la nave se pierde, cero. Si no, ciencia × fracción de días de superficie.', 'If the spacecraft is lost, zero. Otherwise science × fraction of surface days.']],
-        [['Descubrimiento (exploración)', 'Discovery (exploration)'], ['(Σ valor × conseguido + valor de hallazgos) / kWh por día gastados.', '(Σ value × achieved + value of findings) / kWh per day spent.']],
-      ]],
+      ['f', 'cienFin', 'f_S viene del vuelo (fallos de fase y eventos: Manual de juego › capítulo 10). La fracción de datos significa que la ciencia que no cabe en el enlace se pierde.', 'f_S comes from the flight (phase failures and events: Game manual › chapter 10). The data fraction means science that does not fit in the link is lost.'],
+      ['ver', 'puntuacion', 'La regla de puntuación de cada tipo de misión (órbita, aterrizaje, exploración): Manual de juego › capítulo 11.', 'The scoring rule of each mission type (orbit, landing, exploration): Game manual › chapter 11.'],
     ],
   },
 
@@ -359,6 +546,7 @@ const MAN = {
     num: '003', rev: 'D',
     mision: ['Paneles solares, baterías, control térmico y polvo: que la nave tenga energía durante todo el ciclo, incluida la sombra.', 'Solar panels, batteries, thermal control and dust: keep the spacecraft powered through the whole cycle, including the shadow.'],
     proposito: [
+      ['ver', 'flujo', 'Cómo se juega (fases, reloj, revisiones, barras, puntuación, controles): Manual de juego.', 'How the game works (phases, clock, reviews, bars, scoring, controls): Game manual.'],
       ['p', 'El Departamento de Energía mantiene encendida la nave. Todo lo que montan los demás consume vatios: tú generas, almacenas y enfrías.', 'The Power Department keeps the spacecraft switched on. Everything the other departments mount draws watts: you generate, store and cool.'],
       ['h', 'Barras que mueves tú', 'Bars you drive'],
       ['tabla', [['Barra', 'Bar'], ['Qué mide', 'What it measures'], ['Tu palanca', 'Your lever']], [
@@ -370,7 +558,7 @@ const MAN = {
       ['tabla', [['Fase', 'Phase'], ['Qué haces', 'What you do']], [
         [['Briefing', 'Briefing'], ['Lees las horas de sombra y la distancia al Sol (menos luz = paneles más grandes).', 'You read the shadow hours and the distance to the Sun (less light = bigger panels).']],
         [['Diseño', 'Design'], ['Esperas a que los demás elijan (o les pides su consumo), dimensionas paneles y batería con margen, añades térmica.', 'You wait for the others to choose (or ask for their draw), size panels and battery with margin, add thermal.']],
-        [['Restricciones', 'Constraints'], ['Si la potencia o la batería se pasan: quita carga (no basta bajar horas: ver cuidado en la sección 2).', 'If power or battery are over: remove load (lowering hours is not enough: see the caution in section 2).']],
+        [['Recortes', 'Trimming'], ['Si la potencia o la batería se pasan: quita carga (no basta bajar horas: ver cuidado en la sección 2). Pasarse de 100 % sube el fallo en crucero y operaciones.', 'If power or battery are over: remove load (lowering hours is not enough: see the caution in section 2). Going over 100 % raises failure in cruise and operations.']],
         [['Verificación', 'Verification'], ['Compruebas que algo genera energía y firmas en la sala de control.', 'You check that something generates power and sign in the control room.']],
         [['Misión', 'Mission'], ['Activas tus contingencias (por ejemplo calefactores o inclinar los paneles).', 'You activate your contingencies (for example heaters or tilting the panels).']],
       ]],
@@ -382,7 +570,7 @@ const MAN = {
       ['paso', 'Suma la carga: los vatios de todas las piezas encendidas (uso > 0) de los cuatro departamentos. Pide a cada uno su cifra y mira la barra de potencia en Estado.', 'Calculate the load: the watts of all switched-on parts (usage > 0) of the four departments. Ask each one for their figure and look at the power bar in Status.'],
       ['f', 'pPan', 'La barra de potencia cuenta los vatios nominales de cada pieza encendida, sin importar cuántas horas al día.', 'The power bar counts the rated watts of each switched-on part, regardless of how many hours a day.'],
       ['paso', 'Elige la opción de panel. Una opción con más vatios pesa y cuesta más. Deja un margen de un 10-15 % de seguridad.', 'Choose the panel option. An option with more watts weighs and costs more. Leave a 10-15 % safety margin.'],
-      ['cuidado', 'Un evento de diseño puede recortar el tope de potencia (× 0,9 o × 0,85). Si vas al 100 % justo, un evento te manda a Restricciones o a Diseño.', 'A design event can cut the power cap (× 0.9 or × 0.85). If you sit at exactly 100 %, an event sends you to Constraints or to Design.'],
+      ['cuidado', 'Un evento de diseño puede recortar el tope de potencia (× 0,9 o × 0,85). Si vas al 100 % justo, un evento te deja en tolerancia (más riesgo en crucero) o fuera de límite (la revisión falla).', 'A design event can cut the power cap (× 0.9 or × 0.85). If you sit at exactly 100 %, an event leaves you in tolerance (more cruise risk) or out of limits (the review fails).'],
       ['h', 'C. Batería para la sombra (eclipse)', 'C. Battery for the shadow (eclipse)'],
       ['paso', 'En la sombra los paneles no generan. Las piezas marcadas ☾ siguen encendidas y tiran de la batería. Suma sus vatios y multiplícalos por las horas de sombra.', 'In the shadow the panels generate nothing. Parts marked ☾ stay on and draw from the battery. Add their watts and multiply by the shadow hours.'],
       ['f', 'eBatProc', 'Solo cuentan las piezas con ☾ y con uso > 0 (por ejemplo antena, control de actitud y magnetómetro). La capacidad de baterías es la suma de lo que aporta cada una.', 'Only parts with ☾ and usage > 0 count (for example antenna, attitude control and magnetometer). Battery capacity is the sum of what each one provides.'],
@@ -391,9 +579,9 @@ const MAN = {
       ['h', 'D. Térmica y polvo', 'D. Thermal and dust'],
       ['paso', 'Radiadores y aislamiento multicapa (MLI) consumen masa y a veces vatios, pero algunos suben la probabilidad de alguna fase.', 'Radiators and multi-layer insulation (MLI) use mass and sometimes watts, but some raise the probability of a phase.'],
       ['paso', 'Mira los eventos de la misión: calor en paneles, frío en la noche lunar, luz que se debilita lejos del Sol, polvo en las lentes. Compra la contingencia que cubra el que más te asuste (sección 4).', 'Look at the mission events: hot panels, lunar night cold, light fading far from the Sun, dust on lenses. Buy the contingency covering the one that scares you most (section 4).'],
-      ['h', 'E. Restricciones y verificación', 'E. Constraints and verification'],
+      ['h', 'E. Recortes y verificación', 'E. Trimming and verification'],
       ['cuidado', 'Bajar las horas de uso de una pieza no baja la barra de potencia (cuenta los vatios mientras uso > 0), aunque sí baja la energía diaria y los datos. Para bajar vatios hay que quitar la pieza o dejarla en 0 h.', 'Lowering the usage hours of a part does not lower the power bar (it counts the watts while usage > 0), although it does lower daily energy and data. To lower watts you must remove the part or leave it at 0 h.'],
-      ['check', 'Verificación: la comprobación "algo a bordo genera energía" depende de que montes al menos un panel. Todas las barras deben estar en ≤ 100 %. Luego firma en la sala de control.', 'Verification: the check "something on board generates power" depends on you mounting at least one panel. All bars must be at ≤ 100 %. Then sign in the control room.'],
+      ['check', 'Verificación: la comprobación "algo a bordo genera energía" depende de que montes al menos un panel. Luego firma en la sala de control (Manual de juego › capítulo 6).', 'Verification: the check "something on board generates power" depends on you mounting at least one panel. Then sign in the control room (Game manual › chapter 6).'],
     ],
     formulas: [
       ['h', 'Fórmulas de Energía', 'Power formulas'],
@@ -411,6 +599,7 @@ const MAN = {
     num: '004', rev: 'C',
     mision: ['Antenas, computador, almacenamiento de datos, navegación y segmento de tierra; presupuesto de datos y enlace.', 'Antennas, computer, data storage, navigation and ground segment. Data budget and link.'],
     proposito: [
+      ['ver', 'flujo', 'Cómo se juega (fases, reloj, revisiones, barras, puntuación, controles): Manual de juego.', 'How the game works (phases, clock, reviews, bars, scoring, controls): Game manual.'],
       ['p', 'El Departamento de Comunicaciones y Operaciones conecta la nave con la Tierra: solo cuenta la ciencia que llega a casa. También cuidas el computador de a bordo, el almacenamiento y la navegación.', 'The Communications & Operations Department connects the spacecraft to Earth: only the science that reaches home counts. You also maintain the onboard computer, storage and navigation.'],
       ['h', 'Barras que mueves tú', 'Bars you drive'],
       ['tabla', [['Barra', 'Bar'], ['Qué mide', 'What it measures'], ['Tu palanca', 'Your lever']], [
@@ -422,7 +611,7 @@ const MAN = {
       ['tabla', [['Fase', 'Phase'], ['Qué haces', 'What you do']], [
         [['Briefing', 'Briefing'], ['Lees las horas de enlace por día y los días de misión.', 'You read the link hours per day and the mission days.']],
         [['Diseño', 'Design'], ['Pides a Ciencia su tasa de datos, eliges antena y computador, y equilibras el presupuesto de datos.', 'You ask Science for their data rate, choose the antenna and computer, and balance the data budget.']],
-        [['Restricciones', 'Constraints'], ['Si los datos se pasan: o recortas horas de instrumentos con Ciencia, o cambias a una antena más grande si cabe en el resto de barras.', 'If data is over: either cut instrument hours with Science, or swap to a bigger antenna if it fits in the other bars.']],
+        [['Recortes', 'Trimming'], ['Si los datos se pasan: o recortas horas de instrumentos con Ciencia, o cambias a una antena más grande si cabe en el resto de barras.', 'If data is over: either cut instrument hours with Science, or swap to a bigger antenna if it fits in the other bars.']],
         [['Verificación', 'Verification'], ['Compruebas que algo puede enviar datos a casa y firmas en la sala de control.', 'You check that something can send data home and sign in the control room.']],
         [['Misión', 'Mission'], ['Activas tus contingencias y miras cuántos MB se perdieron.', 'You activate your contingencies and see how many MB were lost.']],
       ]],
@@ -436,19 +625,21 @@ const MAN = {
       ['f', 'genCap', 'Las dos están en MB por día. La barra "Enlace de datos" es generado / capacidad.', 'Both are in MB per day. The "Data link" bar is generated / capacity.'],
       ['check', 'Ejemplo genérico (no son cifras de ninguna pieza): una antena de 400 kbps y 8 h de enlace → 400 × 8 × 0,45 = 1 440 MB/día. Un instrumento de 300 kbps usado 6 h genera 300 × 6 × 0,45 = 810 MB/día: solo con él ya usas el 56 % del enlace.', 'Generic example (not the figures of any part): a 400 kbps antenna and 8 h of link → 400 × 8 × 0.45 = 1,440 MB/day. A 300 kbps instrument used 6 h generates 300 × 6 × 0.45 = 810 MB/day: on its own it already uses 56 % of the link.'],
       ['h', 'C. Qué pasa con los datos que no caben', 'C. What happens to data that does not fit'],
-      ['paso', 'En el diseño: si generado > capacidad, la barra pasa de 100 %. Hasta 120 % pasa a Restricciones; por encima, vuelves a Diseño. Para firmar tiene que quedar en ≤ 100 %.', 'In design: if generated > capacity, the bar goes above 100 %. Up to 120 % goes to Constraints. Above that, you return to Design. To sign it must be at ≤ 100 %.'],
+      ['paso', 'En el diseño: si generado > capacidad, la barra pasa de 100 %. Hasta 120 % pasa la revisión (con más riesgo en la bajada de datos y la ciencia); por encima, la revisión falla (Manual de juego › capítulo 5).', 'In design: if generated > capacity, the bar goes above 100 %. Up to 120 % passes the review (with more risk in downlink and science); above that, the review fails (Game manual › chapter 5).'],
       ['paso', 'En el vuelo: la ciencia se multiplica por min(1, capacidad / generado). Lo que no cabe en el enlace se pierde y el informe lo cuenta en MB.', 'In flight: science is multiplied by min(1, capacity / generated). What does not fit in the link is lost and the report counts it in MB.'],
-      ['cuidado', 'Aunque la tolerancia de 20 % te deje pasar la revisión, con ratio 1,2 solo bajarías el 83 % de los datos (1 / 1,2): perderías el 17 % de la ciencia.', 'Even if the 20 % tolerance lets you pass the review, with ratio 1.2 you would only send 83 % of the data (1 / 1.2): you would lose 17 % of the science.'],
+      ['cuidado', 'Aunque la tolerancia (hasta 120 %) te deje pasar la revisión, con ratio 1,2 solo bajarías el 83 % de los datos (1 / 1,2): perderías el 17 % de la ciencia, y además suma hasta +10 puntos de fallo en la bajada de datos y la ciencia.', 'Even if tolerance (up to 120 %) lets you pass the review, with ratio 1.2 you would only send 83 % of the data (1 / 1.2): you would lose 17 % of the science, plus up to +10 failure points on downlink and science.'],
       ['h', 'D. Elegir la antena, el computador y el resto', 'D. Choosing the antenna, computer and the rest'],
       ['paso', 'Compara las opciones de antena: kbps de bajada contra masa, vatios y precio. La antena tiene ☾: sus vatios entran en el cálculo de batería de Energía.', 'Compare antenna options: downlink kbps against mass, watts and price. The antenna has ☾: its watts enter the battery calculation of Power.'],
       ['paso', 'El computador de a bordo y el almacenamiento, la navegación y el segmento de tierra aparecen en la ficha técnica si tu misión los ofrece.', 'The onboard computer and storage, navigation and the ground segment appear in the datasheet if your mission offers them.'],
       ['paso', 'Negocia con Ciencia: sus horas por encima de lo que pide el objetivo no suman ciencia pero sí datos. Pídeles que las bajen antes de comprar una antena mayor.', 'Negotiate with Science: their hours above what the goal asks for add no science but do add data. Ask them to lower those before buying a bigger antenna.'],
       ['h', 'E. Contingencias y verificación', 'E. Contingencies and verification'],
       ['nota', 'Las contingencias compradas de todo el equipo (máx. 3) quedan guardadas en un único registro, el tuyo. Cada departamento compra y activa las suyas; tú coordinas que el equipo no pase de 3.', 'The contingencies bought by the whole team (max. 3) are stored in one single record, yours. Each department buys and activates its own. You make sure the team does not exceed 3.'],
-      ['check', 'Verificación: "algo a bordo puede enviar datos a casa" exige al menos una antena montada. Todas las barras ≤ 100 %. Luego firma en la sala de control.', 'Verification: "something on board can send data home" requires at least one antenna mounted. All bars ≤ 100 %. Then sign in the control room.'],
+      ['check', 'Verificación: "algo a bordo puede enviar datos a casa" exige al menos una antena montada. Luego firma en la sala de control (Manual de juego › capítulo 6).', 'Verification: "something on board can send data home" requires at least one antenna mounted. Then sign in the control room (Game manual › chapter 6).'],
     ],
     formulas: [
       ['h', 'Fórmulas de Comunicaciones y Operaciones', 'Communications & Operations formulas'],
+      ['f', 'kbps', '1 000 bits/s × 3 600 s = 3,6 Mbit = 0,45 MB. Es la conversión que usa todo el juego para los datos.', '1,000 bits/s × 3,600 s = 3.6 Mbit = 0.45 MB. It is the conversion the whole game uses for data.'],
+      ['f', 'h24', 'Estructura, paneles, baterías, antena... están "siempre encendidas". Las que tienen control de uso (instrumentos) se ajustan entre un mínimo y un máximo de h/día.', 'Structure, panels, batteries, antenna... are "always on". Parts with a usage control (instruments) are adjusted between a minimum and a maximum of h/day.'],
       ['f', 'datosGen2', 'Las piezas sin control de uso cuentan 24 h. Si uso = 0, no generan.', 'Parts with no usage control count 24 h. If usage = 0, they generate nothing.'],
       ['f', 'capBaj', 'Se suma la bajada de todas las antenas montadas.', 'The downlink of all mounted antennas is added.'],
       ['f', 'frac', 'Es el factor que multiplica la ciencia de cada objetivo en el vuelo.', 'It is the factor multiplying the science of every goal in flight.'],
@@ -463,7 +654,7 @@ const MAN = {
 const GLOSARIO = [
   ['ΔV (delta-v)', 'ΔV (delta-v)', 'Cambio de velocidad que necesita una maniobra. Es la "moneda" del espacio: cada ΔV se paga con propelente.', 'Change of velocity that a manoeuvre needs. It is the "currency" of space: every ΔV is paid for with propellant.', ['vuelo']],
   ['C3', 'C3', 'Energía de escape al salir de la Tierra (km²/s²). Cuanto mayor, menos masa puede lanzar el mismo cohete: por eso hay una capacidad distinta para cada destino.', 'Escape energy when leaving Earth (km²/s²). The higher it is, the less mass the same rocket can launch: that is why there is a different capacity for each destination.', ['vuelo']],
-  ['Mes de lanzamiento', 'Launch month', 'El mes en que despega la nave. Cada mes tiene sus condiciones (clima, clima espacial, geometría) y su ΔV. Cada mes de retraso sobre el plazo comprometido recorta la financiación, y si el reloj pasa del mes elegido se pierde la ventana.', 'The month the spacecraft launches. Each month has its own conditions (weather, space weather, geometry) and its own ΔV. Every month of delay past the committed deadline cuts funding, and if the clock passes the chosen month the window is lost.', ['vuelo']],
+  ['Mes de lanzamiento', 'Launch month', 'El mes en que despega la nave. Cada mes tiene sus condiciones (clima, clima espacial, geometría) y su ΔV. Retrasarlo respecto a la ventana óptima cuesta propelente extra (kg) y puede pasarte del plazo de los inversores (−4 % de presupuesto por mes de retraso).', 'The month the spacecraft launches. Each month has its own conditions (weather, space weather, geometry) and its own ΔV. Delaying past the optimal window costs extra propellant (kg) and can push you past the investor deadline (−4 % budget per month late).', ['vuelo']],
   ['Sobrevuelo (flyby)', 'Flyby', 'Pasar cerca de un planeta para aprovechar su gravedad y cambiar de velocidad sin gastar propelente. Alarga el viaje.', 'Passing close to a planet to use its gravity and change speed without spending propellant. It lengthens the trip.', ['vuelo']],
   ['Periapsis / apoapsis', 'Periapsis / apoapsis', 'El punto de una órbita más cercano y más lejano del cuerpo. Una órbita muy elíptica pasa poco tiempo cerca y mucho lejos.', 'The closest and farthest point of an orbit around the body. A very elliptical orbit spends little time close and much time far.', ['vuelo', 'ciencia']],
   ['Inserción orbital', 'Orbit insertion', 'Frenada que captura la nave en órbita. Es una fase crítica: si falla, la nave pasa de largo.', 'Braking burn that captures the spacecraft into orbit. It is a critical phase: if it fails, the spacecraft flies past.', ['vuelo']],
@@ -482,7 +673,7 @@ const GLOSARIO = [
   ['kbps / MB', 'kbps / MB', 'Kilobits por segundo y megabytes. 1 kbps durante 1 h = 0,45 MB.', 'Kilobits per second and megabytes. 1 kbps for 1 h = 0.45 MB.', ['comms', 'ciencia']],
   ['Banda X / Ka', 'X / Ka band', 'Frecuencias de radio del espacio profundo. Ka lleva más datos que X pero es más sensible a la puntería.', 'Deep-space radio frequencies. Ka carries more data than X but is more sensitive to pointing.', ['comms']],
   ['Fase crítica', 'Critical phase', 'Fase del vuelo en la que un fallo es un "golpe crítico". Dos golpes pierden la nave.', 'Flight phase where a failure is a "critical hit". Two hits lose the spacecraft.', null],
-  ['Tolerancia', 'Tolerance', 'Hasta un 20 % por encima del límite: pasa la revisión, pero obliga a recortar en Restricciones.', 'Up to 20 % above the limit: passes the review but forces cuts in Constraints.', null],
+  ['Tolerancia', 'Tolerance', 'Entre 100 % y 120 % del límite: pasa la revisión, pero sube la probabilidad de fallo de una etapa del vuelo (≈ +0,5 pp por cada 1 %, hasta +10 pp). Por encima de 120 % la revisión falla.', 'Between 100 % and 120 % of the limit: passes the review, but raises the failure probability of a flight stage (≈ +0.5 pp per 1 %, up to +10 pp). Above 120 % the review fails.', null],
   ['Contingencia', 'Contingency', 'Seguro comprado en el diseño que anula un evento negativo concreto durante la misión.', 'Insurance bought in design that cancels one specific negative event during the mission.', null],
   ['Margen', 'Margin', 'Diferencia entre el límite y lo usado. Los ingenieros reales dejan margen para lo que aún no saben.', 'Difference between the limit and what is used. Real engineers keep margin for what they do not yet know.', null],
   ['Valor de juego (≈)', 'Game value (≈)', 'Cifra estimada porque no hay dato público. Si viene de una ecuación, pasa el cursor sobre ella para ver el cálculo; los datos reales muestran su fuente.', 'A figure estimated because there is no public data. If it comes from an equation, hover over it to see the calculation; real data shows its source.', null],
@@ -505,6 +696,8 @@ function ecuacion(clave, texto) {
     e.leg.length ? h('dl', { class: 'sop-leg' }, e.leg.map(([sim, es, en]) => [h('dt', {}, mate(sim, false)), h('dd', {}, L([es, en]))])) : null);
 }
 
+let irCapitulo = () => {};   // lo fija appManual en cada pintado: abre un capítulo del Manual de juego
+
 function celda(x) { return typeof x === 'string' ? x : L(x); }
 
 function renderBloques(bs) {
@@ -517,6 +710,8 @@ function renderBloques(bs) {
       case 'paso': n++; return h('div', { class: 'sop-paso' }, h('span', { class: 'sop-n' }, String(n).padStart(2, '0')), h('div', { class: 'sop-paso-t' }, L([b[1], b[2]])));
       case 'check': case 'cuidado': case 'nota':
         return h('div', { class: 'sop-call ' + k }, h('span', { class: 'sop-call-etq' }, T.etiq[k]), h('span', { class: 'sop-call-t' }, L([b[1], b[2]])));
+      case 'ver': return h('div', { class: 'sop-call ver' }, h('span', { class: 'sop-call-etq' }, '📖'), h('span', { class: 'sop-call-t' }, L([b[2], b[3]]), ' ',
+        h('button', { class: 'boton texto sop-ver', type: 'button', onclick: () => irCapitulo(b[1]) }, `${T.abrirCap} ›`)));
       case 'f': return ecuacion(b[1], L([b[2], b[3]]));
       case 'lista': return h('ul', { class: 'sop-ul' }, b[1].map((it) => h('li', {}, L(it))));
       case 'tabla': return tabla(b[1].map(celda), b[2].map((f) => f.map((x, i) => h('span', {}, celda(x)))));
@@ -576,7 +771,7 @@ function tarjetaContingencia(c, m, ct, rol) {
 }
 
 function seccionContingencias(c, rol) {
-  const out = renderBloques(COMUN_CONT);
+  const out = renderBloques([['ver', 'contingencias', T.contSop, T.contSop]]);
   out.push(h('h3', { class: 'sop-h2' }, `${T.anexo}: ${depto(rol, 'corto')}`));
   const m = c.mision;
   if (!m) { out.push(sinMision()); return out; }
@@ -727,21 +922,21 @@ function seccionFicha(c, rol) {
   return out;
 }
 
+const dl = (ent) => h('dl', { class: 'sop-dl' }, ent.map((g) => [h('dt', {}, L([g[0], g[1]])), h('dd', {}, L([g[2], g[3]]))]));
+
 function seccionGlosario(rol) {
-  const ent = GLOSARIO.filter((g) => !g[4] || g[4].includes(rol));
   return [
-    h('p', { class: 'sop-p' }, L(['Términos de la sala de control. Primero los de tu departamento.', 'Control room terms. Your department first.'])),
-    h('dl', { class: 'sop-dl' }, [...ent.filter((g) => g[4]), ...ent.filter((g) => !g[4])].map((g) => [
-      h('dt', {}, L([g[0], g[1]])), h('dd', {}, L([g[2], g[3]]))])),
+    ...renderBloques([['ver', 'glosario', T.glosSop, T.glosSop]]),
+    dl(GLOSARIO.filter((g) => g[4]?.includes(rol))),
   ];
 }
 
 function contenido(c, rol, sec) {
   const M = MAN[rol];
   switch (sec) {
-    case 'proposito': return [...renderBloques(M.proposito), ...renderBloques(FLUJO)];
+    case 'proposito': return renderBloques(M.proposito);
     case 'procedimiento': return renderBloques(M.procedimiento);
-    case 'formulas': return [...renderBloques(M.formulas), ...renderBloques(COMUN_FORM)];
+    case 'formulas': return renderBloques(M.formulas);
     case 'contingencias': return seccionContingencias(c, rol);
     case 'ficha': return seccionFicha(c, rol);
     case 'glosario': return seccionGlosario(rol);
@@ -752,30 +947,79 @@ function contenido(c, rol, sec) {
 // ---------------------------------------------------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------------------------------------------------
-export function appManual(c, { rol } = {}) {
+
+// Estado: c.ui.manual = { rol, seccion, base, vista: 'rol' | 'juego', cap }
+function estado(c, rol) {
   const inicial = ROLES.includes(rol) ? rol : ROLES.includes(c?.rol) ? c.rol : 'vuelo';
-  const u = (c.ui.manual ??= { rol: inicial, seccion: SECCIONES[0].id, base: inicial });
-  if (u.base !== inicial) { u.base = inicial; u.rol = inicial; u.seccion = SECCIONES[0].id; }   // se reabre con otro rol: vuelve a empezar
+  const u = (c.ui.manual ??= { rol: inicial, seccion: SECCIONES[0].id, base: inicial, vista: 'rol', cap: CAPITULOS[0].id });
+  if (u.base !== inicial) { u.base = inicial; u.rol = inicial; u.seccion = SECCIONES[0].id; u.vista = 'rol'; }   // se reabre con otro rol: vuelve a empezar
   if (!ROLES.includes(u.rol)) u.rol = inicial;
   if (!SECCIONES.some((s) => s.id === u.seccion)) u.seccion = SECCIONES[0].id;
+  if (!CAPITULOS.some((s) => s.id === u.cap)) u.cap = CAPITULOS[0].id;
+  if (u.vista !== 'juego') u.vista = 'rol';
+  return u;
+}
+
+const arribaDe = (clave) => requestAnimationFrame(() => requestAnimationFrame(() => {
+  const el = document.querySelector(`[data-scroll="sop-${clave}"]`);
+  if (el) el.scrollTop = 0;
+}));
+
+function contenidoJuego(c, cap) {
+  if (cap === 'glosario') return [h('p', { class: 'sop-p' }, T.glosGen), dl(GLOSARIO.filter((g) => !g[4]))];
+  return renderBloques(JUEGO[cap] ?? []);
+}
+
+// Pestañas: una por departamento + "Manual de juego". onRol(r) / onJuego() deciden qué hacer en cada app.
+function pestanas(c, u, enJuego, onRol, onJuego) {
+  const color = (r) => `--rc:var(--lp-rol-${r}, ${ROL_COLOR[r]})`;
+  return h('nav', { class: 'sop-tabs', role: 'tablist', 'aria-label': T.depto },
+    h('button', { class: 'boton sop-tab sop-tab-juego' + (enJuego ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': String(enJuego), onclick: onJuego, title: T.juegoTab },
+      h('span', { class: 'sop-tab-t' }, '📖 ' + T.juegoTab)),
+    ROLES.map((r) => h('button', {
+      class: 'boton sop-tab' + (!enJuego && r === u.rol ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': String(!enJuego && r === u.rol), style: color(r),
+      title: depto(r, 'largo'), onclick: () => onRol(r),
+    }, h('span', { class: 'sop-tab-t' }, depto(r, 'corto')), r === c.rol ? h('i', { class: 'sop-tab-yo', title: T.tuDepto }, '★') : null)));
+}
+
+function libro(rc, portada, pagina) {
+  return h('div', { class: 'sop-libro' }, h('div', { class: 'sop-anillas', 'aria-hidden': 'true' }), portada, pagina);
+}
+
+function pie(lista, idx, ir) {
+  return h('div', { class: 'sop-pie' },
+    h('button', { class: 'boton texto sop-nav', type: 'button', disabled: idx <= 0, onclick: () => ir(idx - 1) }, '◀ ' + (idx > 0 ? L(lista[idx - 1].t) : T.anterior)),
+    h('span', { class: 'sop-pag' }, `${T.pag} ${idx + 1} ${T.de} ${lista.length}`),
+    h('button', { class: 'boton texto sop-nav', type: 'button', disabled: idx >= lista.length - 1, onclick: () => ir(idx + 1) }, (idx < lista.length - 1 ? L(lista[idx + 1].t) : T.siguiente) + ' ▶'));
+}
+
+function vistaJuego(c, u, tabs) {
+  const idx = CAPITULOS.findIndex((s) => s.id === u.cap);
+  const ir = (i) => { u.cap = CAPITULOS[Math.min(CAPITULOS.length - 1, Math.max(0, i))].id; c.repintar(); arribaDe('juego'); };
+  let cuerpo;
+  try { cuerpo = contenidoJuego(c, u.cap); } catch (err) { console.error('manual', err); cuerpo = [h('p', { class: 'sop-call cuidado' }, String(err?.message ?? err))]; }
+  const portada = h('aside', { class: 'sop-lado' },
+    h('div', { class: 'sop-portada' },
+      h('div', { class: 'sop-depto' }, T.juego),
+      h('div', { class: 'sop-mision-r' }, L(['Cómo se juega, de principio a fin. Las reglas generales están aquí; en cada SOP solo lo propio de tu departamento.', 'How the game works, start to finish. General rules are here; each SOP only holds what is specific to your department.']))),
+    h('div', { class: 'sop-indice-t' }, T.indice),
+    h('ol', { class: 'sop-indice' }, CAPITULOS.map((s, i) => h('li', {}, h('button', {
+      class: 'sop-ind' + (s.id === u.cap ? ' activa' : ''), type: 'button', onclick: () => ir(i), 'aria-current': s.id === u.cap ? 'page' : null,
+    }, L(s.t))))));
+  const pagina = h('article', { class: 'sop-pagina', 'data-scroll': 'sop-juego', tabindex: '-1' },
+    h('header', { class: 'sop-cab' }, h('span', { class: 'sop-cab-d' }, `${T.juegoCab} · ${T.capitulo} ${idx + 1} ${T.de} ${CAPITULOS.length}`), h('h2', { class: 'sop-h1' }, L(CAPITULOS[idx].t))),
+    h('div', { class: 'sop-cuerpo' }, cuerpo), pie(CAPITULOS, idx, ir));
+  return h('div', { class: 'sop sop-juego', style: '--rc:var(--lp-acento)' }, tabs, libro(null, portada, pagina));
+}
+
+function vistaRol(c, u, tabs) {
   const rolVer = u.rol, M = MAN[rolVer];
   const idx = SECCIONES.findIndex((s) => s.id === u.seccion);
-  const color = (r) => `--rc:var(--lp-rol-${r}, ${ROL_COLOR[r]})`;
-
-  const arriba = () => requestAnimationFrame(() => requestAnimationFrame(() => {
-    const el = document.querySelector(`[data-scroll="sop-${u.rol}"]`);
-    if (el) el.scrollTop = 0;
-  }));
-  const ir = (i) => { u.seccion = SECCIONES[Math.min(SECCIONES.length - 1, Math.max(0, i))].id; c.repintar(); arriba(); };
+  const color = `--rc:var(--lp-rol-${rolVer}, ${ROL_COLOR[rolVer]})`;
+  const ir = (i) => { u.seccion = SECCIONES[Math.min(SECCIONES.length - 1, Math.max(0, i))].id; c.repintar(); arribaDe(u.rol); };
 
   let cuerpo;
   try { cuerpo = contenido(c, rolVer, u.seccion); } catch (err) { console.error('manual', err); cuerpo = [h('p', { class: 'sop-call cuidado' }, String(err?.message ?? err))]; }
-
-  const tabs = h('nav', { class: 'sop-tabs', role: 'tablist', 'aria-label': T.depto }, ROLES.map((r) => h('button', {
-    class: 'boton sop-tab' + (r === rolVer ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': String(r === rolVer), style: color(r),
-    title: depto(r, 'largo'),
-    onclick: () => { u.rol = r; u.seccion = SECCIONES[0].id; c.repintar(); requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.querySelector(`[data-scroll="sop-${r}"]`); if (el) el.scrollTop = 0; })); },
-  }, h('span', { class: 'sop-tab-t' }, depto(r, 'corto')), r === c.rol ? h('i', { class: 'sop-tab-yo', title: T.tuDepto }, '★') : null)));
 
   const portada = h('aside', { class: 'sop-lado' },
     h('div', { class: 'sop-portada' },
@@ -787,16 +1031,32 @@ export function appManual(c, { rol } = {}) {
       class: 'sop-ind' + (s.id === u.seccion ? ' activa' : ''), type: 'button', onclick: () => ir(i), 'aria-current': s.id === u.seccion ? 'page' : null,
     }, L(s.t))))));
 
-  const pie = h('div', { class: 'sop-pie' },
-    h('button', { class: 'boton texto sop-nav', type: 'button', disabled: idx <= 0, onclick: () => ir(idx - 1) }, '◀ ' + (idx > 0 ? L(SECCIONES[idx - 1].t) : T.anterior)),
-    h('span', { class: 'sop-pag' }, `${T.pag} ${idx + 1} ${T.de} ${SECCIONES.length}`),
-    h('button', { class: 'boton texto sop-nav', type: 'button', disabled: idx >= SECCIONES.length - 1, onclick: () => ir(idx + 1) }, (idx < SECCIONES.length - 1 ? L(SECCIONES[idx + 1].t) : T.siguiente) + ' ▶'));
-
   const pagina = h('article', { class: 'sop-pagina', 'data-scroll': `sop-${rolVer}`, tabindex: '-1' },
     h('header', { class: 'sop-cab' }, h('span', { class: 'sop-cab-d' }, `${T.cab} · ${depto(rolVer, 'corto')}`), h('h2', { class: 'sop-h1' }, L(SECCIONES[idx].t))),
-    h('div', { class: 'sop-cuerpo' }, cuerpo), pie);
+    h('div', { class: 'sop-cuerpo' }, cuerpo), pie(SECCIONES, idx, ir));
 
-  return h('div', { class: 'sop', style: color(rolVer) }, tabs, h('div', { class: 'sop-libro' }, h('div', { class: 'sop-anillas', 'aria-hidden': 'true' }), portada, pagina));
+  return h('div', { class: 'sop', style: color }, tabs, libro(null, portada, pagina));
+}
+
+// App "Manual SOP": un manual por departamento (+ pestaña al Manual de juego).
+export function appManual(c, { rol } = {}) {
+  const u = estado(c, rol);
+  irCapitulo = (cap) => { u.cap = cap; u.vista = 'juego'; c.repintar(); arribaDe('juego'); };
+  const tabs = pestanas(c, u, u.vista === 'juego',
+    (r) => { u.rol = r; u.seccion = SECCIONES[0].id; u.vista = 'rol'; c.repintar(); arribaDe(r); },
+    () => { u.vista = 'juego'; c.repintar(); arribaDe('juego'); });
+  return u.vista === 'juego' ? vistaJuego(c, u, tabs) : vistaRol(c, u, tabs);
+}
+
+// App "Manual de juego" (icono propio del dock del portátil): siempre abre en el Manual de juego.
+// Las pestañas de departamento llevan a la app "Manual SOP" de ese rol.
+export function appManualJuego(c, { rol } = {}) {
+  const u = estado(c, rol);
+  irCapitulo = (cap) => { u.cap = cap; c.repintar(); arribaDe('juego'); };
+  const tabs = pestanas(c, u, true,
+    (r) => { u.rol = r; u.seccion = SECCIONES[0].id; u.vista = 'rol'; c.ui.manualRol = r; c.ui.app = 'manual'; c.repintar(); arribaDe(r); },
+    () => { c.repintar(); });
+  return vistaJuego(c, u, tabs);
 }
 
 export default appManual;

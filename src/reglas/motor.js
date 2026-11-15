@@ -8,7 +8,10 @@ export const ROLES = ['vuelo', 'ciencia', 'potencia', 'comms'];
 export const BARRAS = ['masa', 'potencia', 'bateria', 'datos', 'presupuesto', 'volumen'];
 export const NOMBRE_BARRA = { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data link', presupuesto: 'Budget', volumen: 'Volume' };
 export const MB_POR_KBPS_HORA = 0.45;      // Mateo §1.3: 1 kbps durante 1 h = 0,45 MB
-export const TOLERANCIA = 1.2;              // DEC-10: hasta +20 % pasa la revisión, pero obliga a recortar
+export const TOLERANCIA = 1.2;              // DEC-10 (revisada): hasta +20 % pasa la revisión y NO obliga a recortar, pero cada barra
+//   en tolerancia sube la probabilidad de fallo de una fase del vuelo (riesgoTolerancia). Más del 20 % no pasa la revisión.
+export const DP_TOLERANCIA = 0.5;           // dp = 0,5 · (ratio − 1): hasta +10 puntos porcentuales con ratio 1,2
+export const FACTOR_TOLERANCIA_PRESUPUESTO = 0.25; // el presupuesto pasado penaliza a todas las fases, pero 4 veces menos
 export const DIFICULTADES = ['facil', 'normal', 'dificil'];
 export const EVENTOS_POR_DIFICULTAD = { facil: 1, normal: 2, dificil: 3 }; // AN-09
 export const MAX_CONTINGENCIAS = 3;         // G-11
@@ -111,21 +114,65 @@ export function eventosDisenoSalidos(estado, D) {
   return arr(estado?.diseno?.eventos).map((e) => e?.id).filter((id) => E[id]).map((id) => ({ id, ...E[id] }));
 }
 
-// Siguiente evento de diseño que toca (o null si ya salieron los de la dificultad, o no quedan).
-// Sin estado: barajado fijo con la semilla y la misión, y se toma el primero que aún no salió.
+// Siguiente evento de la lista de la misión que toca (o null si ya salieron los de la dificultad, o no quedan).
+// Sin estado: barajado fijo con la semilla y la misión, y se toma el primero que aún no salió. Los genéricos no cuentan.
 export function siguienteEventoDiseno(estado, D) {
   const m = misionDe(estado, D);
   if (!m) return null;
-  const vistos = arr(estado?.diseno?.eventos).map((e) => e?.id);
-  if (vistos.length >= eventosPorDificultad(estado)) return null;
   const E = obj(D?.EVENTOS_DISENO);
-  const orden = barajar(prng(derivar(estado?.semilla ?? 0, 'diseno', m.id)), arr(m.eventosDiseno).filter((id) => E[id]));
+  const lista = arr(m.eventosDiseno).filter((id) => E[id]);
+  const vistos = arr(estado?.diseno?.eventos).map((e) => e?.id);
+  if (vistos.filter((id) => lista.includes(id)).length >= eventosPorDificultad(estado)) return null;
+  const orden = barajar(prng(derivar(estado?.semilla ?? 0, 'diseno', m.id)), lista);
   return orden.find((id) => !vistos.includes(id)) ?? null;
+}
+
+// Eventos genéricos (EVENTOS_DISENO con `generico: true`, opcionalmente `misiones: [ids]`) que valen para esta misión.
+export const EVENTOS_GENERICOS_MAX = 3;   // como mucho 3 eventos genéricos por partida
+export const P_GENERICO_MES = 0.07;       // probabilidad de un genérico por mes (si no sale uno de la lista de la misión)
+export function eventosGenericos(m, D) {
+  const propios = arr(m?.eventosDiseno);
+  return Object.values(obj(D?.EVENTOS_DISENO)).filter((e) => e?.generico && !propios.includes(e.id) && (!arr(e.misiones).length || arr(e.misiones).includes(m?.id))).map((e) => e.id);
+}
+export function siguienteEventoGenerico(estado, D) {
+  const m = misionDe(estado, D);
+  if (!m) return null;
+  const pool = eventosGenericos(m, D);
+  const vistos = arr(estado?.diseno?.eventos).map((e) => e?.id);
+  if (vistos.filter((id) => pool.includes(id)).length >= EVENTOS_GENERICOS_MAX) return null;
+  return barajar(prng(derivar(estado?.semilla ?? 0, 'generico', m.id)), pool).find((id) => !vistos.includes(id)) ?? null;
+}
+
+// Sorteo en tiempo real (lo hace el anfitrión en cada tic, con estado.reloj.mes ya avanzado). Determinista: semilla + misión + mes.
+// Los eventos de la lista de la misión (nº según la dificultad) se reparten hasta el plazo (mín. 6 meses; sin plazo, 12):
+// p = eventos que faltan / meses que quedan. Si no sale ninguno, un genérico con P_GENERICO_MES. → id o null.
+export function sortearEventoDiseno(estado, D) {
+  const m = misionDe(estado, D);
+  if (!m) return null;
+  const mes = Math.max(0, entero(estado?.reloj?.mes) ?? 0);
+  const azar = prng(derivar(estado?.semilla ?? 0, 'evento', m.id, mes));
+  const tirada = azar(), tirada2 = azar();
+  const sig = siguienteEventoDiseno(estado, D);
+  if (sig) {
+    const lista = arr(m.eventosDiseno);
+    const vistos = arr(estado?.diseno?.eventos).filter((e) => lista.includes(e?.id)).length;
+    const horizonte = Math.max(6, entero(estado?.mision?.plazo) ?? 12);
+    if (tirada < (eventosPorDificultad(estado) - vistos) / Math.max(1, horizonte - mes)) return sig;
+  }
+  const gen = siguienteEventoGenerico(estado, D);
+  return gen && tirada2 < P_GENERICO_MES ? gen : null;
 }
 
 // ---------- Reloj de misión e inversores (contrato-reloj.md §1, §3) ----------
 // Solo vale para misiones con `reloj` y un plazo comprometido (estado.mision.plazo): sin eso, nada de esto cambia el juego.
-export const MESES_REVISION = 2;   // cada revisión de diseño (pedirRevision) cuesta 2 meses
+// El reloj corre en tiempo real mientras el equipo diseña (FASES_RELOJ); el anfitrión suma 1 mes con la acción `tic`.
+// Las revisiones de diseño ya NO suman meses. Más jugadores con rol = más rápido: 4 → 60 s/mes, 3 → 75, 2 → 90, 1 → 105.
+export const FASES_RELOJ = ['diseno', 'restricciones', 'verificacion'];
+export const MS_MES_BASE = 60_000, MS_MES_POR_JUGADOR_MENOS = 15_000;
+export const msPorMes = (n) => MS_MES_BASE + (4 - Math.min(4, Math.max(1, Math.floor(Number(n)) || 1))) * MS_MES_POR_JUGADOR_MENOS;
+export const relojCorre = (estado) => FASES_RELOJ.includes(estado?.fase);
+export const MARGEN_LANZAMIENTO = 1; // el mes de lanzamiento planificado (en diseño/restricciones) debe ser ≥ reloj.mes + 1
+export const MESES_REVISION = MARGEN_LANZAMIENTO; // nombre antiguo (las revisiones ya no suman meses): solo lo usa el planificador
 export const MESES_REDISENO = 6;   // volver a diseñar tras un vuelo (informe → diseño) cuesta 6 meses
 export const GRACIA_RETRASO = 1;   // 1 mes de retraso sin recorte
 export const RECORTE_MES = 0.04;   // después, −4 % del presupuesto por mes
@@ -144,18 +191,21 @@ export function tipoPlazo(m, plazo) {
   return i === 0 ? 'corto' : i === p.length - 1 ? 'largo' : 'medio';
 }
 
-// → { activo, mes, plazo, inicio, lanzamiento (ruta.mes o null), retraso, recorte, bono, cancelada }. `activo` = hay plazo válido.
+// → { activo, mes, plazo, inicio, lanzamiento (ruta.mes o null), retraso, recorte, bono, cancelada, corriendo, msPorMes, inicioMes }.
+// `activo` = hay plazo válido. corriendo/msPorMes/inicioMes salen de estado.reloj (para animar el reloj en la interfaz).
 // retraso = max(0, max(reloj.mes, ruta.mes ?? reloj.mes) − plazo); recorte = min(40 %, 4 % · max(0, retraso − 1)).
 export function relojDe(estado, D) {
   const m = misionDe(estado, D);
   const mes = Math.max(0, entero(estado?.reloj?.mes) ?? 0);
   const inicio = Math.max(0, entero(m?.reloj?.inicio) ?? 0);
   const plazo = m?.reloj && plazosDe(m).includes(estado?.mision?.plazo) ? estado.mision.plazo : null;
-  if (plazo == null) return { activo: false, mes, plazo: null, inicio, retraso: 0, recorte: 0, bono: 0, cancelada: false };
+  const rl = obj(estado?.reloj);
+  const tiempo = { corriendo: !!rl.corriendo && relojCorre(estado), msPorMes: finito(rl.msPorMes) > 0 ? rl.msPorMes : msPorMes(4), inicioMes: finito(rl.inicioMes) };
+  if (plazo == null) return { activo: false, mes, plazo: null, inicio, retraso: 0, recorte: 0, bono: 0, cancelada: false, ...tiempo };
   const rutaMes = entero(estado?.ruta?.mes);
   const retraso = Math.max(0, Math.max(mes, rutaMes ?? mes) - plazo);
   const recorte = Math.min(RECORTE_MAX, RECORTE_MES * Math.max(0, retraso - GRACIA_RETRASO));
-  return { activo: true, mes, plazo, inicio, lanzamiento: rutaMes, retraso, recorte, bono: BONO_PLAZO[tipoPlazo(m, plazo)], cancelada: retraso > RETRASO_CANCELA };
+  return { activo: true, mes, plazo, inicio, lanzamiento: rutaMes, retraso, recorte, bono: BONO_PLAZO[tipoPlazo(m, plazo)], cancelada: retraso > RETRASO_CANCELA, ...tiempo };
 }
 
 // ---------- Condiciones de un mes del calendario (D.CALENDARIO, src/datos/calendario.js) ----------
@@ -249,7 +299,7 @@ function limiteDe(hayAporte, aporte, tope) {
 //   barra = { usado, limite, ratio, estado, partes: [{ rol, id, v }], aportes: [{ rol, id, v }] }
 export function resumen(estado, D) {
   const barras = Object.fromEntries(BARRAS.map((b) => [b, barraVacia()]));
-  const res = { barras, ciencia: { objetivos: [], total: 0 }, riesgos: [], fases: [], energiaWh: 0, plan: null, reloj: null };
+  const res = { barras, ciencia: { objetivos: [], total: 0 }, riesgos: [], fases: [], energiaWh: 0, plan: null, reloj: null, tolerancia: [] };
   const m = misionDe(estado, D);
   if (!m) return res;
 
@@ -336,7 +386,8 @@ export function resumen(estado, D) {
   // Cometa: llegar tarde al perihelio recorta la cobertura del objetivo prioritario.
   const factorPrio = plan?.cometa && !plan.cometa.ok ? num(D?.CALENDARIO?.COMETA_67P?.factor) : 1;
   res.ciencia = ciencia(m, ms, prioridad, estado?.mision?.objetivos, obj(efSitio.ciencia), factorPrio);
-  res.fases = fases(m, ms, ruta, compradas, plan, obj(D?.CALENDARIO?.EFECTOS));
+  res.tolerancia = riesgoToleranciaDe(barras, m);
+  res.fases = fases(m, ms, ruta, compradas, plan, obj(D?.CALENDARIO?.EFECTOS), res.tolerancia);
   res.riesgos = riesgos(m, D, compradas);
   return res;
 }
@@ -376,7 +427,7 @@ function ciencia(m, ms, prioridadPedida, seleccion, factores = {}, factorPrio = 
 //   clima: fase de lanzamiento (la primera), dp = −puntuacion · climaDp, ref = sitio de lanzamiento.
 //   espacio: fase `lanzamiento.faseEspacio` (o la segunda), dp = −pKp7 · espacioDp, ref = mesAbs.
 //   conjuncion: fase que sigue al lanzamiento, dp = −min(conjDpMax, conjDpDia · diasConj), ref = mesAbs.
-function fases(m, ms, ruta, compradas, plan = null, efectos = {}) {
+function fases(m, ms, ruta, compradas, plan = null, efectos = {}, tolerancia = []) {
   const ctg = new Set(compradas.map((c) => c.id));
   const hay = new Set([...ms.filter((x) => x.uso > 0 || !x.pieza.uso).map((x) => x.id), ...ctg]);
   if (ruta) hay.add(ruta.id);
@@ -396,6 +447,7 @@ function fases(m, ms, ruta, compradas, plan = null, efectos = {}) {
       if (f.id === faseEspacio) poner('espacio', cond.mesAbs, -num(cond.pKp7) * num(efectos.espacioDp));
       if (i === 1 && cond.diasConj > 0) poner('conjuncion', cond.mesAbs, -Math.min(num(efectos.conjDpMax), num(efectos.conjDpDia) * cond.diasConj));
     }
+    for (const t of tolerancia) if (t.fase === f.id) poner('tolerancia', t.barra, -t.dp); // barra pasada de su límite (≤ +20 %)
     return { id: f.id, nombre: f.nombre ?? null, critica: !!f.critica, pBase: clamp01(num(f.pBase)), p: clamp01(p), pCruda: p, desglose };
   });
 }
@@ -410,8 +462,40 @@ function riesgos(m, D, compradas) {
   });
 }
 
+// ---------- Riesgo por tolerancia (DEC-10 revisada) ----------
+// Una barra con ratio en (1, 1,2] pasa la revisión, pero aumenta la probabilidad de fallo de una fase del vuelo.
+// Fase por barra (por id de fase de la misión; si no existe, por posición): masa y volumen → lanzamiento (la 1.ª);
+// potencia → crucero (launch→cruise/transit, la 2.ª); batería → insertion/arrival/surface (la penúltima);
+// datos → science/surface/coma (la última); presupuesto → TODAS las fases con 1/4 del efecto.
+const FASE_DE_BARRA = {
+  masa: { ids: ['launch'], idx: 0 }, volumen: { ids: ['launch'], idx: 0 },
+  potencia: { ids: ['cruise', 'transit'], idx: 1 }, bateria: { ids: ['insertion', 'arrival', 'surface'], idx: -2 },
+  datos: { ids: ['science', 'surface', 'coma'], idx: -1 },
+};
+function riesgoToleranciaDe(barras, m) {
+  const lista = arr(m?.fases).filter((f) => f && f.id != null);
+  const r = [];
+  if (!lista.length) return r;
+  for (const b of BARRAS) {
+    const x = barras?.[b];
+    if (x?.estado !== 'tolerancia' || !Number.isFinite(x.ratio)) continue;
+    const dp = DP_TOLERANCIA * (x.ratio - 1);
+    if (b === 'presupuesto') {
+      for (const f of lista) r.push({ barra: b, ratio: x.ratio, fase: f.id, faseNombre: f.nombre ?? null, dp: dp * FACTOR_TOLERANCIA_PRESUPUESTO, todas: true });
+      continue;
+    }
+    const cfg = FASE_DE_BARRA[b];
+    const f = lista.find((y) => cfg.ids.includes(y.id)) ?? lista[Math.min(lista.length - 1, Math.max(0, cfg.idx < 0 ? lista.length + cfg.idx : cfg.idx))];
+    r.push({ barra: b, ratio: x.ratio, fase: f.id, faseNombre: f.nombre ?? null, dp });
+  }
+  return r;
+}
+// → [{ barra, ratio, fase, faseNombre ({es,en}|null), dp (fracción 0..0,1 que se suma a la prob. de fallo), todas? }]
+// Una entrada por barra en tolerancia (el presupuesto: una por fase, con todas: true). Ya está aplicado en res.fases (desglose 'tolerancia').
+export const riesgoTolerancia = (estado, D) => resumen(estado, D).tolerancia;
+
 // ---------- MEC-11 ----------
-// → { nivel: 'dentro'|'tolerancia'|'fuera', barras: [ids en falta] }
+// → { nivel: 'dentro'|'tolerancia'|'fuera', barras: [ids en falta] }. 'tolerancia' pasa la revisión (no obliga a recortar).
 export function cumple(res) {
   const bs = obj(res?.barras);
   const exceso = BARRAS.filter((b) => bs[b]?.estado === 'exceso');
@@ -429,7 +513,7 @@ export function verificar(estado, D) {
   const m = misionDe(estado, D);
   if (!m) { poner('mision', false, 'A mission is chosen', 'Hay una misión elegida'); return { pasa: false, comprobaciones: c }; }
   const res = resumen(estado, D);
-  const malas = BARRAS.filter((b) => res.barras[b].estado !== 'ok');
+  const malas = BARRAS.filter((b) => res.barras[b].estado === 'exceso'); // la tolerancia (≤ +20 %) pasa: solo sube el riesgo
   const NOMBRE_BARRA_ES = { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Enlace de datos', presupuesto: 'Presupuesto', volumen: 'Volumen' };
   poner('barras', !malas.length,
     malas.length ? `All bars within limits (over: ${malas.map((b) => NOMBRE_BARRA[b]).join(', ')})` : 'All bars within limits',
