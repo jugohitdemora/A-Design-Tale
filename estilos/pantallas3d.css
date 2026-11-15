@@ -56,6 +56,9 @@
 #proyector-ui p { margin: 0; font-size: var(--t-enfasis); }
 /* Durante la elección se esconden los botones de vista (no se puede salir del proyector). */
 body.en-proyector #franja .f-vistas { display: none; }
+/* La tarjeta de la sala (.f-hud) ocupa la esquina inferior izquierda: la barra del proyector se coloca a su derecha, sin taparla. */
+body.en-proyector #proyector-ui { left: 400px; right: 20px; bottom: 20px; transform: none; max-width: none; justify-content: space-between; }
+body.en-proyector #proyector-ui .boton { flex: none; white-space: nowrap; }
 
 /* Pista de cada carpeta de misión */
 .carpeta-pista { font: var(--t-meta)/1.3 var(--ui); color: #2b2210; background: #f6ecd0; border: 2px solid #c99a3a; border-radius: 4px;
@@ -64,4 +67,6 @@ body.en-proyector #franja .f-vistas { display: none; }
 .carpeta-pista.encima { border-color: #ffd76a; background: #fff6dc; }
 @media (max-width: 700px) {
   #proyector-ui { flex-direction: column; gap: 8px; bottom: 16px; text-align: center; }
+  /* En pantallas estrechas la tarjeta ocupa todo el ancho: la barra se apila encima. */
+  body.en-proyector #proyector-ui { left: 8px; right: 8px; bottom: 200px; justify-content: center; }
 }
