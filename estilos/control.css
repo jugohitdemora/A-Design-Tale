@@ -201,6 +201,8 @@
 .op-rover summary { font-size: var(--t-meta); cursor: pointer; text-transform: uppercase; }
 .op-dpad { display: grid; grid-template-columns: repeat(5, 36px); gap: var(--e-1); margin-top: var(--e-2); }
 .op-dpad .boton { min-height: 32px; padding: 0; font-size: var(--t-meta); }
+.op-rover-mapa { display: block; width: 100%; max-width: 320px; aspect-ratio: 2 / 1; margin-top: var(--e-1); border: 1px solid var(--mc-borde); image-rendering: auto; }
+.op-rover p { margin: var(--e-1) 0 0; }
 .op-avanzar { margin-top: auto; flex: none; }
 .pl-cambiar { margin-top: var(--e-3); }
 .pl-cambiar > summary { list-style: none; display: inline-flex; min-height: 32px; padding: 4px 12px; }

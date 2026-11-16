@@ -9,6 +9,7 @@ import { trayectoria } from './propagador.js';
 import { paleta, conAlfa } from './paleta.js';
 import { lanzamiento, lanzamientoFallido } from '../laptop/camara-lanzamiento.js';
 import { transcurrido, sonar } from './cine.js';
+import { panelRover } from './rover.js';
 
 const T = textos({
   es: {
@@ -17,7 +18,7 @@ const T = textos({
     siguiente: 'SIGUIENTE PASO ▶', informe: 'VER INFORME ▶', alerta: '⚠ EVENTO EN CURSO', activar: 'ACTIVAR', activada: 'CONTINGENCIA ACTIVADA',
     responsable: 'Responsable', esperaDepto: (d) => `Esperando a ${d}. Solo ese departamento puede activarla.`, sinEvento: 'Sin eventos en este paso.',
     bueno: 'Buenas noticias', noMitigado: 'Sin contingencia que lo cubra: el equipo no compró la adecuada.', mitigado: 'Cubierto por el plan de contingencia.',
-    pendiente: 'pendiente', ok: 'OK', falla: 'FALLO', fallaEn: (f) => `FALLO EN ${f}`, alarma: 'ALERTA', omitida: 'no llegó', rover: 'ROVER', roverTxt: 'Ninguna misión actual lleva rover. El control queda listo por si alguna lo lleva.',
+    pendiente: 'pendiente', ok: 'OK', falla: 'FALLO', fallaEn: (f) => `FALLO EN ${f}`, alarma: 'ALERTA', omitida: 'no llegó',
     paso: 'Paso', sinResultado: 'Esperando el lanzamiento…', fase: 'FASE', exito: 'prob.', sol: 'Sol', tierra: 'Tierra',
     nota: 'Propagador RK4 de dos cuerpos para el juego, con interfaz estilo GMAT (NASA). Órbitas aproximadas.',
   },
@@ -27,7 +28,7 @@ const T = textos({
     siguiente: 'NEXT STEP ▶', informe: 'VIEW REPORT ▶', alerta: '⚠ EVENT IN PROGRESS', activar: 'ACTIVATE', activada: 'CONTINGENCY ACTIVATED',
     responsable: 'Owner', esperaDepto: (d) => `Waiting for ${d}. Only that department can activate it.`, sinEvento: 'No events in this step.',
     bueno: 'Good news', noMitigado: 'No contingency covers it: the team did not buy the right one.', mitigado: 'Covered by the contingency plan.',
-    pendiente: 'pending', ok: 'OK', falla: 'FAIL', fallaEn: (f) => `FAILURE IN ${f}`, alarma: 'ALERT', omitida: 'not reached', rover: 'ROVER', roverTxt: 'No current mission has a rover. The control is ready if one does.',
+    pendiente: 'pending', ok: 'OK', falla: 'FAIL', fallaEn: (f) => `FAILURE IN ${f}`, alarma: 'ALERT', omitida: 'not reached',
     paso: 'Step', sinResultado: 'Waiting for launch…', fase: 'PHASE', exito: 'prob.', sol: 'Sun', tierra: 'Earth',
     nota: 'Two-body RK4 propagator for the game, with a GMAT-style (NASA) interface. Approximate orbits.',
   },
@@ -285,8 +286,8 @@ export function pantallaOperaciones(c) {
       tele(T.enlace, h('p', { class: perdido ? 'mal' : fallos ? 'aviso' : 'ok' }, estadoEnlace)),
       tele(T.datos, barrasLed(Math.round(((paso + 1) / total) * 12), 12), h('span', { class: 'op-mb op-num' }, `${String(redondear(recibidos, 0)).padStart(5, ' ')} MB`))),
     alerta ? null : h('p', { class: 'mc-nota tenue' }, T.sinEvento),
-    h('details', { class: 'op-rover' }, h('summary', {}, T.rover), h('p', {}, T.roverTxt),
-      h('div', { class: 'op-dpad' }, ['▲', '◀', '■', '▶', '▼'].map((x) => h('button', { class: 'boton op-flecha', type: 'button', disabled: true }, x)))),
+    // Róver (src/control/rover.js): se conduce cuando la misión llega viva a la última fase (la superficie).
+    panelRover(c, { activo: paso >= total - 1 && actual.ok !== false, perdido, plan }),
     c.e.fase === 'mision' ? h('button', {
       class: 'boton primario grande ancho op-avanzar', type: 'button', disabled: !!pendiente,
       onclick: () => { if (unaVez('paso', 700)) c.enviar('avanzar', { paso }); },
