@@ -54,7 +54,18 @@ body.en-proyector .f-hud .g-linea { display: none; } /* la barra del proyector y
 .lp-barra .boton, .mc-cab .boton { min-height: 32px; padding: 5px 10px; font-size: var(--tp-etq); box-shadow: 0 3px 0 var(--b-sombra); }
 /* La salida del portátil va sobre la barra oscura: piel clara para que se lea */
 .lp-barra .boton.lp-salir { --b-fondo: #3a4b60; --b-borde: #6b7d93; --b-sombra: #141c27; --b-tinta: #eef4f8; }
-.lp-icono.lp-ir-control { margin-top: auto; }
+/* Dock del portátil: pasos numerados en orden de trabajo y apps de consulta debajo de una raya */
+.lp-icono { position: relative; }
+.lp-icono-paso { position: absolute; top: 2px; left: 4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--lp-tinta); color: #fff; font: 700 11px/18px var(--lp-ui); text-align: center; }
+.lp-icono.guia .lp-icono-paso { background: #d9941a; }
+.lp-dock-sep { width: 70%; margin: 4px auto; border: 0; border-top: 2px dashed var(--lp-borde); opacity: 0.7; flex: none; }
+/* Lista previa a la revisión */
+.lp-checklist ul { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 4px; }
+.lp-checklist li { display: flex; align-items: center; gap: 6px; }
+.lp-checklist li.falta { font-weight: 600; }
+.lp-checklist li .btn-plano { margin-left: auto; }
+.lp-checklist .lp-check { width: 1.2em; text-align: center; }
+.lp-checklist li.ok .lp-check { color: #2f8a3b; }
 
 /* Cabecera de la sala de control */
 .mc-cab .g-pasos { color: var(--mc-tinta-2); }

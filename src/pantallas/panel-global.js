@@ -105,18 +105,21 @@ export function panelGlobal(c, res, opts = {}) {
   }
   raiz.append(luces);
 
-  if (opts.revision) {
-    raiz.append(
-      h('button', { class: 'boton primario grande ancho', type: 'button', onclick: () => { if (unaVez('rev')) c.enviar('pedirRevision', { revision: c.e?.diseno?.revisiones ?? 0 }); } }, T.requestReview), // el número evita que un doble clic pida dos revisiones
-      h('p', { class: 'tenue pequeno' }, T.reviewsDone(c.e?.diseno?.revisiones ?? 0)));
-    // Resultado de la última revisión (lo guarda el anfitrión en diseno.ultima): lo ve todo el equipo.
-    const u = c.e?.diseno?.ultima;
-    if (u?.tipo === 'revision') {
-      const nombres = (u.barras ?? []).map((id) => T.bars?.[id] ?? id).join(', ');
-      raiz.append(h('p', { class: 'pequeno ' + (u.nivel === 'fuera' ? 'aviso' : 'tenue') }, T.lastReview(u.nivel, nombres)));
-    } else if (u?.tipo === 'evento') {
-      raiz.append(h('p', { class: 'pequeno tenue' }, T.lastReview('evento', '')));
-    }
-  }
+  if (opts.revision) raiz.append(...bloqueRevision(c));
   return raiz;
+}
+
+// Botón "Pedir revisión" + resultado de la última revisión (lo guarda el anfitrión en diseno.ultima): lo ve todo el equipo.
+export function bloqueRevision(c) {
+  const out = [
+    h('button', { class: 'boton primario grande ancho', type: 'button', onclick: () => { if (unaVez('rev')) c.enviar('pedirRevision', { revision: c.e?.diseno?.revisiones ?? 0 }); } }, T.requestReview), // el número evita que un doble clic pida dos revisiones
+    h('p', { class: 'tenue pequeno' }, T.reviewsDone(c.e?.diseno?.revisiones ?? 0))];
+  const u = c.e?.diseno?.ultima;
+  if (u?.tipo === 'revision') {
+    const nombres = (u.barras ?? []).map((id) => T.bars?.[id] ?? id).join(', ');
+    out.push(h('p', { class: 'pequeno ' + (u.nivel === 'fuera' ? 'aviso' : 'tenue') }, T.lastReview(u.nivel, nombres)));
+  } else if (u?.tipo === 'evento') {
+    out.push(h('p', { class: 'pequeno tenue' }, T.lastReview('evento', '')));
+  }
+  return out;
 }

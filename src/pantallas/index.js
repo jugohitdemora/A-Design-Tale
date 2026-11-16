@@ -27,10 +27,10 @@ const TV = textos({
       carpeta: 'Abre una carpeta de la mesa y elige la misión.',
       listo: 'Marca los objetivos en el expediente y pulsa Listo.',
       esperaListos: (a, b) => `Esperando a la tripulación (${a}/${b} listos).`,
-      piezas: 'Monta tus piezas en el Constructor del portátil.',
-      cohete: 'Elige un cohete en la Cámara de lanzamiento.',
-      ruta: 'Planifica la ruta en la sala de control.',
-      revision: 'Cuando el equipo esté listo, pulsa Pedir revisión.',
+      piezas: 'Paso 2: monta tus piezas en el Constructor.',
+      cohete: 'Paso 1: elige un cohete en la Cámara de lanzamiento.',
+      ruta: 'Paso 3: planifica la ruta en la sala de control (🗺 Planificar ruta).',
+      revision: 'Paso 5: cuando el equipo esté listo, abre Revisión y pulsa Pedir revisión.',
       exceso: (b) => `Reduce ${b}: hay exceso sobre el límite.`,
       recorta: (b) => `Recorta ${b} hasta quedar dentro del límite.`,
       gonogo: 'Da tu GO en la consola de tu departamento.',
@@ -47,10 +47,10 @@ const TV = textos({
       carpeta: 'Open a folder on the table and choose the mission.',
       listo: 'Tick the goals in the dossier and press Ready.',
       esperaListos: (a, b) => `Waiting for the crew (${a}/${b} ready).`,
-      piezas: 'Add your parts in the laptop Builder.',
-      cohete: 'Choose a rocket in the Launch camera.',
-      ruta: 'Plan the route in the control room.',
-      revision: 'When the team is ready, press Request review.',
+      piezas: 'Step 2: add your parts in the Builder.',
+      cohete: 'Step 1: choose a rocket in the Launch camera.',
+      ruta: 'Step 3: plan the route in the control room (🗺 Plan route).',
+      revision: 'Step 5: when the team is ready, open Review and press Request review.',
       exceso: (b) => `Reduce ${b}: over the limit.`,
       recorta: (b) => `Cut ${b} until it is within the limit.`,
       gonogo: 'Give your GO on your department console.',
@@ -69,7 +69,8 @@ function calcularGuia(c, fase) {
   const g = TV.g;
   const i = FASES_JUEGO.indexOf(fase);
   const base = { fase, i, total: FASES_JUEGO.length, nombre: T.phases[fase] ?? fase };
-  const r = (texto, objetivo = null) => ({ ...base, texto, objetivo });
+  // app: icono del dock del portátil que lleva al siguiente paso ('cohete', 'constructor', 'ruta', 'revision'…).
+  const r = (texto, objetivo = null, app = null) => ({ ...base, texto, objetivo, app });
   try {
     if (fase === 'briefing') {
       if (!e.mision?.escenario) return r(g.proyector, 'proyector');
@@ -85,16 +86,17 @@ function calcularGuia(c, fase) {
       const unir = (l) => (l.length > 1 ? `${l.slice(0, -1).join(', ')} ${TV.y} ${l[l.length - 1]}` : l[0] ?? '');
       if (fase === 'restricciones') {
         const k = res && c.motor?.cumple ? c.motor.cumple(res) : null;
-        if (k?.barras?.length) return r(g.recorta(unir(k.barras.map(nombreBarra))), 'laptop');
-        return r(g.revision, 'laptop');
+        if (k?.barras?.length) return r(g.recorta(unir(k.barras.map(nombreBarra))), 'laptop', 'constructor');
+        return r(g.revision, 'laptop', 'revision');
       }
+      // Mismo orden que el dock del portátil: cohete → piezas → ruta → revisión.
+      if (!e.porRol?.vuelo?.cohete) return r(g.cohete, 'laptop', 'cohete');
       const mias = Object.keys(c.e?.porRol?.[c.rol]?.piezas ?? {}).length;
-      if (!mias) return r(g.piezas, 'laptop');
-      if (!e.porRol?.vuelo?.cohete) return r(g.cohete, 'laptop');
-      if (!e.porRol?.vuelo?.ruta) return r(g.ruta, 'control');
+      if (!mias) return r(g.piezas, 'laptop', 'constructor');
+      if (!e.porRol?.vuelo?.ruta) return r(g.ruta, 'control', 'ruta');
       const k = res && c.motor?.cumple ? c.motor.cumple(res) : null;
-      if (k?.nivel === 'fuera') return r(g.exceso(unir(k.barras.map(nombreBarra))), 'laptop');
-      return r(g.revision, 'laptop');
+      if (k?.nivel === 'fuera') return r(g.exceso(unir(k.barras.map(nombreBarra))), 'laptop', 'constructor');
+      return r(g.revision, 'laptop', 'revision');
     }
     if (fase === 'verificacion') {
       let v = null;

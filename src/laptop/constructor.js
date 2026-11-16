@@ -30,10 +30,10 @@ const T = textos({
       datos: 'Sin antena', presupuesto: 'Sin presupuesto', volumen: 'Sin estructura' },
     est: { ok: 'OK', tolerancia: 'TOL', exceso: 'EXC' }, marcas: '▮ 100 %   ▯ 120 % (tolerancia: pasa, con más riesgo de fallo)', otros: 'Otros',
     ciencia: 'CIENCIA', sinObjetivos: 'Sin objetivos marcados.',
-    pedir: 'PEDIR REVISIÓN', revisiones: (n) => `Revisiones: ${n}`, revHint: 'Una revisión puede sacar un evento.',
+    pedir: 'PEDIR REVISIÓN', irRevision: '✅ Ir a Revisión (paso 5) ›', revisiones: (n) => `Revisiones: ${n}`, revHint: 'Una revisión puede sacar un evento.',
     ultima: { dentro: 'Última revisión: todo dentro.', tolerancia: (b) => `Última revisión: en tolerancia en ${b}. Pasa la revisión, pero sube el riesgo de fallo de una fase de la misión.`, fuera: (b) => `Última revisión: fuera en ${b}.`, evento: (n) => `Salió un evento de diseño: ${n}.` },
     nivel: { dentro: 'DENTRO DE LÍMITES', tolerancia: 'EN TOLERANCIA: PASA, MÁS RIESGO', fuera: 'FUERA DE LÍMITES' },
-    restrTit: 'RESTRICCIONES', restrTxt: 'Recorta hasta cumplir todos los límites. No se añaden piezas.', restrOk: 'Todo dentro: pide revisión.',
+    restrTit: 'RESTRICCIONES', restrTxt: 'Recorta hasta cumplir todos los límites. No se añaden piezas.', restrOk: 'Todo dentro: pide revisión en Revisión.',
     porDepto: 'Por departamento',
     cats: { estructura: 'Estructura', propulsion: 'Propulsión', actitud: 'Actitud', guiado: 'Guiado', camara: 'Cámara', proteccion: 'Protección', sondas: 'Sondas',
       instrumento: 'Instrumentos', paneles: 'Paneles solares', bateria: 'Batería', termica: 'Térmica', polvo: 'Polvo', antena: 'Antena', computador: 'Computador',
@@ -59,10 +59,10 @@ const T = textos({
       datos: 'No antenna', presupuesto: 'No budget', volumen: 'No structure' },
     est: { ok: 'OK', tolerancia: 'TOL', exceso: 'OVER' }, marcas: '▮ 100 %   ▯ 120 % (tolerance: passes, higher failure risk)', otros: 'Other',
     ciencia: 'SCIENCE', sinObjetivos: 'No goals ticked.',
-    pedir: 'REQUEST REVIEW', revisiones: (n) => `Reviews: ${n}`, revHint: 'A review can draw an event.',
+    pedir: 'REQUEST REVIEW', irRevision: '✅ Go to Review (step 5) ›', revisiones: (n) => `Reviews: ${n}`, revHint: 'A review can draw an event.',
     ultima: { dentro: 'Last review: all within limits.', tolerancia: (b) => `Last review: in tolerance on ${b}. It passes the review, but a related mission stage has a higher failure risk.`, fuera: (b) => `Last review: over on ${b}.`, evento: (n) => `A design event came up: ${n}.` },
     nivel: { dentro: 'WITHIN LIMITS', tolerancia: 'IN TOLERANCE — passes, higher failure risk', fuera: 'OVER LIMITS' },
-    restrTit: 'CONSTRAINTS', restrTxt: 'Cut until all limits are met. Do not add parts.', restrOk: 'All within limits: request review.',
+    restrTit: 'CONSTRAINTS', restrTxt: 'Cut until all limits are met. Do not add parts.', restrOk: 'All within limits: request it in Review.',
     porDepto: 'By department',
     cats: { estructura: 'Structure', propulsion: 'Propulsion', actitud: 'Attitude', guiado: 'Guidance', camara: 'Camera', proteccion: 'Protection', sondas: 'Probes',
       instrumento: 'Instruments', paneles: 'Solar panels', bateria: 'Battery', termica: 'Thermal', polvo: 'Dust', antena: 'Antenna', computador: 'Computer',
@@ -291,8 +291,6 @@ function piezasDeMision(c) {
 }
 const opcionDe = (p, id) => lista(p?.opciones).find((o) => o?.id === id) ?? lista(p?.opciones)[0] ?? null;
 
-let ultimoClic = 0;
-function unaVez() { const t = Date.now(); if (t - ultimoClic < 1200) return false; ultimoClic = t; return true; }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Columna izquierda: paleta
@@ -544,7 +542,8 @@ function recursos(c, res, restr) {
 
   const rev = c.e?.diseno?.revisiones ?? 0;
   caja.append(cuerpo, h('footer', { class: 'kb-der-pie' },
-    h('button', { class: 'boton primario grande ancho', type: 'button', title: T.revHint, onclick: () => { if (unaVez()) c.enviar('pedirRevision', { revision: rev }); } }, T.pedir),
+    // La revisión se pide en la app Revisión (último paso del dock); aquí solo se lleva hasta ella.
+    h('button', { class: 'boton ancho', type: 'button', title: T.revHint, onclick: () => { c.ui.app = 'revision'; c.repintar(); } }, T.irRevision),
     h('p', { class: 'kb-tenue' }, T.revisiones(rev))));
   return caja;
 }
