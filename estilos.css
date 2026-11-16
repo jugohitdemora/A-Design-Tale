@@ -314,14 +314,17 @@ sup.src { font-size: var(--t-meta); color: var(--tenue); margin-left: 2px; }
 .tarjeta-inversor { --c1: #3f7d4e; --c2: #1f4a2c; --c3: #2d6a3d; display: flex; gap: 16px; align-items: stretch; width: min(640px, 100%); padding: 10px; border: 4px solid var(--c1); border-radius: 6px;
   background: var(--c3); color: #fff; image-rendering: pixelated; box-shadow: inset 0 0 0 2px var(--c2), 0 18px 50px rgba(0,0,0,0.6); }
 .tarjeta-inversor.malo { --c1: #a8433f; --c2: #5a1f1d; --c3: #7a2e2b; }
-.tarjeta-inversor .inv-foto { width: 150px; flex: none; object-fit: cover; object-position: top; border: 3px solid var(--c2); background: #cfd3da; }
+.tarjeta-inversor .inv-marco { position: relative; width: 150px; flex: none; margin: 0; display: flex; }
+.tarjeta-inversor .inv-foto { width: 100%; object-fit: cover; object-position: top; border: 3px solid var(--c2); background: #cfd3da; }
+/* Marca visible de imagen generada con IA (requisito de Space Apps) */
+.tarjeta-inversor .inv-ia { position: absolute; left: 3px; right: 3px; bottom: 3px; padding: 2px 4px; font-size: var(--t-meta); line-height: 1.2; font-weight: 700; text-align: center; color: #fff; background: rgba(0,0,0,0.72); }
 .tarjeta-inversor .inv-cuerpo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .tarjeta-inversor h3 { margin: 0; font: var(--tp-titulo)/1.35 var(--pixel); text-transform: uppercase; }
 .tarjeta-inversor small { font-size: var(--t-meta); opacity: .8; }
 .tarjeta-inversor .inv-porque { margin: 4px 0 0; font-weight: 700; }
 .tarjeta-inversor ul { margin: 0; padding-left: 18px; font-size: var(--t-cuerpo); }
 .tarjeta-inversor .inv-aceptar { align-self: flex-end; margin-top: auto; padding: 6px 16px; font: var(--tp-titulo) var(--pixel); color: #fff; background: var(--c2); border: 3px solid #fff; cursor: pointer; }
-@media (max-width: 520px) { .tarjeta-inversor { flex-direction: column; } .tarjeta-inversor .inv-foto { width: 100%; height: 160px; } }
+@media (max-width: 520px) { .tarjeta-inversor { flex-direction: column; } .tarjeta-inversor .inv-marco { width: 100%; height: 160px; } }
 
 #barra-simulada { position: fixed; left: 8px; bottom: 8px; z-index: 30; background: #3a1f5c; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 12px; }
 #barra-simulada select { font-size: 12px; padding: 1px 4px; }

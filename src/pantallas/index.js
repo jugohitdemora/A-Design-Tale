@@ -238,7 +238,10 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
       const razones = [en(ev.texto), TI.dinero(bueno ? 1 : -1) + (cambios.length ? ` (${cambios.join(' · ')})` : ''),
         ef.meses ? TI.meses(ef.meses) : null].filter(Boolean);
       modal.append(h('div', { class: 'tarjeta-inversor ' + (bueno ? 'bueno' : 'malo'), role: 'dialog', 'aria-modal': 'true' },
-        h('img', { class: 'inv-foto', src: inv.foto, alt: inv.nombre }),
+        // Los retratos se generaron con IA: las reglas de Space Apps piden una marca visible en la imagen.
+        h('figure', { class: 'inv-marco' },
+          h('img', { class: 'inv-foto', src: inv.foto, alt: `${inv.nombre} (${TI.ia})` }),
+          h('figcaption', { class: 'inv-ia' }, TI.ia)),
         h('div', { class: 'inv-cuerpo' },
           h('small', {}, T.designEvent, cola.length > 1 ? ` (+${cola.length - 1})` : ''),
           h('h3', {}, titular(id, ev.signo, inv.nombre)),

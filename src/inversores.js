@@ -24,14 +24,14 @@ export const TI = textos({
   es: {
     entra: (n) => `Inversor ${n} se une`, sale: (n) => `Inversor ${n} decide retirarse`,
     recorta: (n) => `Inversor ${n} recorta su apoyo`, aporta: (n) => `Inversor ${n} aporta más`,
-    porque: 'Por qué', aceptar: 'Aceptar',
+    porque: 'Por qué', aceptar: 'Aceptar', ia: 'Imagen generada con IA',
     meses: (m) => `Buscar reemplazo retrasa el reloj ${m} ${m === 1 ? 'mes' : 'meses'}`,
     dinero: (v) => `${v > 0 ? 'Más' : 'Menos'} dinero para la misión`,
   },
   en: {
     entra: (n) => `Investor ${n} joins`, sale: (n) => `Investor ${n} decides to leave`,
     recorta: (n) => `Investor ${n} cuts support`, aporta: (n) => `Investor ${n} adds more`,
-    porque: 'Why', aceptar: 'Accept',
+    porque: 'Why', aceptar: 'Accept', ia: 'AI-generated image',
     meses: (m) => `Finding a replacement delays the clock ${m} month${m === 1 ? '' : 's'}`,
     dinero: (v) => `${v > 0 ? 'More' : 'Less'} money for the mission`,
   },
