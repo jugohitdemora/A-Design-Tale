@@ -405,7 +405,7 @@ const JUEGO = {
   controles: [
     ['h', 'Moverse por la sala', 'Moving around the room'],
     ['lista', [
-      ['Arrastra con el ratón (o con el dedo) para mirar alrededor. Cambia la sensibilidad, la calidad gráfica y la animación del fondo en Ajustes.', 'Drag with the mouse (or your finger) to look around. Change the sensitivity, the graphics quality and the background animation in Settings.'],
+      ['Mueve el ratón (o arrastra con el dedo) para mirar alrededor. Cambia la sensibilidad, la calidad gráfica y la animación del fondo en Ajustes.', 'Move the mouse (or drag with your finger) to look around. Change the sensitivity, the graphics quality and the background animation in Settings.'],
       ['Haz clic en un objeto interactivo para usarlo: el holograma del proyector (escenario), la carpeta de misión (expediente), tu portátil, la carpeta de anillas (SOP), la pantalla central de la sala de control, tu consola (tu GO) y la puerta (volver al briefing).', 'Click an interactive object to use it: the projector hologram (scenario), the mission folder (dossier), your laptop, the ring binder (SOP), the main screen of the control room, your console (your GO) and the door (back to the briefing).'],
       ['Esc: te levanta del portátil o te saca de la pantalla ampliada. Vuelves a ver la sala.', 'Esc: stand up from the laptop or leave the zoomed screen. You see the room again.'],
     ]],

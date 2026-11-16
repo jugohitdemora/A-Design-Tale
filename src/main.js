@@ -12,7 +12,7 @@ import { MAX_JUGADORES, conectados, duenoDeRol } from './red/protocolo.js';
 import { T } from './textos.js';
 import { traducirMotivo } from './motivos.js';
 import { abrirCreditos } from './creditos.js';
-import { abrirTutorial } from './tutorial.js?v=4';
+import { abrirTutorial } from './tutorial.js?v=5';
 import { crearPantallas, LOGICO } from './pantallas/index.js';
 import { musica, efecto, volumen, ponerVolumen } from './audio.js';
 
@@ -82,8 +82,9 @@ let vestidoClave = '';     // reparto + idioma con el que se dibujaron las carpe
 const nickDePestana = () => { try { return sessionStorage.getItem('nick'); } catch { return null; } };
 let nick = nickDePestana() ?? leer('nick', '');
 const mirada = { yaw: 0, pitch: CABECEO.briefing };
+let metaMirada = null; // con ratón: hacia dónde va la mirada; el bucle la alcanza con suavidad
 const poses = new Map();
-const reiniciarMirada = () => { mirada.yaw = 0; mirada.pitch = CABECEO[lugar] ?? CABECEO.briefing; difundirMirada(); };
+const reiniciarMirada = () => { metaMirada = null; mirada.yaw = 0; mirada.pitch = CABECEO[lugar] ?? CABECEO.briefing; difundirMirada(); };
 let sesion = null;
 let transporte = null;
 let codigo = '';
@@ -321,7 +322,7 @@ function actualizarTodo() {
 
   $('inicio').classList.toggle('oculto', pantalla !== 'inicio');
   $('lobby').classList.toggle('oculto', pantalla !== 'lobby');
-  // Mirando una sala 3D (briefing o control): se puede arrastrar para mirar y se ven las etiquetas de los avatares.
+  // Mirando una sala 3D (briefing o control): se mira moviendo el ratón (táctil: arrastrar) y se ven las etiquetas de los avatares.
   const mirando = pantalla === 'sala' && vista === 'sala';
   document.body.classList.toggle('en-sala', mirando);
   document.body.classList.toggle('en-juego', pantalla === 'sala');
@@ -526,18 +527,33 @@ addEventListener('keydown', (ev) => {
   if (vista !== 'sala') irA('sala');
 });
 
-// ---------- Mirar (arrastrar) y clic, mirando la sala de briefing o la de control ----------
+// ---------- Mirar y clic, mirando la sala de briefing o la de control ----------
+// Ratón: la mirada sigue al cursor sin arrastrar (centro de la pantalla = frente; bordes = girar). Táctil: arrastrar.
 let arrastre = null;
 const raycaster = new THREE.Raycaster();
 const puedeMirar = () => enJuego() && vista === 'sala' && !ui.overlay;
 const habitacion = () => (lugar === 'control' ? control : sala); // sala 3D en la que estoy
+function apuntarConRaton(e) {
+  const k = ajustes.sensibilidad / 0.005; // 1 con la sensibilidad por defecto
+  const nx = (e.clientX / innerWidth) * 2 - 1, ny = (e.clientY / innerHeight) * 2 - 1;
+  metaMirada = {
+    yaw: THREE.MathUtils.clamp(-nx * 1.5 * k, -1.9, 1.9),
+    pitch: THREE.MathUtils.clamp((CABECEO[lugar] ?? CABECEO.briefing) - ny * 0.8 * k, -1.1, 1.0),
+  };
+}
 contenedor.addEventListener('pointerdown', (e) => {
   if (!puedeMirar()) return;
-  if (modoProyector()) { arrastre = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, fijo: true }; return; } // cámara fija: solo clic
-  arrastre = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY };
-  contenedor.setPointerCapture(e.pointerId);
+  const tactil = e.pointerType === 'touch';
+  arrastre = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, fijo: modoProyector() || !tactil }; // proyector: cámara fija, solo clic
+  if (tactil && !modoProyector()) contenedor.setPointerCapture(e.pointerId);
 });
 contenedor.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'touch') {
+    if (!puedeMirar()) return;
+    if (!modoProyector()) apuntarConRaton(e);
+    resaltar(e);
+    return;
+  }
   if (!arrastre || arrastre.fijo) { if (puedeMirar()) resaltar(e); return; }
   const s = ajustes.sensibilidad;
   mirada.yaw = THREE.MathUtils.clamp(mirada.yaw - (e.clientX - arrastre.x) * s, -1.9, 1.9);
@@ -689,9 +705,16 @@ function bucle() {
       const ry = ASIENTOS[Math.max(0, indiceRol(miRol()))].ry + Math.PI;
       mirada.yaw = THREE.MathUtils.clamp(Math.atan2(Math.sin(euler.y - ry), Math.cos(euler.y - ry)), -1.9, 1.9);
       mirada.pitch = THREE.MathUtils.clamp(euler.x, -1.1, 1.0);
+      metaMirada = null; // se queda en las carpetas hasta que el ratón se mueva
       difundirMirada();
     }
     enCineAntes = sala.enCinematica;
+    // Mirada con el ratón: se acerca a la meta con suavidad (sin saltos al entrar el cursor en la ventana).
+    if (metaMirada && puedeMirar() && !modoProyector() && !sala.enCinematica) {
+      const a = 1 - Math.exp(-dt * 8);
+      const dy = metaMirada.yaw - mirada.yaw, dp = metaMirada.pitch - mirada.pitch;
+      if (Math.abs(dy) + Math.abs(dp) > 1e-4) { mirada.yaw += dy * a; mirada.pitch += dp * a; difundirMirada(); }
+    }
     poseObjetivo(objetivo);
     if (transicion && transicion.t < 1) {
       transicion.t = Math.min(1, transicion.t + dt / 0.75);

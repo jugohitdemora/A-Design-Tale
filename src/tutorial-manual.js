@@ -101,7 +101,7 @@ export const MANUAL = [
   ] },
   { t: t('12. Controles y navegación 3D', '12. Controls and 3D navigation'), b: [
     ['lista', [
-      t('Arrastra con el ratón (o con el dedo) para mirar alrededor. Cambia la sensibilidad, la calidad y la animación del fondo en Ajustes.', 'Drag with the mouse (or your finger) to look around. Change the sensitivity, the quality, and the background animation in Settings.'),
+      t('Mueve el ratón (o arrastra con el dedo) para mirar alrededor. Cambia la sensibilidad, la calidad y la animación del fondo en Ajustes.', 'Move the mouse (or drag with your finger) to look around. Change the sensitivity, the quality, and the background animation in Settings.'),
       t('Haz clic en un objeto para usarlo. Puedes usar el holograma del proyector, la carpeta de misión, tu portátil, la carpeta de anillas (SOP), la pantalla central, tu consola (tu GO) y la puerta.', 'Click an object to use it. You can use the projector hologram, the mission folder, your laptop, the ring binder (SOP), the central screen, your console (your GO), and the door.'),
       t('Pulsa Esc para levantarte del portátil o salir de la pantalla ampliada.', 'Press Esc to stand up from the laptop or leave the zoomed screen.'),
       t('Multijugador: abre la misma URL en cada dispositivo. El código de sala va después de #.', 'Multiplayer: open the same URL on each device. The room code goes after #.'),

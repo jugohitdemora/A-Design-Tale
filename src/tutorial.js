@@ -5,7 +5,7 @@
 // Los números de la práctica siguen las reglas reales: porcentaje = usado / límite; ≤ 100 % dentro; ≤ 120 % tolerancia; > 120 % la revisión falla.
 import { textos, tx, idioma } from './i18n.js';
 import { efecto } from './audio.js';
-import { MANUAL } from './tutorial-manual.js?v=3';
+import { MANUAL } from './tutorial-manual.js?v=4';
 
 const T = textos({
   es: {

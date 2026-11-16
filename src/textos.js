@@ -39,7 +39,7 @@ export const T = textos({
   budget: 'Presupuesto',
   startDesign: 'Empezar el diseño',
   startHint: 'Primero elige una misión jugable.',
-  dragHint: 'Arrastra para mirar alrededor.',
+  dragHint: 'Mueve el ratón para mirar alrededor (en táctil, arrastra).',
   noScenarios: 'No hay escenarios en el módulo de datos.',
 
   // taller
@@ -231,7 +231,7 @@ export const T = textos({
   budget: 'Budget',
   startDesign: 'Start design',
   startHint: 'Choose a playable mission first.',
-  dragHint: 'Drag to look around.',
+  dragHint: 'Move the mouse to look around (on touch, drag).',
   noScenarios: 'No scenarios in the data module.',
 
   // workshop
