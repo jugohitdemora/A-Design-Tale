@@ -80,6 +80,7 @@ export const TI = textos({
     tripulacionTitulo: 'Tripulación',
     tuRolTitulo: 'Tu rol',
     salir: 'Salir',
+    tutorial: 'TUTORIAL',
   },
   en: {
     conectando: 'CONNECTING…',
@@ -128,6 +129,7 @@ export const TI = textos({
     tripulacionTitulo: 'Crew',
     tuRolTitulo: 'Your role',
     salir: 'Leave',
+    tutorial: 'TUTORIAL',
   },
 });
 

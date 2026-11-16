@@ -12,6 +12,7 @@ import { MAX_JUGADORES, conectados, duenoDeRol } from './red/protocolo.js';
 import { T } from './textos.js';
 import { traducirMotivo } from './motivos.js';
 import { abrirCreditos } from './creditos.js';
+import { abrirTutorial } from './tutorial.js';
 import { crearPantallas, LOGICO } from './pantallas/index.js';
 import { musica, efecto, volumen, ponerVolumen } from './audio.js';
 
@@ -129,6 +130,7 @@ $('form-unirse').addEventListener('submit', (e) => {
 });
 
 $('btn-creditos').addEventListener('click', () => abrirCreditos());
+$('btn-tutorial').addEventListener('click', () => abrirTutorial());
 $('btn-ajustes').addEventListener('click', () => {
   $('in-sensibilidad').value = ajustes.sensibilidad;
   $('in-calidad').value = ajustes.calidad;
