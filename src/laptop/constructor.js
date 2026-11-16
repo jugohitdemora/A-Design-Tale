@@ -23,10 +23,10 @@ const T = textos({
     uso: 'USO', siempre: 'Siempre encendida (24 h/día)', hDia: 'h/día', montar: 'MONTAR', quitar: 'QUITAR',
     soloDe: (d) => `Solo ${d} puede cambiarla.`,
     restrNo: 'No se añaden piezas. Quita, baja el uso o cambia de opción.',
-    recursos: 'RECURSOS', mesReloj: (m, p) => (p != null ? `Mes ${m} · comprometido ${p}` : `Mes ${m}`), retrasoN: (n) => `retraso ${n} m`, cancelada: 'Los inversores se retiraron',
+    recursos: 'RECURSOS',
     presu: { mision: 'Misión', bono: 'Inversores (plazo)', recorte: 'Recorte por retraso', eventos: 'Eventos' }, presuTit: 'PRESUPUESTO',
     barras: { masa: 'Masa', potencia: 'Potencia', bateria: 'Batería', datos: 'Datos', presupuesto: 'Presupuesto', volumen: 'Volumen' },
-    sinLimite: { masa: 'Sin cohete: elígelo en la cámara de lanzamiento', potencia: 'Sin paneles', bateria: 'Sin batería',
+    sinLimite: { masa: 'Sin cohete: elígelo en el Selector de cohete (paso 1)', potencia: 'Sin paneles', bateria: 'Sin batería',
       datos: 'Sin antena', presupuesto: 'Sin presupuesto', volumen: 'Sin estructura' },
     est: { ok: 'OK', tolerancia: 'TOL', exceso: 'EXC' }, marcas: '▮ 100 %   ▯ 120 % (tolerancia: pasa, con más riesgo de fallo)', otros: 'Otros',
     ciencia: 'CIENCIA', sinObjetivos: 'Sin objetivos marcados.',
@@ -52,10 +52,10 @@ const T = textos({
     uso: 'USAGE', siempre: 'Always on (24 h/day)', hDia: 'h/day', montar: 'MOUNT', quitar: 'REMOVE',
     soloDe: (d) => `Only ${d} can change it.`,
     restrNo: 'Do not add parts. Remove, lower usage or change option.',
-    recursos: 'RESOURCES', mesReloj: (m, p) => (p != null ? `Month ${m} · committed ${p}` : `Month ${m}`), retrasoN: (n) => `${n} mo late`, cancelada: 'Investors pulled out',
+    recursos: 'RESOURCES',
     presu: { mision: 'Mission', bono: 'Investors (term)', recorte: 'Late funding cut', eventos: 'Events' }, presuTit: 'BUDGET',
     barras: { masa: 'Mass', potencia: 'Power', bateria: 'Battery', datos: 'Data', presupuesto: 'Budget', volumen: 'Volume' },
-    sinLimite: { masa: 'No rocket: choose one in the launch camera', potencia: 'No panels', bateria: 'No battery',
+    sinLimite: { masa: 'No rocket: choose one in the Rocket selector (step 1)', potencia: 'No panels', bateria: 'No battery',
       datos: 'No antenna', presupuesto: 'No budget', volumen: 'No structure' },
     est: { ok: 'OK', tolerancia: 'TOL', exceso: 'OVER' }, marcas: '▮ 100 %   ▯ 120 % (tolerance: passes, higher failure risk)', otros: 'Other',
     ciencia: 'SCIENCE', sinObjetivos: 'No goals ticked.',
@@ -505,11 +505,8 @@ function desglosePresupuesto(pr) {
 
 function recursos(c, res, restr) {
   const rl = res?.reloj;
-  const reloj = rl ? h('div', { class: 'kb-reloj' + (rl.cancelada ? ' cancelada' : rl.retraso > 0 ? ' retraso' : '') },
-    h('b', {}, T.mesReloj(rl.mes, rl.activo ? rl.plazo : null)),
-    rl.retraso > 0 ? h('span', {}, ` · ${T.retrasoN(rl.retraso)}`) : null,
-    rl.cancelada ? h('span', {}, ` · ${T.cancelada}`) : null) : null;
-  const caja = h('aside', { class: 'kb-col kb-der' }, h('header', { class: 'kb-cab' }, h('h3', {}, T.recursos), reloj));
+  // El mes, el plazo y el retraso ya salen en la barra superior del portátil: aquí no se repiten.
+  const caja = h('aside', { class: 'kb-col kb-der' }, h('header', { class: 'kb-cab' }, h('h3', {}, T.recursos)));
   const cuerpo = h('div', { class: 'kb-der-cuerpo', 'data-scroll': 'kb-recursos' });
   let nivel = null;
   try { nivel = res && c.motor?.cumple ? c.motor.cumple(res)?.nivel : null; } catch { nivel = null; }

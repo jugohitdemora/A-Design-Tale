@@ -291,10 +291,6 @@
 .kb-pc ul { margin: 0; padding-left: 14px; }
 .kb-pro small { color: var(--lp-ok); }
 .kb-contra small { color: var(--lp-mal); }
-.kb-reloj { margin-left: auto; font-size: var(--t-meta); }
-.kb-reloj b { font-weight: 700; }
-.kb-reloj.retraso { color: var(--lp-aviso); }
-.kb-reloj.cancelada { color: var(--lp-mal); font-weight: 700; }
 .kb-barra.presu { padding: var(--e-2); background: var(--lp-panel-2); border-color: var(--lp-borde); }
 .kb-barra.presu.alerta { border-color: var(--lp-mal); }
 .kb-barra.presu .kb-barra-nom, .kb-barra.presu .kb-barra-num { font-size: var(--t-cuerpo); }

@@ -10,7 +10,7 @@ import { pantallaInforme } from './informe.js';
 import { expedienteCompleto } from './expediente.js';
 import { resumenSeguro } from './ui.js';
 import { panelGlobal, bloqueRevision } from './panel-global.js';
-import { pasosFase, lineaGuia } from './index.js';
+import { pasosFase } from './index.js';
 
 const T = textos({
   es: {
@@ -166,7 +166,6 @@ export function pantallaLaptop(c, fase, { irA }) {
   const barra = h('header', { class: 'lp-barra' },
     h('span', { class: 'lp-logo' }, T.so),
     pasosFase(c.guia),
-    lineaGuia(c.guia, 'lp-guia'),
     h('span', { class: 'lp-usuario', style: `--rol: var(--lp-rol-${c.rol})` }, c.nick, ' · ', depto(c.rol)),
     h('button', { class: 'boton lp-salir', type: 'button', title: T.levantarse, onclick: () => irA('sala') }, '⏏ ', T.levantarse));
   const d = dockDeFase(fase);

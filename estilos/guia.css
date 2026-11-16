@@ -50,7 +50,8 @@ body.en-proyector .f-hud .g-linea { display: none; } /* la barra del proyector y
 .lp-barra .g-pasos { color: #c9d6e2; }
 .lp-barra .g-fase { display: none; } /* los puntos + la ventana activa ya dicen dónde estás */
 .lp-barra .lp-usuario { display: none; } /* el rol se ve en la tarjeta de la sala; aquí la barra es para la guía */
-.lp-barra .g-linea.lp-guia { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eef4f8; font-size: var(--t-cuerpo); }
+/* Sin línea "Siguiente" en el portátil (no cabía): el paso que toca ya brilla en el dock. */
+.lp-barra .lp-salir { margin-left: auto; }
 .lp-barra .boton, .mc-cab .boton { min-height: 32px; padding: 5px 10px; font-size: var(--tp-etq); box-shadow: 0 3px 0 var(--b-sombra); }
 /* La salida del portátil va sobre la barra oscura: piel clara para que se lea */
 .lp-barra .boton.lp-salir { --b-fondo: #3a4b60; --b-borde: #6b7d93; --b-sombra: #141c27; --b-tinta: #eef4f8; }
