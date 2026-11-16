@@ -13,7 +13,9 @@ export function estadoReferencia(id, { cohete = 0, ruta = 0, semilla = 7 } = {})
   e.mision = { escenario: m.escenario, id, dificultad: 'normal' };
   for (const pid of m.piezas) {
     const p = D.PIEZAS[pid];
-    const op = (p.opciones.find((o) => o.referencia) ?? p.opciones[0]).id;
+    const ref = p.opciones.find((o) => o.referencia);
+    if (!ref && m.piezas.some((q) => q !== pid && D.PIEZAS[q]?.rol === p.rol && D.PIEZAS[q]?.opciones.some((o) => o.referencia && Object.keys(o.aporta ?? {}).some((k) => k in (p.opciones[0].aporta ?? {}))))) continue; // alternativa a una pieza real
+    const op = (ref ?? p.opciones[0]).id;
     e.porRol[p.rol].piezas[pid] = { op, uso: p.uso?.def ?? null };
   }
   e.porRol.vuelo.cohete = m.cohetes[cohete];

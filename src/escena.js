@@ -469,7 +469,7 @@ function crearCarpeta() {
 const FOTOS = {
   mercurio: 'assets/mapas/mercurio-color.jpg', luna: 'assets/mapas/luna-color.jpg', cometa: 'assets/mapas/cometa-67p.jpg',
   // Misiones nuevas (assets/mapas, fuentes en src/datos/mapas-nuevos.js). Si falta un archivo, se dibuja un mapa procedural.
-  tierra: 'assets/mapas/tierra-color.jpg', marte: 'assets/mapas/marte-color.jpg', europa: 'assets/mapas/europa-color.jpg',
+  tierra: 'assets/mapas/tierra-color.png', marte: 'assets/mapas/marte-color.jpg', europa: 'assets/mapas/europa-color.jpg',
   encelado: 'assets/mapas/encelado-color.jpg', iss: 'assets/mapas/iss.jpg',
 };
 const imagenes = {};

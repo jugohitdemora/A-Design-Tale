@@ -26,7 +26,10 @@ const mision = {
         'With six iROSAs installed, the station total passed 250 kW, a rise of over 30 %.', 'ISS-03'),
     ],
   },
-  destino: 'leo', reloj: { inicio: 0, plazos: [8, 12, 16] }, presupuesto: I(150), horasSombra: 9, horasEnlace: 12, diasPrevistos: 30, limites: {},
+  destino: 'leo', reloj: { inicio: 0, plazos: [8, 12, 16] }, presupuesto: I(150), horasSombra: 9, horasEnlace: 12, diasPrevistos: 30,
+  // Topes de juego: lo que admite el maletero sin presión de Dragon (masa) y la potencia que da al cargamento antes de instalarlo.
+  // La manta solar aporta sus kW a la estación, no al cargamento: por eso el tope de potencia manda.
+  limites: { masa: 3300, potencia: 800 },
   objetivos: [
     { id: `${ID}-O1`, prioridad: true, nombre: N('Subir la potencia de la estación entre 20 % y 30 %', 'Raise the station power by 20 % to 30 %'),
       valor: 45, requiere: ['IR-COR'], usoObjetivo: 12,
