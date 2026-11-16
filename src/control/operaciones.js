@@ -270,6 +270,7 @@ export function pantallaOperaciones(c) {
       h('b', {}, ev.signo === '+' ? `★ ${T.bueno}` : T.alerta),
       h('p', { class: 'op-ev' }, tx(ev.nombre) || ev.id), tx(ev.texto) ? h('p', {}, tx(ev.texto)) : null,
       ct ? [h('p', {}, h('b', {}, tx(k?.nombre) || ct), ` · ${T.responsable}: `, h('span', { style: `color:var(--lp-rol-${rolCt})` }, depto(rolCt))),
+        tx(k?.texto) ? h('small', { class: 'tenue' }, tx(k.texto)) : null,
         activada ? h('p', { class: 'ok' }, '✔ ', T.activada)
           : h('button', { class: 'boton peligro grande ancho op-latido', type: 'button', disabled: !puedo, onclick: () => c.enviar('activarContingencia', { id: ct }) }, T.activar),
         !activada && !puedo ? h('small', {}, T.esperaDepto(depto(rolCt))) : null]

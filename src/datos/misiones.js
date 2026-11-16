@@ -23,7 +23,7 @@ export const ESCENARIOS = [
     misiones: ['MER-3', 'ISS-1', 'AGR-1'],
   },
   {
-    id: 'landing', nombre: N('LANDING', 'LANDING'),
+    id: 'landing', nombre: N('ATERRIZAJE', 'LANDING'),
     desc: E('Land a probe on the surface and work there as long as you can.'),
     regla: E('Score: the chain from launch to touchdown must hold, then science times the days you work on the surface.'),
     misiones: ['LUN-3', 'EUR-1', 'MAR-1'],

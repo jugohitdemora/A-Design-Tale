@@ -23,6 +23,7 @@ const T = textos({
     capas: 'CAPAS DE DATOS', real: 'dato real', juego: '≈ juego', calculada: 'calculada', elegir: 'ELEGIR SITIO', elegido: 'ELEGIDO',
     sinSitio: 'Pasa el ratón para leer las capas. Haz clic en un sitio u órbita.',
     fasesTit: 'Probabilidad por fase', ciencia: 'Cobertura de objetivos', masa: 'Masa', sombra: 'Horas de sombra por ciclo',
+    hElev: 'Altura de la Tierra', hPend: 'Pendiente típica', hPeri: 'Periapsis', hApo: 'Apoapsis', hDist: 'Distancia',
     sinRuta: 'Elige primero una ruta: la geometría del mes cambia el propelente.', propelente: 'Propelente', precio: 'Precio',
     efecto: 'Efecto', sinEfectos: 'Sin efectos especiales.', factor: (f) => `× ${f}`, fuente: 'Fuente',
     noPlan: 'Esta misión no tiene planificación de ruta.', bajo: 'bajo', alto: 'alto', leyenda: 'Leyenda', ampliar: '⛶ Ampliar mapa', reducir: '✕ Reducir mapa',
@@ -68,6 +69,7 @@ const T = textos({
     capas: 'DATA LAYERS', real: 'real data', juego: '≈ game', calculada: 'computed', elegir: 'CHOOSE SITE', elegido: 'CHOSEN',
     sinSitio: 'Hover over the map to read layers. Click a site or orbit.',
     fasesTit: 'Probability per phase', ciencia: 'Goal coverage', masa: 'Mass', sombra: 'Shadow hours per cycle',
+    hElev: 'Earth elevation', hPend: 'Typical slope', hPeri: 'Periapsis', hApo: 'Apoapsis', hDist: 'Distance',
     sinRuta: 'Choose a route first: the geometry of the month changes the propellant.', propelente: 'Propellant', precio: 'Price',
     efecto: 'Effect', sinEfectos: 'No special effects.', factor: (f) => `× ${f}`, fuente: 'Source',
     noPlan: 'This mission has no route planning.', bajo: 'low', alto: 'high', leyenda: 'Legend', ampliar: '⛶ Enlarge map', reducir: '✕ Shrink map',
@@ -285,6 +287,7 @@ function panelMeses(c, u) {
   const leyenda = h('div', { class: 'pl-lt-ley' },
     h('span', { class: 'cur' }, T.leyCurva), h('span', { class: 'scr' }, T.leyScrub), h('span', { class: 'ven' }, T.leyVentana),
     h('span', { class: 'pas' }, T.leyPasado), h('span', { class: 'rev' }, T.leyRevision), rl.activo ? h('span', { class: 'dem' }, T.leyDemora) : null,
+    tx(c.D?.PLANIFICACION?.[c.mision?.id]?.lanzamiento?.nota) ? h('span', { class: 'nota' }, tx(c.D.PLANIFICACION[c.mision.id].lanzamiento.nota)) : null,
     h('span', { class: 'nota' }, T.notaRetraso, info.limite < info.max ? ` ${T.tarde(nombre(info.limite, true))}` : ''));
   const delta = h('div', { class: 'pl-lt-delta' });
   // Leyenda y nota de retraso: consulta, plegadas tras "¿Cómo se lee?" (cada franja también lo dice al pasar el ratón).
@@ -572,6 +575,10 @@ function fichaSitio(c, P, u, res) {
       filas.push(h('li', { class: k >= 1 ? 'ok' : 'mal' }, `${tx(o?.nombre) || '—'}: ${T.factor(k)}`));
     }
     if (ef.horasSombra != null) filas.push(h('li', {}, `${T.sombra}: ${ef.horasSombra} h`));
+    const hc = sitio.hechos ?? {};
+    for (const [k, et, u_] of [['elevTierra', T.hElev, '°'], ['pendiente', T.hPend, '°'], ['periapsis', T.hPeri, ' km'], ['apoapsis', T.hApo, ' km'], ['distancia', T.hDist, ' km']]) {
+      if (hc[k] != null) filas.push(h('li', { class: 'tenue' }, `${et}: ${hc[k]}${u_}`));
+    }
     tarjeta.push(h('div', { class: 'pl-sitio-card' + (elegido ? ' elegido' : ''), title: tx(sitio.nota) || null }, // la descripción, al pasar el ratón
       h('b', {}, tx(sitio.nombre)), sitio.inc != null ? h('small', {}, T.inc(sitio.inc)) : sitio.lat != null ? h('small', {}, `${sitio.lat}°, ${sitio.lon}°`) : null,
       filas.length ? h('ul', { class: 'mc-lista' }, filas) : h('p', { class: 'tenue' }, T.sinEfectos),
