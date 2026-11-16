@@ -5,7 +5,7 @@ import { textos, tx } from './i18n.js';
 
 const T = textos({
   es: {
-    titulo: 'Créditos y fuentes', cerrar: 'Cerrar',
+    titulo: 'Créditos y fuentes', boton: 'CRÉDITOS', cerrar: 'Cerrar',
     intro: 'Las imágenes de los mapas son reales y vienen de agencias espaciales. Las cifras marcadas con ≈ son valores de juego; el resto se leyó en la fuente citada.',
     imagenes: 'Imágenes y mapas reales', misiones: 'Misiones reales de referencia', datos: 'Datos y herramientas de la NASA',
     licencia: 'Licencia', abrir: 'Ver fuente',
@@ -17,7 +17,7 @@ const T = textos({
     equipo: 'Hecho para el NASA Space Apps Challenge 2026.',
   },
   en: {
-    titulo: 'Credits and sources', cerrar: 'Close',
+    titulo: 'Credits and sources', boton: 'CREDITS', cerrar: 'Close',
     intro: 'The map images are real and come from space agencies. Figures marked ≈ are game values; the rest were read in the cited source.',
     imagenes: 'Real images and maps', misiones: 'Real reference missions', datos: 'NASA data and tools',
     licencia: 'Licence', abrir: 'Open source',
@@ -81,4 +81,4 @@ export function abrirCreditos() {
   dlg.showModal();
 }
 
-export const textoBotonCreditos = () => T.titulo.toUpperCase();
+export const textoBotonCreditos = () => T.boton;

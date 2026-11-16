@@ -66,6 +66,8 @@ body.en-sala #lienzo:active { cursor: grabbing; }
 .btn:hover { filter: brightness(1.08); }
 .btn:active { transform: translateY(2px); }
 .btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.fila-btn { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fila-btn .btn { padding: 16px 8px; font-size: clamp(12px, 1.3vw, 15px); }
 .btn-primario { background: #f0b53c; color: #1a1a1a; border: 3px solid #a8741a; box-shadow: 0 4px 0 #8a5c12; }
 .btn-secundario { background: #4f6b8f; color: var(--crema); border: 3px solid #2f4664; box-shadow: 0 4px 0 #22344b; }
 .btn::before, .btn::after { content: ''; position: absolute; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: rgba(0,0,0,0.3); }
