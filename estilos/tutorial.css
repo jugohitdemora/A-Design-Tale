@@ -176,3 +176,62 @@ dialog.tt-manual .acciones { padding: 0 14px 12px; }
 @media (prefers-reduced-motion: reduce) {
   .tt *, .btn-tutorial * { animation: none !important; transition: none !important; }
 }
+
+/* --- Ruta, mes y sitio (planificación) --- */
+.tt-meses { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 10px; }
+.tt-mes { flex: 1; display: grid; justify-items: center; align-content: end; gap: 4px; padding: 8px 4px 6px; font: inherit; color: var(--lp-tinta); cursor: pointer;
+  background: var(--lp-panel); border: 2px solid var(--lp-borde); border-radius: var(--lp-radio); box-shadow: var(--lp-sombra); }
+.tt-mes i { display: block; width: 70%; background: var(--lp-aviso); border: 2px solid var(--lp-borde); }
+.tt-mes.mejor i { background: var(--lp-ok); }
+.tt-mes.on { background: var(--lp-sel); border-color: var(--lp-acento); }
+.tt-mes:hover { background: var(--lp-sel); }
+.tt-mes-kg { font-size: var(--t-meta); font-variant-numeric: tabular-nums; }
+.tt-mes em { font: normal 10px/1.2 var(--lp-pixel); color: var(--lp-mal); min-height: 12px; }
+.tt-mes.mejor em { color: var(--lp-ok); }
+.tt-capas { display: flex; gap: 8px; margin-bottom: 8px; }
+.tt-mapa { display: block; width: 100%; height: auto; border: 2px solid var(--lp-borde); box-shadow: var(--lp-sombra); background: #444; }
+.tt-marca-sitio { cursor: pointer; }
+.tt-marca-sitio:hover circle, .tt-marca-sitio:focus circle { fill: #ffd36a; }
+.tt-marca-sitio.on circle { fill: #ffd36a; stroke-width: 5; }
+.tt-marca-sitio:focus { outline: none; }
+.tt-sitio .tt-num { white-space: nowrap; }
+
+/* --- Pared de la sala de control (colores de la pared: índigo, cian y ámbar) --- */
+.tt-control { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+.tt-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.tt-tab { font: 11px/1.3 var(--lp-pixel); letter-spacing: 0.5px; padding: 8px 10px; cursor: pointer; color: var(--lp-tinta); background: var(--lp-panel-2); border: 2px solid var(--lp-borde); border-radius: 3px; }
+.tt-tab.visto::after { content: ' ✓'; color: var(--lp-ok); }
+.tt-tab.on { background: var(--lp-barra); color: #ffd36a; }
+.tt-pared { background: #0a0d1c; border: 2px solid #3a4880; box-shadow: var(--lp-sombra); color: #e6edff; padding: 10px; }
+.tt-pared-cab { font: 11px/1.4 var(--lp-pixel); color: #4be6ff; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 2px solid #2a3a86; }
+.tt-pared-cajas { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); min-height: 150px; }
+.tt-pared-cajas.c3 { grid-template-columns: repeat(3, 1fr); }
+.tt-pared-caja { display: grid; place-items: center; text-align: center; padding: 8px 4px; min-height: 64px; background: #121830; border: 2px solid #3a4880; }
+.tt-pared-caja span { font: 10px/1.5 var(--lp-pixel); color: #ffb938; }
+.tt-pared-consolas { display: flex; justify-content: space-around; padding: 8px 20px 0; }
+.tt-pared-consolas i { width: 46px; height: 14px; background: var(--lp-barra); border-bottom: 6px solid var(--c); }
+.tt-control-txt ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.tt-control-txt .tt-h { margin-bottom: 10px; }
+
+/* --- Consola de operaciones (vuelo) --- */
+.tt-chip { margin-left: auto; font: 10px/1 var(--lp-pixel); padding: 4px 6px; border-radius: 2px; color: #fff; background: var(--lp-ok); }
+.tt-chip.tol { background: var(--lp-aviso); color: var(--lp-tinta); } .tt-chip.mal { background: var(--lp-mal); }
+.tt-ops { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.tt-ops-caja { padding: 8px 12px; background: #0a0d1c; color: #e6edff; border: 2px solid #3a4880; box-shadow: var(--lp-sombra); }
+.tt-ops-caja h4 { margin: 0 0 6px; font: 11px/1.4 var(--lp-pixel); color: #4be6ff; }
+.tt-ops-caja p { margin: 2px 0; }
+
+@media (max-width: 760px) { .tt-control { grid-template-columns: 1fr; } }
+
+/* Correcciones: el .aviso / .mal globales del inicio pintan el texto; aquí el texto va en tinta. */
+.tt-ayuda, .tt-ayuda.aviso, .tt-ayuda.mal, .tt-veredicto, .tt-veredicto.aviso, .tt-evento, .tt-evento.ok, .tt-evento.mal { color: var(--lp-tinta); }
+.tt-mapa { max-width: 340px; }
+
+/* Móvil: sin retrato, el cuadro del Chief ocupa todo el ancho y el texto largo hace scroll. */
+@media (max-width: 760px) {
+  .tt-retrato { display: none; }
+  .tt-chief { grid-template-columns: minmax(0, 1fr); }
+  .tt-texto { max-height: 24vh; overflow-y: auto; }
+  .tt-acc .boton { padding: 8px 10px; font-size: 11px; min-height: 36px; }
+  .tt-ventana-titulo, .lp-ventana-titulo { font-size: 11px; }
+}

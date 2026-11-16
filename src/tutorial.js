@@ -9,6 +9,13 @@ import { MANUAL } from './tutorial-manual.js';
 
 const T = textos({
   es: {
+    dias: 'días', propelente: 'Propelente', precio: 'Precio', rutas: 'Rutas', riesgoCr: 'Riesgo en crucero', pts: 'puntos', mejor: 'MEJOR', plazoMes: 'PLAZO',
+    mejorVentana: 'Ir a la mejor ventana', ahoraPlazo: 'Ahora: febrero. Plazo de los inversores: junio.', extraKg: 'Propelente extra por mes',
+    capaRelieve: 'Elevación', capaPend: 'Pendiente', capas: 'Capas de datos', sitios: 'Sitios candidatos', pendiente: 'Pendiente', rocas: 'Rocas', interes: 'Interés científico', pAter: 'Éxito del aterrizaje',
+    leyenda: 'Leyenda: verde llano, ámbar inclinado, rojo muy inclinado.', sitioAlto: 'Mucha ciencia, pero la pendiente sube el riesgo de aterrizaje.', sitioLlano: 'Terreno llano: aterrizaje seguro.',
+    secuencia: 'Secuencia de misión', mensajes: 'Mensajes', telemetria: 'Telemetría', energia: 'Energía', enlace: 'Enlace', datosRec: 'Datos', estable: 'estable', responsable: 'Responsable',
+    esperaDepto: 'Esperando al departamento. Solo él puede activarla.', activarComo: 'ACTIVAR · Comunicaciones y Ops.', sinCobertura: 'Ninguna contingencia cubre este evento.',
+    tabPlan: 'PLANIFICACIÓN', tabGo: 'GO / NO-GO', tabOps: 'OPERACIONES', tabInf: 'INFORME', pared: 'Pared de la sala de control', verTodas: 'Pulsa las cuatro pestañas para seguir.',
     boton: 'TUTORIAL', titulo: 'Tutorial · Simulacro', ventana: 'Misión de práctica · Luna-0', jefe: 'JEFE DE MISIÓN', saltar: 'Saltar', siguiente: 'Siguiente', atras: 'Atrás',
     paso: (a, b) => `Paso ${a} de ${b}`, cerrar: 'Cerrar', terminar: 'Terminar y a la misión',
     barras: 'Barras de recursos', masa: 'Masa', potencia: 'Potencia', presupuesto: 'Presupuesto', ratio: 'razón',
@@ -19,7 +26,7 @@ const T = textos({
     faltan: 'Faltan piezas obligatorias', listoDiseno: 'Diseño completo. Puedes pedir la revisión.',
     firmar: 'Firmar GO', firmado: 'GO', pendiente: 'Pendiente',
     lanzar: 'LANZAR', cuenta: 'Cuenta atrás', despegue: '¡Despegue!',
-    fases: ['Lanzamiento', 'Crucero', 'Órbita lunar', 'Operaciones'], faseTit: 'Fases del vuelo', next: 'NEXT',
+    fases: ['Lanzamiento', 'Crucero', 'Aterrizaje', 'Operaciones'], faseTit: 'Fases del vuelo', next: 'NEXT',
     eventoTit: 'EVENTO', tormenta: 'Tormenta solar. Las partículas dañan la electrónica.',
     activar: 'Activar contingencia', aceptar: 'Aceptar el daño', anulado: 'Anulada por tu contingencia',
     dano: 'Daño: −15 % de ciencia',
@@ -30,6 +37,13 @@ const T = textos({
     manualPie: 'Encuentra la versión completa, con fórmulas y datos de tu misión, en la app «Manual de juego» del portátil.',
   },
   en: {
+    dias: 'days', propelente: 'Propellant', precio: 'Price', rutas: 'Routes', riesgoCr: 'Cruise risk', pts: 'points', mejor: 'BEST', plazoMes: 'DEADLINE',
+    mejorVentana: 'Go to the best window', ahoraPlazo: 'Now: February. Investor deadline: June.', extraKg: 'Extra propellant per month',
+    capaRelieve: 'Elevation', capaPend: 'Slope', capas: 'Data layers', sitios: 'Candidate sites', pendiente: 'Slope', rocas: 'Rocks', interes: 'Science interest', pAter: 'Landing success',
+    leyenda: 'Legend: green is flat, amber is steep, red is very steep.', sitioAlto: 'High science, but the slope raises the landing risk.', sitioLlano: 'Flat terrain: safe landing.',
+    secuencia: 'Mission sequence', mensajes: 'Messages', telemetria: 'Telemetry', energia: 'Power', enlace: 'Link', datosRec: 'Data', estable: 'stable', responsable: 'Owner',
+    esperaDepto: 'Waiting for the department. Only it can activate it.', activarComo: 'ACTIVATE · Comms & Ops', sinCobertura: 'No contingency covers this event.',
+    tabPlan: 'PLANNING', tabGo: 'GO / NO-GO', tabOps: 'OPERATIONS', tabInf: 'REPORT', pared: 'Control room wall', verTodas: 'Click the four tabs to continue.',
     boton: 'TUTORIAL', titulo: 'Tutorial · Drill', ventana: 'Practice mission · Luna-0', jefe: 'MISSION CHIEF', saltar: 'Skip', siguiente: 'Next', atras: 'Back',
     paso: (a, b) => `Step ${a} of ${b}`, cerrar: 'Close', terminar: 'Finish and go to the mission',
     barras: 'Resource bars', masa: 'Mass', potencia: 'Power', presupuesto: 'Budget', ratio: 'ratio',
@@ -40,7 +54,7 @@ const T = textos({
     faltan: 'Required parts are missing', listoDiseno: 'Design complete. You can request the review.',
     firmar: 'Sign GO', firmado: 'GO', pendiente: 'Pending',
     lanzar: 'LAUNCH', cuenta: 'Countdown', despegue: 'Liftoff!',
-    fases: ['Launch', 'Cruise', 'Lunar orbit', 'Operations'], faseTit: 'Flight phases', next: 'NEXT',
+    fases: ['Launch', 'Cruise', 'Landing', 'Operations'], faseTit: 'Flight phases', next: 'NEXT',
     eventoTit: 'EVENT', tormenta: 'Solar storm. Particles damage the electronics.',
     activar: 'Activate contingency', aceptar: 'Accept the damage', anulado: 'Cancelled by your contingency',
     dano: 'Damage: −15 % science',
@@ -59,7 +73,7 @@ const DEPS = {
   potencia: { color: '#e0c040', n: { es: 'Energía', en: 'Power' }, d: { es: 'Paneles, baterías y temperatura.', en: 'Panels, batteries and temperature.' } },
   comms: { color: '#4a7fd0', n: { es: 'Comunicaciones y Operaciones', en: 'Communications & Operations' }, d: { es: 'Antenas, computador y que los datos lleguen a casa.', en: 'Antennas, computer, and getting the data home.' } },
 };
-const LIM = { masa: 100, presupuesto: 30 };
+const LIM = { masa: 100, presupuesto: 40 };
 const PIEZAS = [
   { id: 'chasis', dep: 'vuelo', n: { es: 'Chasis ligero', en: 'Light frame' }, m: 40, w: 0, c: 8, req: true },
   { id: 'camara', dep: 'ciencia', n: { es: 'Cámara de cráteres', en: 'Crater camera' }, m: 12, w: 20, c: 6, req: true },
@@ -69,9 +83,26 @@ const PIEZAS = [
   { id: 'antena', dep: 'comms', n: { es: 'Antena de bajada', en: 'Downlink antenna' }, m: 8, w: 10, c: 4, req: true },
 ];
 const SEGURO = { id: 'seguro', dep: 'comms', c: 2 };
+// Planificación (sala de control): la ruta, el mes y el sitio suman masa y precio, y mueven la probabilidad de una fase.
+const RUTAS = [
+  { id: 'directa', n: { es: 'Directa rápida', en: 'Fast direct' }, dias: 3, prop: 30, c: 6, dp: 0 },
+  { id: 'equil', n: { es: 'Equilibrada', en: 'Balanced' }, dias: 5, prop: 18, c: 4, dp: 3 },
+  { id: 'larga', n: { es: 'Larga con sobrevuelo', en: 'Long with flyby' }, dias: 9, prop: 8, c: 3, dp: 6 },
+];
+const MESES = [
+  { n: { es: 'Feb', en: 'Feb' }, extra: 8 }, { n: { es: 'Mar', en: 'Mar' }, extra: 0, mejor: true }, { n: { es: 'Abr', en: 'Apr' }, extra: 8 },
+  { n: { es: 'May', en: 'May' }, extra: 16 }, { n: { es: 'Jun', en: 'Jun' }, extra: 24 },
+];
+const SITIOS = [
+  { id: 'A', n: { es: 'Fondo del cráter', en: 'Crater floor' }, pend: 3, rocas: { es: 'pocas', en: 'few' }, interes: { es: 'medio', en: 'medium' }, p: 95, bonus: 40, x: 95, y: 150 },
+  { id: 'B', n: { es: 'Pared del cráter', en: 'Crater wall' }, pend: 18, rocas: { es: 'muchas', en: 'many' }, interes: { es: 'alto', en: 'high' }, p: 78, bonus: 90, x: 205, y: 70 },
+  { id: 'C', n: { es: 'Llanura norte', en: 'North plain' }, pend: 2, rocas: { es: 'pocas', en: 'few' }, interes: { es: 'bajo', en: 'low' }, p: 95, bonus: 10, x: 290, y: 165 },
+];
+const rutaSel = (s = S) => RUTAS.find((r) => r.id === s.ruta) ?? null;
+const sitioSel = (s = S) => SITIOS.find((x) => x.id === s.sitio) ?? null;
 
 // Estado del simulacro (se reinicia al abrir el tutorial).
-const nuevo = () => ({ paso: 0, obj: false, extra: false, piezas: new Set(), seguro: false, firmas: new Set(), lanzado: false, fase: 0, fin: false, evento: null, resultado: null });
+const nuevo = () => ({ paso: 0, obj: false, extra: false, piezas: new Set(), seguro: false, ruta: null, mes: null, sitio: null, capa: 'relieve', tab: 0, vistos: new Set(), firmas: new Set(), lanzado: false, fase: 0, fin: false, evento: null, nuevoEv: false, resultado: null });
 let S = nuevo();
 
 const L = (o) => tx(o);
@@ -83,6 +114,8 @@ function medidas(s = S) {
     if (p.w > 0) uso += p.w; else sum -= p.w;
   }
   if (s.seguro) c += SEGURO.c;
+  const ru = rutaSel(s), me = s.mes != null ? MESES[s.mes] : null;
+  m += (ru?.prop ?? 0) + (me?.extra ?? 0); c += ru?.c ?? 0;
   const r = (u, l) => (l > 0 ? u / l : (u > 0 ? Infinity : 0));
   return { m, uso, sum, c, rm: r(m, LIM.masa), rp: r(uso, sum), rc: r(c, LIM.presupuesto) };
 }
@@ -93,6 +126,8 @@ function disenoValido(s = S) {
   const req = PIEZAS.filter((p) => p.req).every((p) => s.piezas.has(p.id)) && PIEZAS.some((p) => p.panel && s.piezas.has(p.id)) && (!s.extra || s.piezas.has('espectro'));
   return { req, ok: req && m.rm <= 1.2 && m.rp <= 1.2 && m.rc <= 1.2, m };
 }
+const probFases = () => [Math.round((100 - riesgoLanz()) * 10) / 10, 94 - (rutaSel()?.dp ?? 0), sitioSel()?.p ?? 95, 96];
+const semaforo = (p) => (p >= 90 ? 'ok' : p >= 80 ? 'tol' : 'mal');
 const riesgoLanz = () => Math.round((5 + Math.max(0, medidas().rm - 1) * 100 * 0.5) * 10) / 10;
 
 // ---------- DOM ----------
@@ -164,12 +199,16 @@ function decir(texto) {
 const PASOS = [
   { id: 'hola', chief: { es: '¡Bienvenido a bordo! Soy el Jefe de Misión. Aprenderás a jugar con una misión de práctica. Es un simulacro. No arriesgas nada.', en: 'Welcome aboard! I am the Mission Chief. You will learn to play with a practice mission. It is a drill. Nothing is at risk.' }, escena: escHola },
   { id: 'juego', chief: { es: 'Project Orbit es un juego en equipo. Hasta cuatro personas diseñan una misión espacial real. Cada persona lleva un departamento. Todo el equipo gana o pierde junto. Si falta un jugador, su departamento queda vacante. Cualquiera puede manejarlo.', en: 'Project Orbit is a team game. Up to four people design a real space mission. Each person runs one department. The whole team wins or loses together. If a player is absent, that department stays vacant. Anyone can run it.' }, escena: escDeptos },
-  { id: 'fases', chief: { es: 'Este es el camino de cada partida. Primero viene el briefing. Después diseñas, revisas, votas GO o NO-GO, lanzas, vuelas y lees el informe. Hoy lo haremos todo en un simulacro corto.', en: 'This is the path of each game. First comes the briefing. Then you design, review, vote GO or NO-GO, launch, fly, and read the report. Today you will play all of it in a short drill.' }, escena: escFases },
+  { id: 'fases', chief: { es: 'Este es el camino de cada partida. Primero viene el briefing. Después diseñas, revisas, votas GO o NO-GO, lanzas, vuelas y lees el informe. Hoy lo haremos todo en un simulacro corto, con la sala de control incluida.', en: 'This is the path of each game. First comes the briefing. Then you design, review, vote GO or NO-GO, launch, fly, and read the report. Today you will play all of it in a short drill, control room included.' }, escena: escFases },
   { id: 'briefing', chief: { es: 'Briefing. Lee tu expediente. Indica el destino, el presupuesto y los objetivos de ciencia. El objetivo PRIORITARIO es obligatorio. Un objetivo opcional da más ciencia, pero pide más instrumentos. Haz clic en un objetivo para marcarlo.', en: 'Briefing. Read your dossier. It gives the destination, the budget, and the science goals. The PRIORITY goal is mandatory. An optional goal gives more science, but it needs more instruments. Click a goal to mark it.' }, escena: escBriefing, gate: () => S.obj },
   { id: 'diseno', chief: { es: 'Diseño. Monta un chasis, una cámara, una antena y un panel solar (●). Cada barra muestra qué porcentaje del límite usas. Hasta el 100 %, estás dentro del límite. Del 100 % al 120 %, estás en tolerancia. La revisión pasa, pero sube el riesgo. Por encima del 120 %, la revisión falla. Compra también el seguro. Lo necesitarás en el vuelo.', en: 'Design. Mount a frame, a camera, an antenna, and a solar panel (●). Each bar shows the percentage of the limit you use. Up to 100 %, you are within the limit. From 100 % to 120 %, you are in tolerance. The review passes, but the risk grows. Above 120 %, the review fails. Buy the insurance too. You will need it in flight.' }, escena: escDiseno, gate: () => disenoValido().ok },
-  { id: 'go', chief: { es: 'Revisión y GO / NO-GO. Cada departamento revisa su parte. Después firma GO en su consola. Hacen falta las cuatro firmas. Si cambias el diseño más tarde, las firmas se borran. Entonces firmas otra vez. Pulsa cada lámpara.', en: 'Review and GO / NO-GO. Each department checks its part. Then it signs GO at its console. You need all four signatures. If you change the design later, the signatures clear. Then you sign again. Press each lamp.' }, escena: escGo, gate: () => S.firmas.size === 4 },
-  { id: 'lanzar', chief: { es: 'Lanzamiento. En el juego real, eliges el mes de lanzamiento. Fuera del mejor mes, el cohete necesita más propelente. Mira el riesgo de fallo. Sube cuando la masa pasa el límite. Si el lanzamiento falla, la misión termina. ¡Inicia la cuenta atrás!', en: 'Launch. In the real game, you choose the launch month. Outside the best month, the rocket needs more propellant. Look at the failure risk. It grows when the mass is over the limit. If the launch fails, the mission ends. Start the countdown!' }, escena: escLanzar, gate: () => S.lanzado },
-  { id: 'vuelo', chief: { es: 'Vuelo. La pantalla muestra una fase cada vez. Todos ven la misma fase. Pulsa NEXT para avanzar. Puede aparecer un evento malo. Entonces el departamento dueño de la contingencia debe activarla. Antes de eso, no puedes avanzar.', en: 'Flight. The screen shows one phase at a time. Everyone sees the same phase. Press NEXT to advance. A bad event can appear. Then the department that owns the contingency must activate it. You cannot advance before that.' }, escena: escVuelo, gate: () => S.fin },
+  { id: 'control', chief: { es: 'Sala de control. Es la pared grande de la sala. Cambia con la fase: planificación, GO / NO-GO, operaciones e informe. Pulsa cada pestaña para ver qué hace.', en: 'Control room. It is the big wall of the room. It changes with the phase: planning, GO / NO-GO, operations, and report. Click each tab to see what it does.' }, escena: escControl, gate: () => S.vistos.size === 4 },
+  { id: 'ruta', chief: { es: 'Ruta. Elige cómo viaja la nave. Un viaje directo es rápido, pero gasta más propelente. Ese propelente pesa y sube la barra de masa. Un viaje largo con sobrevuelo gasta menos, pero la nave queda expuesta más tiempo. Eso sube el riesgo en el crucero. Elige una ruta que quepa en las barras.', en: 'Route. Choose how the spacecraft travels. A direct trip is fast, but it burns more propellant. That propellant weighs on the mass bar. A long trip with a flyby burns less, but the spacecraft stays exposed for longer. That raises the risk in cruise. Choose a route that fits the bars.' }, escena: escRuta, gate: () => !!S.ruta && disenoValido().ok },
+  { id: 'mes', chief: { es: 'Mes de lanzamiento. El mejor mes gasta menos propelente. Cada mes lejos de él suma propelente extra, y pesa en la barra de masa. El reloj corre en tiempo real, así que no puedes lanzar en un mes que ya pasó. El plazo de los inversores es junio. Elige un mes o pulsa «Ir a la mejor ventana».', en: 'Launch month. The best month burns the least propellant. Each month away from it adds extra propellant, and it weighs on the mass bar. The clock runs in real time, so you cannot launch in a month that has passed. The investor deadline is June. Choose a month or press "Go to the best window".' }, escena: escMes, gate: () => S.mes != null && disenoValido().ok },
+  { id: 'sitio', chief: { es: 'Sitio de aterrizaje. Ciencia propone sitios y Vuelo comprueba que son seguros. Usa las capas de datos del mapa. Activa la capa Pendiente. Un sitio inclinado es un riesgo: una nave real se volcó en 2024 al aterrizar en una ladera. Elige un sitio.', en: 'Landing site. Science proposes sites and Flight checks that they are safe. Use the data layers on the map. Turn on the Slope layer. A steep site is a risk: a real lander tipped over in 2024 after it landed on a slope. Choose a site.' }, escena: escSitio, gate: () => !!S.sitio },
+  { id: 'go', chief: { es: 'Revisión y GO / NO-GO. Cada departamento revisa su parte. Después firma GO en su consola. Hacen falta las cuatro firmas. Si cambias el diseño, la ruta, el mes o el sitio, las firmas se borran. Entonces firmas otra vez. Pulsa cada lámpara.', en: 'Review and GO / NO-GO. Each department checks its part. Then it signs GO at its console. You need all four signatures. If you change the design, the route, the month, or the site, the signatures clear. Then you sign again. Press each lamp.' }, escena: escGo, gate: () => S.firmas.size === 4 && disenoValido().ok },
+  { id: 'lanzar', chief: { es: 'Lanzamiento. Todo está listo. Mira el riesgo de fallo. Sube cuando la masa pasa el límite. Si el lanzamiento falla, la misión termina. ¡Inicia la cuenta atrás!', en: 'Launch. Everything is ready. Look at the failure risk. It grows when the mass is over the limit. If the launch fails, the mission ends. Start the countdown!' }, escena: escLanzar, gate: () => S.lanzado },
+  { id: 'vuelo', chief: { es: 'Operaciones. Esta consola muestra la secuencia, los mensajes y la telemetría. Cada fase tiene un semáforo con su probabilidad. Pulsa NEXT para avanzar. Si sale un evento malo, solo el departamento dueño de la contingencia puede activarla. Antes de eso, no puedes avanzar.', en: 'Operations. This console shows the sequence, the messages, and the telemetry. Each phase has a light with its probability. Press NEXT to advance. If a bad event appears, only the department that owns the contingency can activate it. You cannot advance before that.' }, escena: escVuelo, gate: () => S.fin },
   { id: 'informe', chief: () => (S.resultado?.total
     ? { es: '¡Misión total! Tu seguro anuló la tormenta. Toda la ciencia llegó a casa. Así se juega: diseña con margen, asegura lo que puede fallar y firma con tu equipo. Vuela otra vez para mejorar la puntuación.', en: 'Full mission! Your insurance cancelled the storm. All the science came home. This is the game: design with margin, insure what can fail, and sign together. Fly again to get a better score.' }
     : { es: 'Misión parcial. No tenías seguro, así que la tormenta quitó el 15 % de la ciencia. En el juego real, el informe explica cada causa. Después pulsas «Volver a volar» y rediseñas. Inténtalo otra vez y compra el seguro.', en: 'Partial mission. You had no insurance, so the storm removed 15 % of the science. In the real game, the report explains each cause. Then you press "Fly again" and redesign. Try again and buy the insurance.' }), escena: escInforme },
@@ -300,6 +339,87 @@ function escDiseno(el) {
         h('p', { class: cls }, msg))));
 }
 
+
+// Barras de recursos con el estado de la revisión (para los pasos de ruta y mes, que suman masa y precio).
+function bloqueBarras() {
+  const v = disenoValido(), m = v.m;
+  const mx = Math.max(m.rm, m.rp, m.rc);
+  let txt = T.dentro, cls = 'tt-ayuda';
+  if (!v.ok) { txt = T.fuera + (idioma() === 'es' ? ' Elige una opción más ligera o vuelve al diseño.' : ' Choose a lighter option or go back to the design.'); cls += ' mal'; }
+  else if (mx > 1) { txt = T.tolerancia; cls += ' aviso'; }
+  return [barra(T.masa, m.m, LIM.masa, m.rm, 'kg'), barra(T.potencia, m.uso, m.sum, m.rp, 'W'), barra(T.presupuesto, m.c, LIM.presupuesto, m.rc, 'M'),
+    h('p', { class: 'tt-riesgo' }, `${T.riesgoLanz}: ${riesgoLanz().toString().replace('.', idioma() === 'es' ? ',' : '.')} %`), h('p', { class: cls }, txt)];
+}
+const cambiar = (f) => () => { f(); S.firmas.clear(); efecto('confirmar'); pintarPaso({ decirTexto: false }); };
+
+// Pared de la sala de control: cuatro pestañas. Las cajas son un esquema de lo que muestra cada modo.
+const PARED = [
+  { id: 'plan', t: () => T.tabPlan, cajas: { es: ['RUTA', 'MES DE LANZAMIENTO', 'SITIO / ÓRBITA'], en: ['ROUTE', 'LAUNCH MONTH', 'SITE / ORBIT'] },
+    d: { es: ['Aquí eliges la ruta, el mes de lanzamiento y el sitio.', 'Solo Vuelo y Mecánica fija la ruta y el mes.', 'Vuelo y Mecánica o Ciencia pueden elegir el sitio.', 'Los cuatro departamentos ven esta pantalla.'],
+      en: ['Here you choose the route, the launch month, and the site.', 'Only Flight & Mechanics sets the route and the month.', 'Flight & Mechanics or Science can choose the site.', 'All four departments see this screen.'] } },
+  { id: 'go', t: () => T.tabGo, cajas: { es: ['VUELO', 'CIENCIA', 'ENERGÍA', 'COMUNICACIONES'], en: ['FLIGHT', 'SCIENCE', 'POWER', 'COMMS'] },
+    d: { es: ['Cada departamento firma GO en su consola.', 'Con las cuatro firmas, pulsas Lanzar.', 'Si algo cambia, las firmas se borran.'],
+      en: ['Each department signs GO at its console.', 'With all four signatures, you press Launch.', 'If anything changes, the signatures clear.'] } },
+  { id: 'ops', t: () => T.tabOps, cajas: { es: ['SECUENCIA', 'VISTA ORBITAL', 'MENSAJES', 'TELEMETRÍA'], en: ['SEQUENCE', 'ORBIT VIEW', 'MESSAGES', 'TELEMETRY'] },
+    d: { es: ['Ves la secuencia de la misión, la órbita, los mensajes y la telemetría.', 'Pulsa «Siguiente paso» para avanzar.', 'Si sale un evento, el departamento dueño activa la contingencia.'],
+      en: ['You see the mission sequence, the orbit, the messages, and the telemetry.', 'Press "Next step" to advance.', 'If an event appears, the owning department activates the contingency.'] } },
+  { id: 'inf', t: () => T.tabInf, cajas: { es: ['VEREDICTO', 'CIENCIA', 'CAUSAS', 'MISIÓN REAL'], en: ['VERDICT', 'SCIENCE', 'CAUSES', 'REAL MISSION'] },
+    d: { es: ['Ves el veredicto, la ciencia lograda y las causas.', 'También ves la misión real, para comparar.', 'Desde aquí vuelves a volar o empiezas otra misión.'],
+      en: ['You see the verdict, the science achieved, and the causes.', 'You also see the real mission, to compare.', 'From here you fly again or start another mission.'] } },
+];
+function escControl(el) {
+  const sel = PARED[S.tab];
+  S.vistos.add(sel.id);
+  const tabs = h('div', { class: 'tt-tabs', role: 'tablist' }, PARED.map((x, i) => h('button', { class: 'tt-tab' + (i === S.tab ? ' on' : '') + (S.vistos.has(x.id) && i !== S.tab ? ' visto' : ''), type: 'button', role: 'tab',
+    onclick: () => { S.tab = i; efecto('clic'); pintarPaso({ decirTexto: false }); } }, x.t())));
+  const pared = h('div', { class: 'tt-pared', 'aria-label': T.pared }, h('div', { class: 'tt-pared-cab' }, '◉ CONTROL · ', sel.t()),
+    h('div', { class: 'tt-pared-cajas c' + sel.cajas.es.length }, L(sel.cajas).map((c) => h('div', { class: 'tt-pared-caja' }, h('span', {}, c)))));
+  const consolas = h('div', { class: 'tt-pared-consolas', 'aria-hidden': 'true' }, Object.values(DEPS).map((d) => h('i', { style: `--c:${d.color}` })));
+  el.append(h('div', { class: 'tt-control' }, h('div', {}, tabs, pared, consolas), h('div', { class: 'tt-control-txt' }, h('h3', { class: 'tt-h' }, sel.t()), h('ul', {}, L(sel.d).map((x) => h('li', {}, x))),
+    S.vistos.size < 4 ? h('p', { class: 'tt-tenue' }, T.verTodas) : null)));
+}
+
+function escRuta(el) {
+  const tarjetas = RUTAS.map((r) => h('button', { class: 'tt-pieza tt-ruta' + (S.ruta === r.id ? ' on' : ''), type: 'button', style: `--c:${DEPS.vuelo.color}`, 'aria-pressed': S.ruta === r.id, onclick: cambiar(() => { S.ruta = r.id; }) },
+    h('span', { class: 'tt-lampara' }), h('strong', {}, L(r.n)), h('span', { class: 'tt-dep' }, `${T.riesgoCr}: +${r.dp} ${T.pts}`),
+    h('span', { class: 'tt-num' }, `${r.dias} ${T.dias} · +${r.prop} kg · ${r.c} M`)));
+  el.append(h('div', { class: 'tt-diseno' }, h('div', {}, h('h3', { class: 'tt-h' }, T.rutas), h('div', { class: 'tt-piezas' }, tarjetas),
+    h('p', { class: 'tt-tenue' }, idioma() === 'es' ? '«+kg» es el propelente de la ruta. Pesa como una pieza más.' : '"+kg" is the propellant of the route. It weighs like one more part.')),
+    h('div', {}, h('h3', { class: 'tt-h' }, T.barras), bloqueBarras())));
+}
+
+function escMes(el) {
+  const mejor = MESES.findIndex((x) => x.mejor), maxE = Math.max(...MESES.map((x) => x.extra));
+  const cols = MESES.map((x, i) => h('button', { class: 'tt-mes' + (S.mes === i ? ' on' : '') + (i === mejor ? ' mejor' : ''), type: 'button', 'aria-pressed': S.mes === i, onclick: cambiar(() => { S.mes = i; }) },
+    h('span', { class: 'tt-mes-kg' }, `+${x.extra} kg`), h('i', { style: `height:${14 + (x.extra / maxE) * 70}px` }), h('strong', {}, L(x.n)),
+    h('em', {}, i === mejor ? T.mejor : i === MESES.length - 1 ? T.plazoMes : '\u00a0')));
+  el.append(h('div', { class: 'tt-diseno' }, h('div', {}, h('h3', { class: 'tt-h' }, T.extraKg), h('div', { class: 'tt-meses' }, cols),
+    h('p', { class: 'tt-tenue' }, T.ahoraPlazo), h('button', { class: 'boton', type: 'button', onclick: cambiar(() => { S.mes = mejor; }) }, T.mejorVentana)),
+    h('div', {}, h('h3', { class: 'tt-h' }, T.barras), bloqueBarras())));
+}
+
+function escSitio(el) {
+  const pend = S.capa === 'pendiente';
+  const crateres = [[60, 60, 34], [150, 110, 48], [250, 55, 28], [330, 120, 38], [120, 190, 30], [235, 190, 26]];
+  const mapa = h('div', { class: 'tt-mapa-wrap' });
+  mapa.innerHTML = `<svg class="tt-mapa" viewBox="0 0 380 230" role="img" aria-label="${T.capas}"><rect width="380" height="230" fill="${pend ? '#2d3340' : '#8e9296'}"/>
+    ${crateres.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${pend ? '#262b36' : '#7b7f84'}" stroke="${pend ? '#39404f' : '#a9adb1'}" stroke-width="3"/>`).join('')}
+    ${pend ? `<circle cx="95" cy="150" r="46" fill="#3fa66b" opacity=".55"/><circle cx="290" cy="165" r="50" fill="#3fa66b" opacity=".55"/><circle cx="205" cy="70" r="58" fill="#e0b040" opacity=".5"/><circle cx="205" cy="70" r="32" fill="#d05050" opacity=".65"/>` : ''}
+    ${SITIOS.map((x) => `<g class="tt-marca-sitio${S.sitio === x.id ? ' on' : ''}" data-s="${x.id}" tabindex="0" role="button" aria-label="${L(x.n)}"><circle cx="${x.x}" cy="${x.y}" r="13" fill="#f3ead6" stroke="#1d2a3a" stroke-width="3"/><text x="${x.x}" y="${x.y + 5}" text-anchor="middle" font-family="Press Start 2P, monospace" font-size="12" fill="#1d2a3a">${x.id}</text></g>`).join('')}</svg>`;
+  const elegir = (id) => cambiar(() => { S.sitio = id; })();
+  mapa.querySelectorAll('[data-s]').forEach((g) => { g.addEventListener('click', () => elegir(g.dataset.s)); g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); elegir(g.dataset.s); } }); });
+  const capa = (id, txt) => h('button', { class: 'boton chico' + (S.capa === id ? ' on' : ''), type: 'button', 'aria-pressed': S.capa === id, onclick: () => { S.capa = id; efecto('clic'); pintarPaso({ decirTexto: false }); } }, txt);
+  const fichas = SITIOS.map((x) => h('button', { class: 'tt-pieza tt-sitio' + (S.sitio === x.id ? ' on' : ''), type: 'button', style: `--c:${x.pend > 12 ? 'var(--lp-mal)' : 'var(--lp-ok)'}`, 'aria-pressed': S.sitio === x.id, onclick: () => elegir(x.id) },
+    h('span', { class: 'tt-lampara' }), h('strong', {}, `${x.id} · ${L(x.n)}`), h('span', { class: 'tt-dep' }, `${T.rocas}: ${L(x.rocas)} · ${T.interes}: ${L(x.interes)}`),
+    h('span', { class: 'tt-num' }, `${x.pend}° · ${x.p} %`)));
+  const sel = sitioSel();
+  el.append(h('div', { class: 'tt-diseno' }, h('div', {}, h('h3', { class: 'tt-h' }, T.capas), h('div', { class: 'tt-capas' }, capa('relieve', T.capaRelieve), capa('pendiente', T.capaPend)), mapa,
+    h('p', { class: 'tt-tenue' }, T.leyenda)),
+    h('div', {}, h('h3', { class: 'tt-h' }, T.sitios), h('div', { class: 'tt-piezas' }, fichas),
+      h('p', { class: 'tt-tenue' }, `${T.pendiente} · ${T.pAter}`),
+      sel ? h('p', { class: 'tt-ayuda ' + (sel.p < 90 ? 'aviso' : ''), }, sel.p < 90 ? T.sitioAlto : T.sitioLlano) : null)));
+}
+
 function escGo(el) {
   el.append(h('h3', { class: 'tt-h' }, idioma() === 'es' ? 'Consolas de la sala de control' : 'Control-room consoles'),
     h('div', { class: 'tt-consolas' }, Object.entries(DEPS).map(([id, d]) => {
@@ -312,9 +432,8 @@ function escGo(el) {
 }
 
 function escLanzar(el) {
-  const cohete = h('div', { class: 'tt-cohete' + (S.lanzado ? ' sube' : '') },
-    h('svg', { viewBox: '0 0 40 90', width: '56', height: '120', 'aria-hidden': 'true' }));
-  cohete.firstChild.innerHTML = '<polygon points="20,2 30,26 30,66 10,66 10,26" fill="#e9e4da"/><polygon points="20,2 30,26 10,26" fill="#d9822b"/><circle cx="20" cy="40" r="5" fill="#62c6ff"/><polygon points="10,66 2,80 10,76" fill="#d9822b"/><polygon points="30,66 38,80 30,76" fill="#d9822b"/><polygon class="llama" points="14,68 20,88 26,68" fill="#f2b844"/>';
+  const cohete = h('div', { class: 'tt-cohete' + (S.lanzado ? ' sube' : '') });
+  cohete.innerHTML = '<svg viewBox="0 0 40 90" width="56" height="120" aria-hidden="true"><polygon points="20,2 30,26 30,66 10,66 10,26" fill="#e9e4da"/><polygon points="20,2 30,26 10,26" fill="#d9822b"/><circle cx="20" cy="40" r="5" fill="#62c6ff"/><polygon points="10,66 2,80 10,76" fill="#d9822b"/><polygon points="30,66 38,80 30,76" fill="#d9822b"/><polygon class="llama" points="14,68 20,88 26,68" fill="#f2b844"/></svg>';
   const cuenta = h('div', { class: 'tt-cuenta', 'aria-live': 'polite' }, S.lanzado ? T.despegue : '');
   const btn = h('button', { class: 'boton primario grande tt-lanzar', type: 'button', disabled: S.lanzado, onclick: () => {
     btn.disabled = true; efecto('confirmar');
@@ -332,9 +451,20 @@ function escLanzar(el) {
     cuenta, btn)));
 }
 
+const MENSAJES = [
+  { es: 'Motores encendidos. El ascenso es nominal.', en: 'Engines lit. The ascent is nominal.' }, { es: 'Crucero hacia la Luna. El enlace es estable.', en: 'Cruise to the Moon. The link is stable.' },
+  { es: 'Descenso al sitio de aterrizaje.', en: 'Descent to the landing site.' }, { es: 'Aterrizaje confirmado. La cámara envía datos.', en: 'Landing confirmed. The camera sends data.' },
+];
+const TELEMETRIA = [{ pot: 100, datos: 0 }, { pot: 92, datos: 0 }, { pot: 88, datos: 0 }, { pot: 90, datos: 120 }];
 function escVuelo(el) {
-  const fases = T.fases;
-  const lista = h('ol', { class: 'tt-fases' }, fases.map((f, i) => h('li', { class: S.fin || i < S.fase ? 'hecha' : i === S.fase ? 'ahora' : '' }, h('span', { class: 'tt-n' }, i + 1), h('span', {}, f))));
+  const fases = T.fases, pr = probFases();
+  const idx = S.fin ? 3 : S.fase;
+  const lista = h('ol', { class: 'tt-fases' }, fases.map((f, i) => h('li', { class: S.fin || i < S.fase ? 'hecha' : i === S.fase ? 'ahora' : '' }, h('span', { class: 'tt-n' }, i + 1), h('span', {}, f),
+    h('b', { class: 'tt-chip ' + semaforo(pr[i]), title: T.exito }, `${Math.round(pr[i])} %`))));
+  const tele = TELEMETRIA[idx];
+  const consola = h('div', { class: 'tt-ops' },
+    h('div', { class: 'tt-ops-caja' }, h('h4', {}, T.mensajes), h('p', {}, L(MENSAJES[idx]))),
+    h('div', { class: 'tt-ops-caja' }, h('h4', {}, T.telemetria), h('p', {}, `${T.energia}: ${tele.pot} %`), h('p', {}, `${T.enlace}: ${T.estable}`), h('p', {}, `${T.datosRec}: ${tele.datos} MB`)));
   const cuerpo = h('div', { class: 'tt-evento-zona' });
   const ev = S.evento;
   const nuevo = S.nuevoEv ? ' nuevo' : '';
@@ -342,8 +472,9 @@ function escVuelo(el) {
   if (ev === 'pendiente') {
     cuerpo.append(h('div', { class: 'tt-evento' + nuevo },
       h('strong', {}, '⚠ ' + T.eventoTit), h('p', {}, T.tormenta),
+      h('p', { class: 'tt-tenue' }, S.seguro ? `${T.responsable}: ${L(DEPS.comms.n)}. ${T.esperaDepto}` : T.sinCobertura),
       S.seguro
-        ? h('button', { class: 'boton primario', type: 'button', onclick: () => { S.evento = 'anulado'; S.nuevoEv = true; efecto('contingencia'); pintarPaso({ decirTexto: false }); } }, T.activar)
+        ? h('button', { class: 'boton primario', type: 'button', onclick: () => { S.evento = 'anulado'; S.nuevoEv = true; efecto('contingencia'); pintarPaso({ decirTexto: false }); } }, T.activarComo)
         : h('button', { class: 'boton peligro', type: 'button', onclick: () => { S.evento = 'dano'; S.nuevoEv = true; efecto('aviso'); pintarPaso({ decirTexto: false }); } }, T.aceptar)));
   } else if (ev === 'anulado') cuerpo.append(h('div', { class: 'tt-evento ok' + nuevo }, h('strong', {}, '✔ ' + T.anulado)));
   else if (ev === 'dano') cuerpo.append(h('div', { class: 'tt-evento mal' + nuevo }, h('strong', {}, '✖ ' + T.dano)));
@@ -358,14 +489,15 @@ function escVuelo(el) {
     }
     pintarPaso({ decirTexto: false });
   } }, S.fin ? '✔' : T.next + ' ▶');
-  el.append(h('h3', { class: 'tt-h' }, T.faseTit), lista, cuerpo, h('div', { class: 'tt-vuelo-acc' }, next));
+  el.append(h('h3', { class: 'tt-h' }, T.secuencia), lista, consola, cuerpo, h('div', { class: 'tt-vuelo-acc' }, next));
 }
 
 function escInforme(el) {
   const m = medidas();
   const r = S.resultado ?? { total: !!S.seguro, ciencia: 85 };
   const ciencia = Math.round(r.ciencia);
-  const puntos = Math.round(ciencia * (S.extra ? 12 : 8) - Math.max(0, m.c - LIM.presupuesto) * 10);
+  const si = sitioSel(), ru = rutaSel(), me = S.mes != null ? MESES[S.mes] : null, es = idioma() === 'es';
+  const puntos = Math.round(ciencia * (S.extra ? 12 : 8) + (si?.bonus ?? 0) - Math.max(0, m.c - LIM.presupuesto) * 10);
   el.append(h('div', { class: 'tt-informe' },
     h('h3', { class: 'tt-h' }, T.informe),
     h('div', { class: 'tt-veredicto ' + (r.total ? 'ok' : 'aviso') }, T.veredicto + ': ', h('strong', {}, r.total ? T.total : T.parcial)),
@@ -376,6 +508,11 @@ function escInforme(el) {
     h('ul', { class: 'tt-causas' },
       h('li', {}, idioma() === 'es' ? (S.seguro ? 'La contingencia «Modo seguro» anuló la tormenta solar.' : 'No compraste contingencia. La tormenta solar quitó el 15 % de la ciencia.') : (S.seguro ? 'The "Safe mode" contingency cancelled the solar storm.' : 'You bought no contingency. The solar storm removed 15 % of the science.')),
       h('li', {}, idioma() === 'es' ? (S.extra ? 'Cubriste el objetivo opcional. Conseguiste más ciencia.' : 'Elegiste solo el objetivo prioritario. El riesgo es menor y la ciencia también.') : (S.extra ? 'You covered the optional goal. You got more science.' : 'You chose the priority goal only. The risk is lower, and the science is lower.')),
+      ru ? h('li', {}, es ? `Ruta «${L(ru.n)}»: ${ru.dias} días y +${ru.prop} kg de propelente. Riesgo en crucero: +${ru.dp} puntos.` : `Route "${L(ru.n)}": ${ru.dias} days and +${ru.prop} kg of propellant. Cruise risk: +${ru.dp} points.`) : null,
+      me ? h('li', {}, me.extra === 0 ? (es ? 'Lanzaste en el mejor mes: sin propelente extra.' : 'You launched in the best month: no extra propellant.') : (es ? `Lanzaste lejos del mejor mes: +${me.extra} kg de propelente.` : `You launched away from the best month: +${me.extra} kg of propellant.`)) : null,
+      si ? h('li', {}, si.p < 90
+        ? (es ? `El sitio «${L(si.n)}» es inclinado (${si.pend}°) y daba solo un ${si.p} % de éxito. En el juego real, ese riesgo puede terminar la misión. A cambio, la ciencia fue mayor.` : `The site "${L(si.n)}" is steep (${si.pend}°) and gave only ${si.p} % success. In the real game, that risk can end the mission. In return, the science was higher.`)
+        : (es ? `El sitio «${L(si.n)}» es llano (${si.pend}°) y dio un ${si.p} % de éxito en el aterrizaje.` : `The site "${L(si.n)}" is flat (${si.pend}°) and gave ${si.p} % landing success.`)) : null,
       h('li', {}, idioma() === 'es' ? 'El informe real también cuenta los datos perdidos y compara tu misión con la misión real.' : 'The real report also counts the lost data and compares your mission with the real mission.'))));
 }
 

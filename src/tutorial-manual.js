@@ -57,18 +57,43 @@ export const MANUAL = [
     ['p', t('Mientras corre el reloj, saltan eventos de diseño al azar. Cada evento aparece en una tarjeta y afecta a todo el equipo. En el vuelo, cada fase puede traer un evento del mazo de la misión.', 'While the clock runs, random design events appear. Each event shows on a card and affects the whole team. In flight, each phase can bring an event from the mission deck.')],
     ['nota', t('Una contingencia comprada anula los eventos negativos. Los eventos buenos son suerte. Ninguna contingencia los anula.', 'A bought contingency cancels the negative events. Good events are luck. No contingency cancels them.')],
   ] },
-  { t: t('8. Ventana de lanzamiento y propelente', '8. Launch window and propellant'), b: [
-    ['p', t('El equipo elige el mes de lanzamiento en la sala de control. Vuelo y Mecánica lidera la decisión. Cada mes tiene sus condiciones, con datos de la NASA: el clima del sitio, el clima espacial, la posición del destino y el ΔV. El ΔV es cuánto debe cambiar la velocidad de la nave.', 'The team chooses the launch month in the control room. Flight & Mechanics leads the decision. Each month has its own conditions, with NASA data: the site weather, the space weather, the target position, and the ΔV. The ΔV is how much the spacecraft must change its velocity.')],
-    ['nota', t('Fuera del mes óptimo, la nave necesita más propelente. Ese propelente pesa en la barra de masa. Un lanzamiento tardío también puede pasar el plazo.', 'Outside the best month, the spacecraft needs more propellant. That propellant weighs on the mass bar. A late launch can also pass the deadline.')],
+  { t: t('8. Ruta, mes y sitio', '8. Route, month, and site'), b: [
+    ['p', t('Estas tres decisiones se toman en la pantalla de planificación de la sala de control. Las ven los cuatro departamentos. Solo Vuelo y Mecánica fija la ruta y el mes. Vuelo y Mecánica o Ciencia pueden elegir el sitio.', 'You make these three decisions on the planning screen of the control room. All four departments see it. Only Flight & Mechanics sets the route and the month. Flight & Mechanics or Science can choose the site.')],
+    ['h', t('La ruta', 'The route')],
+    ['p', t('Cada ruta tiene días de viaje, masa de propelente, precio y un efecto en la probabilidad de una fase (Δp).', 'Each route has travel days, propellant mass, price, and an effect on the probability of one phase (Δp).')],
+    ['lista', [
+      t('Un viaje directo y rápido gasta más propelente. Pesa más y pide un cohete mayor.', 'A fast direct trip burns more propellant. It weighs more and needs a bigger rocket.'),
+      t('Un viaje largo con sobrevuelos usa la gravedad de los planetas. Gasta menos, pero la nave queda expuesta más tiempo.', 'A long trip with flybys uses the gravity of planets. It burns less, but the spacecraft stays exposed for longer.'),
+      t('Pregúntate: ¿cuántos kg ahorro? ¿cuánto dinero? ¿sube o baja la probabilidad de la fase afectada?', 'Ask yourself: how many kg do I save? How much money? Does the probability of the affected phase go up or down?'),
+    ]],
+    ['h', t('El mes de lanzamiento', 'The launch month')],
+    ['p', t('Cada mes tiene sus condiciones, con datos de la NASA: el clima del sitio, el clima espacial, la posición del destino y el ΔV. El ΔV es cuánto debe cambiar la velocidad de la nave.', 'Each month has its own conditions, with NASA data: the site weather, the space weather, the target position, and the ΔV. The ΔV is how much the spacecraft must change its velocity.')],
+    ['lista', [
+      t('Fuera del mes óptimo, la nave necesita más propelente. Ese propelente pesa en la barra de masa.', 'Outside the best month, the spacecraft needs more propellant. That propellant weighs on the mass bar.'),
+      t('El reloj corre en tiempo real. No puedes lanzar en un mes que ya pasó.', 'The clock runs in real time. You cannot launch in a month that has passed.'),
+      t('Después del plazo, los inversores recortan la financiación. El botón «Ir a la mejor ventana» te lleva al mejor mes.', 'After the deadline, the investors cut the funding. The "Go to the best window" button takes you to the best month.'),
+    ]],
+    ['h', t('El sitio o la órbita', 'The site or orbit')],
+    ['p', t('El mapa usa imágenes reales y capas de datos: color, elevación, pendiente y composición. Ciencia propone sitios. Vuelo y Mecánica comprueba que son alcanzables y seguros.', 'The map uses real images and data layers: colour, elevation, slope, and composition. Science proposes sites. Flight & Mechanics checks that they are reachable and safe.')],
+    ['nota', t('Un sitio inclinado o con rocas es un riesgo de aterrizaje. Una nave real se volcó en 2024 al aterrizar en una ladera. Cada cambio de ruta, mes o sitio borra las firmas.', 'A steep site, or one with boulders, is a landing risk. A real lander tipped over in 2024 after it landed on a slope. Each change of route, month, or site clears the signatures.')],
   ] },
   { t: t('9. Contingencias', '9. Contingencies'), b: [
     ['p', t('Una contingencia es un seguro. Se compra en la fase de Diseño y cuesta masa y presupuesto. En la fase de Misión, el departamento dueño la activa en la sala de control.', 'A contingency is insurance. You buy it in the Design phase, and it costs mass and budget. In the Mission phase, the owning department activates it in the control room.')],
     ['p', t('Si un evento tiene una contingencia pendiente, no puedes avanzar. Antes, actívala.', 'If an event has a pending contingency, you cannot advance. Activate it first.')],
     ['nota', t('Asegura primero los fallos críticos en las fases críticas. Valen mucho más que un evento que solo quita un 15 % de ciencia.', 'Insure the critical failures in the critical phases first. They are worth much more than an event that only removes 15 % of the science.')],
   ] },
-  { t: t('10. El vuelo y la sala de control', '10. The flight and the control room'), b: [
-    ['p', t('Después del GO y del lanzamiento, el vuelo ocurre en la sala de control. La pantalla muestra una fase cada vez. Todos ven lo mismo. Pulsa «Next» para avanzar.', 'After GO and launch, the flight happens in the control room. The screen shows one phase at a time. Everyone sees the same. Press "Next" to advance.')],
-    ['p', t('El semáforo de cada fase muestra su probabilidad actual. Las fases críticas pueden terminar la misión.', 'The light of each phase shows its current probability. Critical phases can end the mission.')],
+  { t: t('10. La sala de control y el vuelo', '10. The control room and the flight'), b: [
+    ['p', t('La sala de control tiene una pared grande de pantallas. La pared cambia con la fase de la partida.', 'The control room has a big wall of screens. The wall changes with the phase of the game.')],
+    ['tabla', [t('Modo de la pared', 'Wall mode'), t('Qué muestra', 'What it shows')], [
+      [t('Planificación', 'Planning'), t('La ruta, el mes de lanzamiento y el sitio o la órbita, con mapas y capas de datos.', 'The route, the launch month, and the site or orbit, with maps and data layers.')],
+      [t('GO / NO-GO', 'GO / NO-GO'), t('Las comprobaciones, la firma de cada departamento y el botón «Lanzar».', 'The checks, the signature of each department, and the "Launch" button.')],
+      [t('Operaciones', 'Operations'), t('La secuencia de la misión, la vista orbital, los mensajes y la telemetría.', 'The mission sequence, the orbit view, the messages, and the telemetry.')],
+      [t('Informe final', 'Final report'), t('El veredicto, la ciencia lograda, las causas y la misión real.', 'The verdict, the science achieved, the causes, and the real mission.')],
+    ]],
+    ['p', t('Sentado en tu consola, haz clic en la pantalla central para usar su interfaz. Haz clic en tu consola para poner o quitar tu GO. La puerta de la pared izquierda te lleva de vuelta al briefing. Pulsa Esc para volver a mirar la sala.', 'Seated at your console, click the central screen to use its interface. Click your console to set or remove your GO. The door in the left wall takes you back to the briefing. Press Esc to look at the room again.')],
+    ['h', t('El vuelo, fase a fase', 'The flight, phase by phase')],
+    ['p', t('Después del GO y del lanzamiento, el vuelo ocurre en la consola de operaciones. Todos ven lo mismo. Pulsa «Siguiente paso» para avanzar. El semáforo de cada fase muestra su probabilidad actual. Las fases críticas pueden terminar la misión.', 'After GO and launch, the flight happens on the operations console. Everyone sees the same. Press "Next step" to advance. The light of each phase shows its current probability. Critical phases can end the mission.')],
+    ['p', t('Si sale un evento malo y tienes una contingencia que lo cubre, solo el departamento dueño puede activarla. Hasta que la active, nadie avanza.', 'If a bad event appears and you have a contingency that covers it, only the owning department can activate it. Until it does, nobody advances.')],
   ] },
   { t: t('11. Puntuación e informe', '11. Scoring and report'), b: [
     ['p', t('El informe da un veredicto: total, parcial o fallida. También da una puntuación, según la regla de la misión.', 'The report gives a verdict: full, partial, or failed. It also gives a score, under the mission rule.')],
