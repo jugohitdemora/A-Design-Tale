@@ -5,7 +5,7 @@
 // Los números de la práctica siguen las reglas reales: porcentaje = usado / límite; ≤ 100 % dentro; ≤ 120 % tolerancia; > 120 % la revisión falla.
 import { textos, tx, idioma } from './i18n.js';
 import { efecto } from './audio.js';
-import { MANUAL } from './tutorial-manual.js';
+import { MANUAL } from './tutorial-manual.js?v=3';
 
 const T = textos({
   es: {
@@ -391,10 +391,10 @@ function escRuta(el) {
 function escMes(el) {
   const mejor = MESES.findIndex((x) => x.mejor), maxE = Math.max(...MESES.map((x) => x.extra));
   const cols = MESES.map((x, i) => h('button', { class: 'tt-mes' + (S.mes === i ? ' on' : '') + (i === mejor ? ' mejor' : ''), type: 'button', 'aria-pressed': S.mes === i, onclick: cambiar(() => { S.mes = i; }) },
-    h('span', { class: 'tt-mes-kg' }, `+${x.extra} kg`), h('i', { style: `height:${14 + (x.extra / maxE) * 70}px` }), h('strong', {}, L(x.n)),
+    h('span', { class: 'tt-mes-kg' }, `+${x.extra} kg`), h('i', { style: `height:${12 + (x.extra / maxE) * 48}px` }), h('strong', {}, L(x.n)),
     h('em', {}, i === mejor ? T.mejor : i === MESES.length - 1 ? T.plazoMes : '\u00a0')));
-  el.append(h('div', { class: 'tt-diseno' }, h('div', {}, h('h3', { class: 'tt-h' }, T.extraKg), h('div', { class: 'tt-meses' }, cols),
-    h('p', { class: 'tt-tenue' }, T.ahoraPlazo), h('button', { class: 'boton', type: 'button', onclick: cambiar(() => { S.mes = mejor; }) }, T.mejorVentana)),
+  el.append(h('div', { class: 'tt-diseno' }, h('div', {}, h('h3', { class: 'tt-h' }, T.extraKg), h('button', { class: 'boton tt-mejor', type: 'button', onclick: cambiar(() => { S.mes = mejor; }) }, '★ ' + T.mejorVentana), h('div', { class: 'tt-meses' }, cols),
+    h('p', { class: 'tt-tenue' }, T.ahoraPlazo)),
     h('div', {}, h('h3', { class: 'tt-h' }, T.barras), bloqueBarras())));
 }
 
