@@ -16,7 +16,7 @@ const T = textos({
     secuencia: 'Secuencia de misión', mensajes: 'Mensajes', telemetria: 'Telemetría', energia: 'Energía', enlace: 'Enlace', datosRec: 'Datos', estable: 'estable', responsable: 'Responsable',
     esperaDepto: 'Esperando al departamento. Solo él puede activarla.', activarComo: 'ACTIVAR · Comunicaciones y Ops.', sinCobertura: 'Ninguna contingencia cubre este evento.',
     tabPlan: 'PLANIFICACIÓN', tabGo: 'GO / NO-GO', tabOps: 'OPERACIONES', tabInf: 'INFORME', pared: 'Pared de la sala de control', verTodas: 'Pulsa las cuatro pestañas para seguir.',
-    boton: 'TUTORIAL', titulo: 'Tutorial · Simulacro', ventana: 'Misión de práctica · Luna-0', jefe: 'JEFE DE MISIÓN', saltar: 'Saltar', siguiente: 'Siguiente', atras: 'Atrás',
+    boton: 'TUTORIAL', titulo: 'Tutorial · Simulacro', ventana: 'Misión de práctica · Luna-0', jefe: 'JEFE DE MISIÓN', saltar: 'Cerrar tutorial', siguiente: 'Siguiente', atras: 'Atrás',
     paso: (a, b) => `Paso ${a} de ${b}`, cerrar: 'Cerrar', terminar: 'Terminar y a la misión',
     barras: 'Barras de recursos', masa: 'Masa', potencia: 'Potencia', presupuesto: 'Presupuesto', ratio: 'razón',
     dentro: 'Dentro del límite', tolerancia: 'En tolerancia. La revisión pasa, pero el riesgo es mayor.', fuera: 'Fuera del límite. La revisión falla.',
@@ -44,7 +44,7 @@ const T = textos({
     secuencia: 'Mission sequence', mensajes: 'Messages', telemetria: 'Telemetry', energia: 'Power', enlace: 'Link', datosRec: 'Data', estable: 'stable', responsable: 'Owner',
     esperaDepto: 'Waiting for the department. Only it can activate it.', activarComo: 'ACTIVATE · Comms & Ops', sinCobertura: 'No contingency covers this event.',
     tabPlan: 'PLANNING', tabGo: 'GO / NO-GO', tabOps: 'OPERATIONS', tabInf: 'REPORT', pared: 'Control room wall', verTodas: 'Click the four tabs to continue.',
-    boton: 'TUTORIAL', titulo: 'Tutorial · Drill', ventana: 'Practice mission · Luna-0', jefe: 'MISSION CHIEF', saltar: 'Skip', siguiente: 'Next', atras: 'Back',
+    boton: 'TUTORIAL', titulo: 'Tutorial · Drill', ventana: 'Practice mission · Luna-0', jefe: 'MISSION CHIEF', saltar: 'Close tutorial', siguiente: 'Next', atras: 'Back',
     paso: (a, b) => `Step ${a} of ${b}`, cerrar: 'Close', terminar: 'Finish and go to the mission',
     barras: 'Resource bars', masa: 'Mass', potencia: 'Power', presupuesto: 'Budget', ratio: 'ratio',
     dentro: 'Within the limit', tolerancia: 'In tolerance. The review passes, but the risk is higher.', fuera: 'Over the limit. The review fails.',
@@ -257,7 +257,7 @@ function escHola(el) {
   el.append(h('div', { class: 'tt-hero' },
     h('div', { class: 'tt-hero-t' }, 'PROJECT ORBIT'),
     h('p', {}, idioma() === 'es' ? 'Simulacro de entrenamiento · Misión de práctica «Luna-0»' : 'Training drill · Practice mission "Luna-0"'),
-    h('p', { class: 'tt-tenue' }, idioma() === 'es' ? 'Tiempo estimado: 3 minutos. Puedes saltar el tutorial cuando quieras.' : 'Estimated time: 3 minutes. You can skip the tutorial any time.')));
+    h('p', { class: 'tt-tenue' }, idioma() === 'es' ? 'Tiempo estimado: 3 minutos. Puedes cerrar el tutorial cuando quieras.' : 'Estimated time: 3 minutes. You can close the tutorial any time.')));
 }
 
 function escDeptos(el) {
@@ -571,7 +571,7 @@ function crearDialogo() {
   const pasoTxt = h('span', { class: 'tt-paso' });
   const barra = h('header', { class: 'lp-barra tt-taskbar' }, h('span', { class: 'lp-logo' }, 'AGENCY·OS'), h('span', { class: 'tt-tit' }, T.titulo),
     h('div', { class: 'tt-puntos' }, puntos), pasoTxt,
-    h('button', { class: 'boton peligro tt-saltar', type: 'button', onclick: cerrar }, '✕ ' + T.saltar));
+    h('button', { class: 'boton peligro tt-saltar', type: 'button', onclick: () => { efecto('clic'); cerrar(); } }, '✕ ' + T.saltar));
   const botonesVentana = () => h('span', { class: 'lp-ventana-botones', 'aria-hidden': 'true' }, '▁ ▢ ✕');
   const escena = h('div', { class: 'lp-ventana-cuerpo tt-escena' });
   const ret = retrato();
