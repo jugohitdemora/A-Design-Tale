@@ -118,7 +118,9 @@ body.en-proyector .f-hud .g-linea { display: none; } /* la barra del proyector y
 .rm-linea > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* compacto (barras): textos cortos; la tarjeta de la sala usa los largos */
 .rm-l { display: none; }
-.f-hud .rm { max-width: none; grid-template-columns: auto minmax(50px, 1fr); padding: 6px 8px; background: rgba(0, 0, 0, 0.25); border-radius: 4px; }
+.f-hud .rm { max-width: none; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'fecha' 'barra' 'linea'; row-gap: 4px; padding: 6px 8px; background: rgba(0, 0, 0, 0.25); border-radius: 4px; }
+.f-hud .rm-fecha { flex-wrap: wrap; row-gap: 0; min-width: 0; } /* la barra va debajo: nunca se sale de la tarjeta */
+.f-hud .rm-fecha > * { white-space: nowrap; }
 .f-hud .rm-linea { gap: 0 var(--e-2); }
 .mc-cab .rm { color: var(--mc-tinta); --rm-c: var(--mc-ok); }
 .mc-cab .rm.aviso { --rm-c: var(--mc-aviso); } .mc-cab .rm.mal { --rm-c: var(--mc-mal); }
