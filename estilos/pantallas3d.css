@@ -57,7 +57,7 @@
 /* Durante la elección se esconden los botones de vista (no se puede salir del proyector). */
 body.en-proyector #franja .f-vistas { display: none; }
 /* La tarjeta de la sala (.f-hud) ocupa la esquina inferior izquierda: la barra del proyector se coloca a su derecha, sin taparla. */
-body.en-proyector #proyector-ui { left: 400px; right: 20px; bottom: 20px; transform: none; max-width: none; justify-content: space-between; }
+body.en-proyector #proyector-ui { left: 332px; right: 20px; bottom: 20px; transform: none; max-width: none; justify-content: space-between; }
 body.en-proyector #proyector-ui .boton { flex: none; white-space: nowrap; }
 
 /* Pista de cada carpeta de misión */
@@ -70,3 +70,10 @@ body.en-proyector #proyector-ui .boton { flex: none; white-space: nowrap; }
   /* En pantallas estrechas la tarjeta ocupa todo el ancho: la barra se apila encima. */
   body.en-proyector #proyector-ui { left: 8px; right: 8px; bottom: 200px; justify-content: center; }
 }
+
+/* Cartel sobre la pantalla central de la sala de control: siempre visible, más llamativo cuando es el siguiente paso */
+.etiqueta.pared-etq { font: var(--tp-etq) var(--pixel); letter-spacing: 1px; color: #ffe6a6; background: rgba(11, 14, 19, 0.75);
+  border: 2px solid rgba(242, 193, 78, 0.6); padding: 6px 14px; border-radius: 4px; }
+.etiqueta.pared-etq.guia { color: #1b1408; background: #f2c14e; border-color: #fff1c4; animation: pared-pulso 1.6s ease-in-out infinite; }
+@keyframes pared-pulso { 0%, 100% { box-shadow: 0 0 0 0 rgba(242, 193, 78, 0.7); } 50% { box-shadow: 0 0 0 10px rgba(242, 193, 78, 0); } }
+@media (prefers-reduced-motion: reduce) { .etiqueta.pared-etq.guia { animation: none; } }

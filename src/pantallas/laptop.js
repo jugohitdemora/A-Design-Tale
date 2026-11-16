@@ -124,7 +124,7 @@ function contenidoApp(c, app, fase, irA) {
         h('div', { class: 'lp-ruta-icono', 'aria-hidden': 'true' }, fase === 'mision' || fase === 'informe' ? '🛰' : '🗺'),
         h('h3', {}, fase === 'mision' || fase === 'informe' ? T.enControl : T.ruta),
         fase === 'mision' || fase === 'informe' ? null : h('p', {}, T.rutaTxt),
-        h('button', { class: 'boton primario grande', type: 'button', onclick: () => irA('control') }, T.irControl));
+        h('button', { class: 'boton primario grande', type: 'button', onclick: () => irA('pared') }, T.irControl));
       default: return h('div', { class: 'lp-vacio' });
     }
   } catch (err) {
@@ -149,7 +149,7 @@ function listaRevision(c, fase) {
     ['constructor', T.apps.constructor, TR.limites, dentro],
   ];
   if (fase === 'restricciones') filas.splice(0, 3);
-  const ir = (a) => (a === 'ruta' ? c.irA?.('control') : (c.ui.app = a, c.repintar()));
+  const ir = (a) => (a === 'ruta' ? c.irA?.('pared') : (c.ui.app = a, c.repintar()));
   return h('section', { class: 'caja lp-checklist' }, h('h3', {}, TR.titulo),
     h('ul', {}, filas.map(([a, , txt, ok]) => h('li', { class: ok ? 'ok' : ok === false ? 'falta' : '' },
       h('span', { class: 'lp-check', 'aria-hidden': 'true' }, ok ? '✔' : ok === false ? '○' : '–'), ' ', txt,
@@ -178,7 +178,7 @@ export function pantallaLaptop(c, fase, { irA }) {
       class: 'lp-icono' + (a === app ? ' activa' : '') + (esRuta ? ' lp-ir-control' : '') + (guia ? ' guia' : ''),
       type: 'button', role: esRuta ? undefined : 'tab', 'aria-selected': esRuta ? undefined : String(a === app),
       disabled: bloqueada, title: bloqueada ? T.bloqueada : esRuta ? T.irControl : T.apps[a],
-      onclick: esRuta ? () => irA('control') : () => { c.ui.app = a; if (a === 'manual') c.ui.manualRol = c.rol; c.repintar(); },
+      onclick: esRuta ? () => irA('pared') : () => { c.ui.app = a; if (a === 'manual') c.ui.manualRol = c.rol; c.repintar(); },
     },
     k != null ? h('span', { class: 'lp-icono-paso', 'aria-label': T.pasoN(k) }, String(k)) : null,
     h('span', { class: 'lp-icono-dib', 'aria-hidden': 'true' }, iconoDock(a)), h('span', { class: 'lp-icono-txt' }, nombre));

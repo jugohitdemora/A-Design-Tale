@@ -21,7 +21,7 @@ export const LOGICO = { laptop: { w: 1024, h: 640 }, control: { w: 1280, h: 640 
 
 const TV = textos({
   es: { laptop: 'Portátil', sala: 'Sala', control: 'Sala de control', pared: 'Pantalla principal', briefing: 'Sala de briefing', manualTitulo: 'MANUAL DE PROCEDIMIENTOS', cerrar: 'Cerrar',
-    cargando: 'Cargando…', esc: 'Esc: levantar la vista', lobby: 'Salir al lobby', siguiente: 'Siguiente', y: 'y',
+    cargando: 'Cargando…', esc: 'Esc: levantar la vista', lobby: 'Salir al lobby', siguiente: 'Siguiente', y: 'y', menu: 'Más opciones',
     g: {
       proyector: 'Elige un escenario en el proyector.',
       carpeta: 'Abre una carpeta de la mesa y elige la misión.',
@@ -29,7 +29,7 @@ const TV = textos({
       esperaListos: (a, b) => `Esperando a la tripulación (${a}/${b} listos).`,
       piezas: 'Paso 2: monta tus piezas en el Constructor.',
       cohete: 'Paso 1: elige un cohete en el Selector de cohete.',
-      ruta: 'Paso 3: planifica la ruta en la sala de control (🗺 Planificar ruta).',
+      ruta: 'Paso 3: haz clic en la pantalla grande de la sala de control para planificar la ruta.',
       revision: 'Paso 5: cuando el equipo esté listo, abre Revisión y pulsa Pedir revisión.',
       exceso: (b) => `Reduce ${b}: hay exceso sobre el límite.`,
       recorta: (b) => `Recorta ${b} hasta quedar dentro del límite.`,
@@ -41,7 +41,7 @@ const TV = textos({
       informe: 'Revisa el informe y elige el siguiente vuelo.',
     } },
   en: { laptop: 'Laptop', sala: 'Room', control: 'Control room', pared: 'Main screen', briefing: 'Briefing room', manualTitulo: 'STANDARD OPERATING PROCEDURES', cerrar: 'Close',
-    cargando: 'Loading…', esc: 'Esc: look up', lobby: 'Leave to lobby', siguiente: 'Next', y: 'and',
+    cargando: 'Loading…', esc: 'Esc: look up', lobby: 'Leave to lobby', siguiente: 'Next', y: 'and', menu: 'More options',
     g: {
       proyector: 'Choose a scenario on the projector.',
       carpeta: 'Open a folder on the table and choose the mission.',
@@ -49,7 +49,7 @@ const TV = textos({
       esperaListos: (a, b) => `Waiting for the crew (${a}/${b} ready).`,
       piezas: 'Step 2: add your parts in the Builder.',
       cohete: 'Step 1: choose a rocket in the Rocket selector.',
-      ruta: 'Step 3: plan the route in the control room (🗺 Plan route).',
+      ruta: 'Step 3: click the big screen in the control room to plan the route.',
       revision: 'Step 5: when the team is ready, open Review and press Request review.',
       exceso: (b) => `Reduce ${b}: over the limit.`,
       recorta: (b) => `Cut ${b} until it is within the limit.`,
@@ -114,11 +114,13 @@ function calcularGuia(c, fase) {
 }
 
 // Fases como puntos (hecho / actual / pendiente) con el nombre de la actual. Se usa en el portátil, la sala de control y el HUD.
-export function pasosFase(guia) {
+// opts.extras = false: solo los puntos (la tarjeta de la sala coloca el reloj y Desistir por su cuenta).
+export function pasosFase(guia, { extras = true } = {}) {
   if (!guia) return null;
   const pasos = h('div', { class: 'g-pasos', title: FASES_JUEGO.map((f) => T.phases[f]).join(' › ') },
     h('ol', { 'aria-label': guia.nombre }, FASES_JUEGO.map((f, k) => h('li', { class: k === guia.i ? 'actual' : k < guia.i ? 'hecho' : '', ...(k === guia.i ? { 'aria-current': 'step' } : {}) }))),
     h('span', { class: 'g-fase' }, `${guia.i + 1}/${guia.total} · ${guia.nombre}`));
+  if (!extras) return pasos;
   let reloj = null;
   try { reloj = cReloj ? relojMision(cReloj) : null; } catch (err) { console.warn('reloj', err); }
   let desistir = null;
@@ -154,7 +156,7 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     irA: (v) => ultimo?.irA?.(v),
   };
   let ultimo = null, errorCarga = null, firma = '', avisoTxt = '', avisoTimer = null;
-  let arrastrando = false, faseVista = null;
+  let arrastrando = false, faseVista = null, menuHud = false;
   const vistos = new Set(); let lineaBase = false; const cola = [];
 
   cargarModulos(simulado).then(({ motor, D }) => { c.motor = motor; c.D = D; dibujar(true); })
@@ -181,19 +183,28 @@ export function crearPantallas({ raiz, franja, modal, capa, simulado = false }) 
     const vista = ultimo?.vista ?? 'sala';
     const nodos = [h('p', { class: 'f-aviso' + (avisoTxt ? '' : ' vacio'), role: 'status', 'aria-live': 'polite' }, avisoTxt)];
     if (vista === 'sala') {
-      const boton = (v, icono, txt, destino = v) => h('button', { class: 'boton ancho f-vista' + (c.guia?.objetivo === v ? ' primario guia' : ''), type: 'button', onclick: () => c.irA(destino) }, h('span', { 'aria-hidden': 'true' }, icono), txt);
-      // En la sala de control: la pantalla central (interfaz de la fase), el portátil (en el briefing) y la puerta al briefing.
+      // Tarjeta compacta: fase + menú ⋯, reloj, "Siguiente ›" y las vistas en una fila. Nombre, Desistir y Salir al lobby van en el menú.
+      const boton = (v, icono, txt) => h('button', { class: 'boton f-vista' + (c.guia?.objetivo === v ? ' primario guia' : ''), type: 'button', title: txt, onclick: () => c.irA(v) },
+        h('span', { class: 'f-vista-ico', 'aria-hidden': 'true' }, icono), h('span', { class: 'f-vista-txt' }, txt));
       const enControl = ultimo?.lugar === 'control';
-      nodos.push(h('aside', { class: 'f-hud' },
-        pasosFase(c.guia),
+      let reloj = null, desistir = null;
+      try { reloj = relojMision(c); } catch (err) { console.warn('reloj', err); }
+      try { desistir = botonDesistir(c); } catch (err) { console.warn('desistir', err); }
+      const votoAbierto = desistir?.querySelector('.desistir-cuenta');
+      nodos.push(h('aside', { class: 'f-hud' + (menuHud ? ' menu-abierto' : '') },
+        h('div', { class: 'f-cab' }, pasosFase(c.guia, { extras: false }), votoAbierto ? desistir : null,
+          h('button', { class: 'f-menu-btn', type: 'button', title: TV.menu, 'aria-label': TV.menu, 'aria-expanded': String(menuHud),
+            onclick: () => { menuHud = !menuHud; pintarFranja(); } }, '⋯')),
+        menuHud ? h('div', { class: 'f-menu' },
+          h('span', { class: 'f-menu-yo' }, ultimo?.nick ?? '', ' · ', c.rol ? nombreRol(c.rol) : T.noRole, ' · ', ultimo?.enLinea ?? ''),
+          votoAbierto ? null : desistir,
+          h('button', { class: 'boton f-salir', type: 'button', onclick: () => { menuHud = false; ultimo?.volverAlLobby?.(); } }, TV.lobby)) : null,
+        reloj,
         lineaGuia(c.guia),
-        h('div', { class: 'f-vistas' },
+        h('div', { class: 'f-vistas' + (enControl ? ' tres' : '') },
           boton('laptop', '💻', TV.laptop),
-          enControl ? boton('control', '🛰', TV.pared) : boton('control', '🛰', TV.control),
-          enControl ? boton('briefing', '🚪', TV.briefing) : null),
-        h('div', { class: 'f-pie' },
-          h('span', {}, ultimo?.nick ?? '', ' · ', c.rol ? nombreRol(c.rol) : T.noRole, ' · ', ultimo?.enLinea ?? ''),
-          h('button', { class: 'boton f-salir', type: 'button', onclick: () => ultimo?.volverAlLobby?.() }, TV.lobby))));
+          boton('control', '🛰', enControl ? TV.pared : TV.control),
+          enControl ? boton('briefing', '🚪', TV.briefing) : null)));
     }
     franja.replaceChildren(...nodos);
   }

@@ -257,13 +257,16 @@ function vistaAutomatica(fase) {
 let fundido = null;
 // v: 'sala' (mirar la sala en la que estoy) | 'briefing' (mirar la sala de briefing) | 'laptop' (portátil, en el briefing) | 'control' (pared de la sala de control).
 // Cambiar de sala se hace con un fundido. Desde la pared o la consola, 'sala' vuelve a mirar la sala de control; desde el portátil, la de briefing.
+// 'pared': ir a la sala de control y encuadrar directamente la pantalla central (botón "Planificar ruta" del portátil).
 function irA(v, inmediato = false) {
   if (!enJuego()) return;
+  const directo = v === 'pared';
+  if (directo) v = 'control';
   if (v === 'laptop' && !miRol()) return;
   const nuevoLugar = v === 'control' || (v === 'sala' && lugar === 'control') ? 'control' : 'briefing';
   // Al llegar a la sala de control desde otra sala se queda sentado en el puesto (la pared se abre con clic, como el portátil en el briefing).
   // Estando ya en la sala de control, 'control' encuadra la pared.
-  if (v === 'briefing' || (v === 'control' && lugar !== 'control')) v = 'sala';
+  if (v === 'briefing' || (v === 'control' && lugar !== 'control' && !directo)) v = 'sala';
   if (proyectorEnMesa() && (v !== 'sala' || nuevoLugar !== 'briefing')) return; // hasta elegir escenario no se sale del proyector
   if (nuevoLugar !== lugar) {
     const cambiar = () => { lugar = nuevoLugar; vista = v; if (v === 'sala') reiniciarMirada(); empezarTransicion(true); sesion?.presencia(presencia()); actualizarTodo(); };

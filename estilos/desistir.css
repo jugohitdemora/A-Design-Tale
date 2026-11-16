@@ -23,3 +23,7 @@
 .desistir-btn .desistir-cuenta { display: none; }
 .mc-cab .desistir-btn .desistir-cuenta { display: inline; }
 .mc-cab .desistir-btn { padding-inline: 10px; }
+/* Tarjeta de la sala: con votación abierta, Desistir sale junto a la fase en versión corta (✕ 2/4). */
+.f-cab .desistir-btn .desistir-txt { display: none; }
+.f-cab .desistir-btn .desistir-cuenta { display: inline; }
+.f-cab .desistir-btn { flex: none; min-height: 0; padding: 4px 8px; }

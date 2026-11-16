@@ -382,3 +382,7 @@ export function decorarSala(escena, { tablero } = {}) {
   const cOrbita = cuadro(0.6, 0.84, texOrbita()); colocar(cOrbita, 3.93, 1.75, 1.7, -Math.PI / 2); poner(cOrbita);
   const cLuna = cuadro(0.6, 0.84, texLuna()); colocar(cLuna, 3.93, 1.75, -1.5, -Math.PI / 2); poner(cLuna);
 }
+
+// Piezas y texturas que reutiliza el decorado de la sala de control (decorado-control.js), para que las dos salas compartan estilo.
+export { mat, luz, caja, cil, mulberry, lienzo, planoTex, cuadro, colocar, cohete, satelite, globo, planta,
+  texParche, texVitrina, texTelemetria, texReloj, texSistema, texMarte, texLuna, texOrbita };

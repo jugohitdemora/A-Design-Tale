@@ -3,12 +3,13 @@
 import * as THREE from 'three';
 import { crearAvatar, etiqueta, ROLES } from './escena.js';
 import { textos } from './i18n.js';
+import { decorarControl } from './decorado-control.js';
 
 const VERDE = 0x5fe08a, CIAN = 0x62c6ff, AMBAR = 0xf2b844, ROJO = 0xe0584a;
 
 const TC = textos({
-  es: { briefing: 'SALA DE BRIEFING' },
-  en: { briefing: 'BRIEFING ROOM' },
+  es: { briefing: 'SALA DE BRIEFING', abrir: '▶ HAZ CLIC EN LA PANTALLA' },
+  en: { briefing: 'BRIEFING ROOM', abrir: '▶ CLICK THE SCREEN' },
 });
 
 // Sala de control de misión con jugadores: un puesto por rol en la primera fila de consolas, mirando a la pared de pantallas.
@@ -77,6 +78,9 @@ export function crearCentroDeControl({ holograma = true, jugadores = false } = {
     const tubo = caja(2.2, 0.05, 0.45, brillo(0xffd59a, 1.4)); tubo.position.set(x, 5.36, z); escena.add(tubo);
     const cable = caja(0.03, 0.4, 0.03, 0x111111); cable.position.set(x, 5.7, z); escena.add(cable);
   }
+
+  // Escenario (moqueta, techo, paneles, relojes, carteles, maquetas, plantas): decorado-control.js.
+  decorarControl(escena);
 
   // ---------- Pared de pantallas ----------
   const zPared = -7.35;
@@ -239,8 +243,15 @@ export function crearCentroDeControl({ holograma = true, jugadores = false } = {
   baliza.scale.setScalar(6);
   baliza.position.set(0, 5.1, zPared + 0.7);
   baliza.visible = false;
+  // Cartel sobre la pantalla central: dice que se puede pulsar; brilla cuando la guía lleva allí.
+  const cartelPared = etiqueta(() => TC.abrir, 'etiqueta pared-etq');
+  cartelPared.position.set(0, PARED.centro.y + PARED.alto / 2 - 0.45, zPared + 0.3);
+  cartelPared.visible = false;
+  let guiaPared = false;
   let puerta = null;
   if (jugadores) {
+    cartelPared.visible = true;
+    escena.add(cartelPared);
     ASIENTOS_CONTROL.forEach((a, i) => { const av = crearAvatar(ROLES[i], a); escena.add(av.grupo); avatares.push(av); });
     // Clic en la pantalla central: encuadrarla y usar la interfaz de la fase.
     const zPared3 = zona(PARED.ancho, PARED.alto, 0.2, { tipo: 'pared' });
@@ -291,7 +302,11 @@ export function crearCentroDeControl({ holograma = true, jugadores = false } = {
     pared: PARED,
     actualizar(t) {
       animados.forEach((f) => f(t));
-      contorno.visible = !!encima && encima.userData.tipo === 'pared';
+      // Contorno: al pasar el ratón, o parpadeando suave cuando la guía lleva a la pantalla central.
+      const sobre = !!encima && encima.userData.tipo === 'pared';
+      contorno.visible = sobre || guiaPared;
+      contorno.material.opacity = sobre ? 1 : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 3));
+      contorno.material.transparent = !sobre;
       if (baliza.visible) {
         baliza.position.y = 5.1 + Math.sin(t * 3) * 0.12;
         baliza.rotation.y = t * 1.5;
@@ -308,7 +323,11 @@ export function crearCentroDeControl({ holograma = true, jugadores = false } = {
     ponerHolograma(v) { plano.visible = v; grupoOrbita.visible = v; },
     resaltar(obj) { encima = obj ?? null; },
     // Baliza sobre la pantalla central cuando toca ir allí.
-    guiar(tipo) { baliza.visible = jugadores && tipo === 'control'; },
+    guiar(tipo) {
+      guiaPared = jugadores && tipo === 'control';
+      baliza.visible = guiaPared;
+      cartelPared.element.classList.toggle('guia', guiaPared);
+    },
     // firmas: { rol: bool }; activo: solo hay votación en la fase de verificación (fuera de ella las lámparas lucen el color del rol).
     marcarFirmas(firmas, activo) {
       lamparas.forEach((l, i) => {
@@ -395,6 +414,15 @@ function crearConsola(semilla, animados, colorRol = null) {
   if (rnd() > 0.45) { // cascos sobre la mesa
     const cascos = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 4, 8, Math.PI), mat(0x1a1a1a));
     cascos.position.set(0.65, 0.84, 0.2); cascos.rotation.x = -Math.PI / 2; g.add(cascos);
+  }
+  // Objetos de mesa: una taza y una carpeta de procedimientos o unos papeles.
+  const taza = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.1, 8), mat([0xf1e9d6, 0xd9402f, 0x3f7fd8, 0xe8b84a][Math.floor(rnd() * 4)]));
+  taza.position.set(-0.75, 0.875, 0.3); g.add(taza);
+  if (rnd() > 0.4) {
+    const carpeta = caja(0.3, 0.04, 0.38, [0x24324a, 0xb3261e, 0x3fa66b][Math.floor(rnd() * 3)]);
+    carpeta.position.set(-0.42, 0.845, 0.28); carpeta.rotation.y = (rnd() - 0.5) * 0.4; g.add(carpeta);
+  } else {
+    const papeles = caja(0.24, 0.02, 0.32, 0xf6f0e0); papeles.position.set(0.42, 0.835, 0.3); papeles.rotation.y = (rnd() - 0.5) * 0.5; g.add(papeles);
   }
   // Silla
   const silla = new THREE.Group();
