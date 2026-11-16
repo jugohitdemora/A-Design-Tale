@@ -1,0 +1,55 @@
+/* Chat de la sala. Mismo material que .f-hud (estilos/guia.css): cartel azul marino, marco metálico y remaches; botón de sistema.css.
+   Abajo a la izquierda; con la sala a la vista se desplaza a la derecha de la tarjeta de guía (300px + márgenes). */
+.chat { position: fixed; left: 16px; bottom: 16px; z-index: 8; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; font: var(--t-cuerpo)/1.4 var(--ui); color: var(--crema); }
+body.en-sala .chat { left: 332px; }
+.chat.oculto, .chat .oculto { display: none; }
+
+.chat-boton, .chat-panel {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.18)), var(--cartel);
+  border: 4px solid var(--cartel-borde); border-radius: 8px; color: var(--crema);
+  box-shadow: inset 0 0 0 2px #2c3c58, 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+.chat-boton { display: inline-flex; align-items: center; gap: var(--e-2); min-height: 44px; padding: 6px 12px; cursor: pointer; position: relative;
+  font: var(--tp-etq)/1 var(--pixel); letter-spacing: 0.5px; text-transform: uppercase; }
+.chat-boton:hover { border-color: var(--acento); }
+.chat-boton:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.chat-ico { font: 18px/1 var(--ui); color: var(--acento); }
+.chat-insignia { min-width: 22px; padding: 4px 5px; border-radius: 4px; background: var(--acento); color: #1a1a1a; font: var(--tp-etq)/1 var(--pixel); text-align: center; }
+@keyframes chat-aviso { 0%, 100% { border-color: var(--cartel-borde); } 50% { border-color: var(--acento); } }
+.chat-boton.nuevo { animation: chat-aviso 1.4s ease-in-out infinite; }
+
+.chat-panel { position: relative; width: min(320px, calc(100vw - 32px)); padding: 8px 10px 10px; display: grid; gap: 8px; }
+.chat-panel::before, .chat-panel::after { content: ''; position: absolute; top: 5px; left: 5px; width: 6px; height: 6px; border-radius: 50%; background: #9aa0a6; box-shadow: 0 0 0 2px #4a4f55; }
+.chat-panel::after { left: auto; right: 5px; }
+.chat-cab { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 0; }
+.chat-titulo { font: var(--tp-etq)/1.3 var(--pixel); letter-spacing: 0.5px; text-transform: uppercase; }
+.chat-cerrar { width: 30px; height: 26px; padding: 0; border: 2px solid rgba(241, 230, 207, 0.4); border-radius: 4px; background: rgba(0, 0, 0, 0.25);
+  color: var(--crema); font: 700 14px/1 var(--ui); cursor: pointer; }
+.chat-cerrar:hover { border-color: var(--acento); color: var(--acento); }
+
+.chat-lista { list-style: none; margin: 0; padding: 8px; display: grid; gap: 6px; align-content: start; height: 190px; overflow-y: auto;
+  background: rgba(0, 0, 0, 0.3); border-radius: 4px; scrollbar-width: thin; scrollbar-color: #6d7378 transparent; }
+.chat-msg { display: block; font-size: var(--t-meta); line-height: 1.35; overflow-wrap: anywhere; }
+.chat-nick { font-weight: 600; margin-right: 6px; }
+.chat-nick::after { content: ':'; }
+.chat-msg.propio .chat-texto { color: #fff; }
+.chat-vacio { font-size: var(--t-meta); opacity: 0.65; }
+
+.chat-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--e-2); }
+.chat-entrada { min-width: 0; min-height: var(--toque); padding: 6px 10px; border: 3px solid #2f4664; border-radius: 4px; background: #0f1a2b; color: var(--crema); font: var(--t-cuerpo) var(--ui); }
+.chat-entrada::placeholder { color: rgba(241, 230, 207, 0.5); }
+.chat-entrada:focus-visible { outline: 3px solid var(--acento); outline-offset: 1px; }
+.boton.chat-enviar { min-height: var(--toque); padding: 6px 12px; box-shadow: 0 3px 0 var(--b-p-sombra); }
+
+@media (max-width: 760px) { body.en-sala .chat { left: 16px; bottom: 150px; } }
+@media (prefers-reduced-motion: reduce) { .chat-boton.nuevo { animation: none; border-color: var(--acento); } }
+
+/* Que no tape la vista: cerrado es solo un icono pequeño y tenue; abierto es translúcido y se aclara al usarlo (cursor encima o escribiendo). */
+.chat-boton { min-height: 36px; padding: 4px 8px; opacity: 0.6; transition: opacity 0.15s; }
+.chat-boton:hover, .chat-boton:focus-visible, .chat-boton.nuevo { opacity: 1; }
+.chat-boton-txt { display: none; }
+.chat-panel { opacity: 0.55; transition: opacity 0.15s; }
+.chat-panel:hover, .chat-panel:focus-within { opacity: 1; }
+.chat-lista { height: 140px; }
+.chat-cerrar { width: 34px; }
+@media (prefers-reduced-motion: reduce) { .chat-boton, .chat-panel { transition: none; } }

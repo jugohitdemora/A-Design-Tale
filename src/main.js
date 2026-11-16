@@ -14,6 +14,7 @@ import { traducirMotivo } from './motivos.js';
 import { abrirCreditos } from './creditos.js';
 import { abrirTutorial } from './tutorial.js?v=5';
 import { crearPantallas, LOGICO } from './pantallas/index.js';
+import { crearChat } from './chat.js';
 import { musica, efecto, volumen, ponerVolumen } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -95,6 +96,14 @@ const SIMULADO = params.get('simulado') === '1';
 let moduloSimulado = null;
 const raizPantalla = $('pantalla');
 const ui = crearPantallas({ raiz: raizPantalla, franja: $('franja'), modal: $('modal-evento'), capa: $('capa'), simulado: SIMULADO });
+
+// Chat de la sala: el color del nick es el de su departamento (gris crema si aún no tiene rol).
+const chat = crearChat({
+  idPropio: jugadorId,
+  enviar: (texto) => sesion?.chat?.(texto),
+  colorDe: (id) => { const r = estado()?.jugadores?.[id]?.rol; return r ? colorCss(ROLES[indiceRol(r)].color) : '#f1e6cf'; },
+  alMensaje: (propio) => { if (!propio) efecto('clic'); },
+});
 
 const indiceRol = (id) => ROLES.findIndex((r) => r.id === id);
 const estado = () => sesion?.estado ?? null;
@@ -178,6 +187,9 @@ function entrarEnSala(cod) {
   sesion.on('estado', () => { pintarMesa(); actualizarTodo(); });
   sesion.on('aviso', (motivo) => { avisar(motivo); actualizarTodo(); });
   sesion.on('version', () => { versionAjena = true; actualizarTodo(); });
+  chat.vaciar();
+  chat.ponerNick(nick);
+  sesion.on('chat', (id, quien, texto) => chat.recibir(id, quien, texto));
   sesion.on('nuevoPar', () => sesion?.presencia(presencia()));
   sesion.on('presencia', (id, datos) => { if (datos) poses.set(id, datos); else poses.delete(id); actualizarAvatares(); pintarVotos(); });
   pantalla = 'lobby';
@@ -320,6 +332,7 @@ function actualizarTodo() {
   else { faseVista = null; lugar = 'briefing'; vista = 'sala'; pantallaLista = false; }
   sonidoDeFase();
 
+  chat.mostrar(pantalla !== 'inicio');
   $('inicio').classList.toggle('oculto', pantalla !== 'inicio');
   $('lobby').classList.toggle('oculto', pantalla !== 'lobby');
   // Mirando una sala 3D (briefing o control): se mira moviendo el ratón (táctil: arrastrar) y se ven las etiquetas de los avatares.

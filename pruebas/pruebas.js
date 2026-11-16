@@ -30,6 +30,20 @@ const deAcuerdo = (ss) => {
 const hosts = (ss) => ss.filter((s) => s.soyHost()).length;
 
 const pruebas = {
+  async 'Chat: el mensaje llega a los demás con el nick, recortado y sin eco'() {
+    const red = crearRed();
+    const ss = ['A', 'B', 'C'].map((n) => jugador(red, 'j' + n, n));
+    await esperarHasta(() => deAcuerdo(ss) && conectados(ss[0].estado).length === 3, 5000, 'acuerdo entre 3');
+    const recibidos = ss.map(() => []);
+    ss.forEach((s, i) => s.on('chat', (id, nick, texto) => recibidos[i].push({ id, nick, texto })));
+    ss[0].chat('hola ' + 'x'.repeat(500));
+    await esperarHasta(() => recibidos[1].length === 1 && recibidos[2].length === 1, 3000, 'chat en B y C');
+    afirmar(recibidos[0].length === 0, 'el emisor no debe recibir su propio mensaje');
+    afirmar(recibidos[1][0].nick === 'A' && recibidos[1][0].id === 'jA', 'nick o id incorrectos');
+    afirmar(recibidos[1][0].texto.length === 200, 'el texto debe recortarse a 200 caracteres');
+    ss.forEach((s) => s.salir());
+  },
+
   async 'Arranque simultáneo: un solo anfitrión y todos dentro'() {
     const red = crearRed();
     const ss = ['A', 'B', 'C'].map((n) => jugador(red, 'j' + n, n));

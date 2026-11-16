@@ -223,6 +223,11 @@ export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora =
       return;
     }
     if (tipo === 'pres') emitir('presencia', pares.get(peerId).jugadorId, m.datos);
+    // Chat: efímero y fuera de las reglas (no entra en el estado). El transporte ya descarta los duplicados entre brokers.
+    if (tipo === 'chat' && typeof m.texto === 'string') {
+      const de = pares.get(peerId).jugadorId;
+      emitir('chat', de, estado?.jugadores?.[de]?.nick ?? String(m.nick ?? '?').slice(0, 16), m.texto.slice(0, 200));
+    }
   });
 
   // ---------- Arranque ----------
@@ -279,6 +284,7 @@ export function crearSesion({ transporte, jugadorId, nick, tiempos = {}, ahora =
       enviarPendientes();
       return it.id;
     },
+    chat(texto) { if (compatibles().length) enviar('chat', { texto: String(texto).slice(0, 200), nick }); }, // difusión; quien lo envía lo pinta por su cuenta
     presencia(datos) { if (compatibles().length) enviar('pres', { datos }); }, // difusión, como el estado
     salir() {
       cerrada = true;

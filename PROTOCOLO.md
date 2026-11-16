@@ -22,6 +22,7 @@ All carry `v` (protocol version).
 | `intent` | player → host | `jugadorId`, `intencion {id, tipo, payload}` | Ask for a change |
 | `aviso` | host → one player | `id`, `motivo` | Rejection of an intent, with the reason to display |
 | `pres` | player → everyone (broadcast) | `datos` | Ephemeral presence (gaze) |
+| `chat` | player → everyone (broadcast) | `texto` (≤ 200), `nick` | Room chat. Ephemeral, outside the state and the rules; the sender paints its own message (no echo) |
 
 ## 3. Identity
 
