@@ -2,14 +2,14 @@
 // misión de práctica de un solo jugador (briefing → diseño → GO/NO-GO → lanzamiento → vuelo → informe). Al final regala el
 // Manual de juego (se lee aquí). No usa red ni el estado de la partida: todo es local a este módulo.
 // Contrato: abrirTutorial() abre el diálogo; textoBotonTutorial() es el texto del botón del inicio.
-// Los números de la práctica siguen las reglas reales: razón = usado / límite; ≤ 1,00 dentro; ≤ 1,20 tolerancia; > 1,20 la revisión falla.
+// Los números de la práctica siguen las reglas reales: porcentaje = usado / límite; ≤ 100 % dentro; ≤ 120 % tolerancia; > 120 % la revisión falla.
 import { textos, tx, idioma } from './i18n.js';
 import { efecto } from './audio.js';
 import { MANUAL } from './tutorial-manual.js';
 
 const T = textos({
   es: {
-    boton: 'TUTORIAL', titulo: 'Tutorial · Simulacro', jefe: 'JEFE DE MISIÓN', saltar: 'Saltar', siguiente: 'Siguiente', atras: 'Atrás',
+    boton: 'TUTORIAL', titulo: 'Tutorial · Simulacro', ventana: 'Misión de práctica · Luna-0', jefe: 'JEFE DE MISIÓN', saltar: 'Saltar', siguiente: 'Siguiente', atras: 'Atrás',
     paso: (a, b) => `Paso ${a} de ${b}`, cerrar: 'Cerrar', terminar: 'Terminar y a la misión',
     barras: 'Barras de recursos', masa: 'Masa', potencia: 'Potencia', presupuesto: 'Presupuesto', ratio: 'razón',
     dentro: 'Dentro del límite', tolerancia: 'En tolerancia. La revisión pasa, pero el riesgo es mayor.', fuera: 'Fuera del límite. La revisión falla.',
@@ -30,7 +30,7 @@ const T = textos({
     manualPie: 'Encuentra la versión completa, con fórmulas y datos de tu misión, en la app «Manual de juego» del portátil.',
   },
   en: {
-    boton: 'TUTORIAL', titulo: 'Tutorial · Drill', jefe: 'MISSION CHIEF', saltar: 'Skip', siguiente: 'Next', atras: 'Back',
+    boton: 'TUTORIAL', titulo: 'Tutorial · Drill', ventana: 'Practice mission · Luna-0', jefe: 'MISSION CHIEF', saltar: 'Skip', siguiente: 'Next', atras: 'Back',
     paso: (a, b) => `Step ${a} of ${b}`, cerrar: 'Close', terminar: 'Finish and go to the mission',
     barras: 'Resource bars', masa: 'Mass', potencia: 'Power', presupuesto: 'Budget', ratio: 'ratio',
     dentro: 'Within the limit', tolerancia: 'In tolerance. The review passes, but the risk is higher.', fuera: 'Over the limit. The review fails.',
@@ -87,7 +87,7 @@ function medidas(s = S) {
   return { m, uso, sum, c, rm: r(m, LIM.masa), rp: r(uso, sum), rc: r(c, LIM.presupuesto) };
 }
 const estadoRazon = (r) => (r <= 1 ? 'ok' : r <= 1.2 ? 'tol' : 'mal');
-const fmtR = (r) => (Number.isFinite(r) ? r.toFixed(2).replace('.', idioma() === 'es' ? ',' : '.') : '∞');
+const fmtP = (r) => (Number.isFinite(r) ? `${Math.round(r * 100)} %` : '∞');
 function disenoValido(s = S) {
   const m = medidas(s);
   const req = PIEZAS.filter((p) => p.req).every((p) => s.piezas.has(p.id)) && PIEZAS.some((p) => p.panel && s.piezas.has(p.id)) && (!s.extra || s.piezas.has('espectro'));
@@ -166,7 +166,7 @@ const PASOS = [
   { id: 'juego', chief: { es: 'Project Orbit es un juego en equipo. Hasta cuatro personas diseñan una misión espacial real. Cada persona lleva un departamento. Todo el equipo gana o pierde junto. Si falta un jugador, su departamento queda vacante. Cualquiera puede manejarlo.', en: 'Project Orbit is a team game. Up to four people design a real space mission. Each person runs one department. The whole team wins or loses together. If a player is absent, that department stays vacant. Anyone can run it.' }, escena: escDeptos },
   { id: 'fases', chief: { es: 'Este es el camino de cada partida. Primero viene el briefing. Después diseñas, revisas, votas GO o NO-GO, lanzas, vuelas y lees el informe. Hoy lo haremos todo en un simulacro corto.', en: 'This is the path of each game. First comes the briefing. Then you design, review, vote GO or NO-GO, launch, fly, and read the report. Today you will play all of it in a short drill.' }, escena: escFases },
   { id: 'briefing', chief: { es: 'Briefing. Lee tu expediente. Indica el destino, el presupuesto y los objetivos de ciencia. El objetivo PRIORITARIO es obligatorio. Un objetivo opcional da más ciencia, pero pide más instrumentos. Haz clic en un objetivo para marcarlo.', en: 'Briefing. Read your dossier. It gives the destination, the budget, and the science goals. The PRIORITY goal is mandatory. An optional goal gives more science, but it needs more instruments. Click a goal to mark it.' }, escena: escBriefing, gate: () => S.obj },
-  { id: 'diseno', chief: { es: 'Diseño. Monta un chasis, una cámara, una antena y un panel solar (●). Cada barra muestra una razón: lo usado dividido por el límite. Con 1,00 o menos, estás dentro del límite. De 1,00 a 1,20, estás en tolerancia. La revisión pasa, pero sube el riesgo. Por encima de 1,20, la revisión falla. Compra también el seguro. Lo necesitarás en el vuelo.', en: 'Design. Mount a frame, a camera, an antenna, and a solar panel (●). Each bar shows a ratio: used divided by limit. At 1.00 or less, you are within the limit. From 1.00 to 1.20, you are in tolerance. The review passes, but the risk grows. Above 1.20, the review fails. Buy the insurance too. You will need it in flight.' }, escena: escDiseno, gate: () => disenoValido().ok },
+  { id: 'diseno', chief: { es: 'Diseño. Monta un chasis, una cámara, una antena y un panel solar (●). Cada barra muestra qué porcentaje del límite usas. Hasta el 100 %, estás dentro del límite. Del 100 % al 120 %, estás en tolerancia. La revisión pasa, pero sube el riesgo. Por encima del 120 %, la revisión falla. Compra también el seguro. Lo necesitarás en el vuelo.', en: 'Design. Mount a frame, a camera, an antenna, and a solar panel (●). Each bar shows the percentage of the limit you use. Up to 100 %, you are within the limit. From 100 % to 120 %, you are in tolerance. The review passes, but the risk grows. Above 120 %, the review fails. Buy the insurance too. You will need it in flight.' }, escena: escDiseno, gate: () => disenoValido().ok },
   { id: 'go', chief: { es: 'Revisión y GO / NO-GO. Cada departamento revisa su parte. Después firma GO en su consola. Hacen falta las cuatro firmas. Si cambias el diseño más tarde, las firmas se borran. Entonces firmas otra vez. Pulsa cada lámpara.', en: 'Review and GO / NO-GO. Each department checks its part. Then it signs GO at its console. You need all four signatures. If you change the design later, the signatures clear. Then you sign again. Press each lamp.' }, escena: escGo, gate: () => S.firmas.size === 4 },
   { id: 'lanzar', chief: { es: 'Lanzamiento. En el juego real, eliges el mes de lanzamiento. Fuera del mejor mes, el cohete necesita más propelente. Mira el riesgo de fallo. Sube cuando la masa pasa el límite. Si el lanzamiento falla, la misión termina. ¡Inicia la cuenta atrás!', en: 'Launch. In the real game, you choose the launch month. Outside the best month, the rocket needs more propellant. Look at the failure risk. It grows when the mass is over the limit. If the launch fails, the mission ends. Start the countdown!' }, escena: escLanzar, gate: () => S.lanzado },
   { id: 'vuelo', chief: { es: 'Vuelo. La pantalla muestra una fase cada vez. Todos ven la misma fase. Pulsa NEXT para avanzar. Puede aparecer un evento malo. Entonces el departamento dueño de la contingencia debe activarla. Antes de eso, no puedes avanzar.', en: 'Flight. The screen shows one phase at a time. Everyone sees the same phase. Press NEXT to advance. A bad event can appear. Then the department that owns the contingency must activate it. You cannot advance before that.' }, escena: escVuelo, gate: () => S.fin },
@@ -261,7 +261,7 @@ function barra(nombre, usado, limite, razon, unidad) {
   const e = estadoRazon(razon);
   const pct = Math.min(100, (Number.isFinite(razon) ? razon : 2) / 1.4 * 100);
   return h('div', { class: 'tt-barra ' + e },
-    h('div', { class: 'tt-barra-cab' }, h('span', {}, nombre), h('span', {}, `${usado} / ${limite} ${unidad}`), h('strong', {}, `${T.ratio} ${fmtR(razon)}`)),
+    h('div', { class: 'tt-barra-cab' }, h('span', {}, nombre), h('span', {}, `${usado} / ${limite} ${unidad}`), h('strong', {}, fmtP(razon))),
     h('div', { class: 'tt-pista' }, h('i', { style: `width:${pct}%` }), h('b', { class: 'l100' }), h('b', { class: 'l120' })));
 }
 
@@ -407,7 +407,7 @@ function contenidoManual(bloque) {
 function abrirManual() {
   efecto('abrir');
   let m = document.getElementById('dlg-manual-regalo');
-  if (!m) { m = h('dialog', { id: 'dlg-manual-regalo', class: 'dialogo dialogo-ancho tt-manual' }); document.body.append(m); }
+  if (!m) { m = h('dialog', { id: 'dlg-manual-regalo', class: 'dialogo dialogo-ancho tt-manual laptop-so' }); document.body.append(m); }
   let cap = 0;
   const cuerpo = h('div', { class: 'tt-m-cuerpo' });
   const indice = h('ol', { class: 'tt-m-indice' });
@@ -420,7 +420,7 @@ function abrirManual() {
   };
   pintar();
   const cerrarB = h('button', { class: 'boton primario', type: 'button', onclick: () => m.close() }, T.cerrar);
-  m.replaceChildren(h('h2', {}, T.regaloT), h('div', { class: 'tt-m-marco' }, h('nav', {}, h('p', { class: 'tt-tenue' }, T.indice), indice), cuerpo), h('div', { class: 'acciones' }, cerrarB));
+  m.replaceChildren(h('div', { class: 'lp-ventana-titulo tt-m-titulo' }, h('span', {}, T.regaloT), h('span', { class: 'lp-ventana-botones', 'aria-hidden': 'true' }, '▁ ▢ ✕')), h('div', { class: 'tt-m-marco' }, h('nav', {}, h('p', { class: 'tt-tenue' }, T.indice), indice), cuerpo), h('div', { class: 'acciones' }, cerrarB));
   m.showModal();
 }
 
@@ -428,26 +428,32 @@ function abrirManual() {
 function cerrar() { dlg?.close(); }
 
 function crearDialogo() {
-  dlg = h('dialog', { id: 'dlg-tutorial', class: 'tt', 'aria-label': T.titulo });
+  // Misma piel que el portátil (AGENCIA·OS): barra de tareas, escritorio azul y dos ventanas crema (estilos/escritorio.css + tutorial.css).
+  dlg = h('dialog', { id: 'dlg-tutorial', class: 'tt laptop-so', 'aria-label': T.titulo });
   const puntos = PASOS.map(() => h('i', {}));
   const pasoTxt = h('span', { class: 'tt-paso' });
-  const cab = h('header', { class: 'tt-cab' }, h('span', { class: 'tt-tit' }, T.titulo), h('div', { class: 'tt-puntos' }, puntos), pasoTxt,
-    h('button', { class: 'boton chico tt-saltar', type: 'button', onclick: cerrar }, T.saltar + ' ✕'));
-  const escena = h('div', { class: 'tt-escena' });
+  const barra = h('header', { class: 'lp-barra tt-taskbar' }, h('span', { class: 'lp-logo' }, 'AGENCY·OS'), h('span', { class: 'tt-tit' }, T.titulo),
+    h('div', { class: 'tt-puntos' }, puntos), pasoTxt,
+    h('button', { class: 'boton peligro tt-saltar', type: 'button', onclick: cerrar }, '✕ ' + T.saltar));
+  const botonesVentana = () => h('span', { class: 'lp-ventana-botones', 'aria-hidden': 'true' }, '▁ ▢ ✕');
+  const escena = h('div', { class: 'lp-ventana-cuerpo tt-escena' });
   const ret = retrato();
   const texto = h('p', { class: 'tt-texto', 'aria-live': 'polite' });
   const atras = h('button', { class: 'boton', type: 'button', onclick: () => ir(-1) });
   const sig = h('button', { class: 'boton primario', type: 'button', onclick: () => ir(1) });
-  const dialogo = h('div', { class: 'tt-dialogo', onclick: (e) => { if (!e.target.closest('button')) ui.completo?.(); } }, h('div', { class: 'tt-nombre' }, T.jefe), texto, h('div', { class: 'tt-acc' }, atras, sig));
-  dlg.append(h('div', { class: 'tt-marco' }, cab, escena, h('footer', { class: 'tt-chief' }, ret, dialogo)));
+  const dialogo = h('div', { class: 'tt-dialogo', onclick: (e) => { if (!e.target.closest('button')) ui.completo?.(); } }, texto, h('div', { class: 'tt-acc' }, atras, sig));
+  const ventEscena = h('section', { class: 'lp-ventana tt-vent-escena' }, h('div', { class: 'lp-ventana-titulo' }, h('span', { class: 'tt-vt' }, T.ventana), botonesVentana()), escena);
+  const ventChief = h('section', { class: 'lp-ventana tt-vent-chief' }, h('div', { class: 'lp-ventana-titulo' }, h('span', { class: 'tt-nombre' }, T.jefe), botonesVentana()),
+    h('div', { class: 'lp-ventana-cuerpo tt-chief' }, ret, dialogo));
+  dlg.append(h('div', { class: 'tt-marco' }, barra, h('div', { class: 'tt-cuerpo' }, ventEscena, ventChief)));
   document.body.append(dlg);
   ui = { escena, texto, retrato: ret, sig, atras, puntos, pasoTxt, completo: null };
   dlg.addEventListener('close', () => { limpiarTemporizadores(); S = nuevo(); });
   dlg.addEventListener('cancel', () => efecto('clic'));
   addEventListener('idioma', () => {
     if (!dlg?.open) return;
-    cab.querySelector('.tt-tit').textContent = T.titulo; cab.querySelector('.tt-saltar').textContent = T.saltar + ' ✕';
-    dialogo.querySelector('.tt-nombre').textContent = T.jefe; pintarPaso();
+    barra.querySelector('.tt-tit').textContent = T.titulo; barra.querySelector('.tt-saltar').textContent = '✕ ' + T.saltar;
+    ventEscena.querySelector('.tt-vt').textContent = T.ventana; ventChief.querySelector('.tt-nombre').textContent = T.jefe; pintarPaso();
   });
 }
 

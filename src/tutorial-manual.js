@@ -42,9 +42,9 @@ export const MANUAL = [
     ]],
     ['p', t('Cada misión tiene un plazo con los inversores. Hay un mes de gracia. Después, el presupuesto baja un 4 % por cada mes de retraso. Si el retraso pasa de 12 meses, los inversores se retiran.', 'Each mission has a deadline with the investors. You have one month of grace. After that, the budget drops 4 % for each month of delay. If the delay is more than 12 months, the investors pull out.')],
   ] },
-  { t: t('5. Barras, razón y tolerancia', '5. Bars, ratio, and tolerance'), b: [
+  { t: t('5. Barras, porcentaje y tolerancia', '5. Bars, percentage, and tolerance'), b: [
     ['p', t('Seis barras comparan lo que usa el diseño con un límite. Son la masa, el volumen, la potencia, la batería, el enlace de datos y el presupuesto.', 'Six bars compare what the design uses with a limit. They are mass, volume, power, battery, data link, and budget.')],
-    ['p', t('Razón = usado ÷ límite. Con 1,00 o menos, estás dentro del límite. De 1,00 a 1,20, estás en tolerancia y la revisión pasa. Por encima de 1,20, la revisión falla.', 'Ratio = used ÷ limit. At 1.00 or less, you are within the limit. From 1.00 to 1.20, you are in tolerance and the review passes. Above 1.20, the review fails.')],
+    ['p', t('Cada barra muestra el porcentaje del límite que usas: usado ÷ límite × 100. Hasta el 100 %, estás dentro del límite. Del 100 % al 120 %, estás en tolerancia y la revisión pasa. Por encima del 120 %, la revisión falla.', 'Each bar shows the percentage of the limit you use: used ÷ limit × 100. Up to 100 %, you are within the limit. From 100 % to 120 %, you are in tolerance and the review passes. Above 120 %, the review fails.')],
     ['p', t('Pasar el límite tiene un costo en el vuelo. La probabilidad de fallo de una etapa relacionada sube unos 0,5 puntos porcentuales por cada 1 % de exceso. El máximo es +10 puntos con un 120 %.', 'Going over the limit has a cost in flight. The failure probability of a related stage rises about 0.5 percentage points for each 1 % of excess. The maximum is +10 points at 120 %.')],
     ['nota', t('Deja margen. Un evento puede cambiar un límite cuando estás justo en el 100 %.', 'Keep some margin. An event can change a limit when you are exactly at 100 %.')],
   ] },
