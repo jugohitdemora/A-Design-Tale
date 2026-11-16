@@ -1,6 +1,6 @@
 // Tutorial de la pantalla de inicio: el jefe de misión (Chief) explica el juego con un cuadro de diálogo y hace jugar una
 // misión de práctica de un solo jugador (briefing → diseño → GO/NO-GO → lanzamiento → vuelo → informe). Al final regala el
-// Manual de juego (se lee aquí y se puede descargar). No usa red ni el estado de la partida: todo es local a este módulo.
+// Manual de juego (se lee aquí). No usa red ni el estado de la partida: todo es local a este módulo.
 // Contrato: abrirTutorial() abre el diálogo; textoBotonTutorial() es el texto del botón del inicio.
 // Los números de la práctica siguen las reglas reales: razón = usado / límite; ≤ 1,00 dentro; ≤ 1,20 tolerancia; > 1,20 la revisión falla.
 import { textos, tx, idioma } from './i18n.js';
@@ -25,7 +25,7 @@ const T = textos({
     dano: 'Daño: −15 % de ciencia',
     informe: 'Informe de vuelo', veredicto: 'Veredicto', total: 'MISIÓN TOTAL', parcial: 'MISIÓN PARCIAL',
     ciencia: 'Ciencia lograda', gastado: 'Presupuesto gastado', puntos: 'Puntuación',
-    regalo: '¡Un regalo!', regaloT: 'Manual de juego', abrir: 'Abrir el manual', descargar: 'Descargar (.html)', leer: 'Leer',
+    regalo: '¡Un regalo!', regaloT: 'Manual de juego', abrir: 'Abrir el manual', leer: 'Leer',
     indice: 'Capítulos', manualHecho: 'Manual guardado', ya: 'Ya tienes el manual', otraVez: 'Repetir tutorial',
     manualPie: 'La versión completa, con fórmulas y datos de tu misión, está en la app «Manual de juego» del portátil.',
   },
@@ -46,7 +46,7 @@ const T = textos({
     dano: 'Damage: −15 % science',
     informe: 'Flight report', veredicto: 'Verdict', total: 'FULL MISSION', parcial: 'PARTIAL MISSION',
     ciencia: 'Science achieved', gastado: 'Budget spent', puntos: 'Score',
-    regalo: 'A gift!', regaloT: 'Game manual', abrir: 'Open the manual', descargar: 'Download (.html)', leer: 'Read',
+    regalo: 'A gift!', regaloT: 'Game manual', abrir: 'Open the manual', leer: 'Read',
     indice: 'Chapters', manualHecho: 'Manual saved', ya: 'You already have the manual', otraVez: 'Repeat tutorial',
     manualPie: 'The full version, with formulas and your mission data, is in the "Game manual" app on the laptop.',
   },
@@ -173,7 +173,7 @@ const PASOS = [
   { id: 'informe', chief: () => (S.resultado?.total
     ? { es: 'Misión total. Tu seguro anuló la tormenta y toda la ciencia llegó a casa. Así se juega: diseñar con margen, asegurar lo que puede fallar y firmar entre todos. Vuelve a volar para mejorar la puntuación.', en: 'Full mission. Your insurance cancelled the storm and all the science came home. That is the game: design with margin, insure what can fail and sign together. Fly again to improve the score.' }
     : { es: 'Misión parcial. Sin el seguro, la tormenta te quitó el 15 % de la ciencia. En el juego real el informe explica cada causa y, con «Volver a volar», rediseñas con lo aprendido. Prueba otra vez comprando el seguro.', en: 'Partial mission. Without the insurance, the storm cost you 15 % of the science. In the real game the report explains every cause and, with "Fly again", you redesign with what you learned. Try again with the insurance.' }), escena: escInforme },
-  { id: 'regalo', chief: { es: 'Has terminado el entrenamiento. Toma: el Manual de juego. Tiene las reglas, los números y los controles en capítulos. Léelo aquí o descárgalo; el manual completo, con fórmulas, también está en el portátil de tu asiento. ¡Buena misión, astronauta!', en: 'Training complete. Here, take the Game manual. It has the rules, numbers and controls in chapters. Read it here or download it; the full manual, with formulas, is also on your seat laptop. Good luck out there, astronaut!' }, escena: escRegalo },
+  { id: 'regalo', chief: { es: 'Has terminado el entrenamiento. Toma: el Manual de juego. Tiene las reglas, los números y los controles en capítulos. Léelo aquí; el manual completo, con fórmulas, también está en el portátil de tu asiento. ¡Buena misión, astronauta!', en: 'Training complete. Here, take the Game manual. It has the rules, numbers and controls in chapters. Read it here; the full manual, with formulas, is also on your seat laptop. Good luck out there, astronaut!' }, escena: escRegalo },
 ];
 
 function ctxPaso() { return PASOS[S.paso]; }
@@ -385,8 +385,7 @@ function escRegalo(el) {
     h('div', { class: 'tt-libro' }, h('span', { class: 'tt-cinta' }), h('strong', {}, 'PROJECT ORBIT'), h('span', {}, T.regaloT)),
     h('h3', { class: 'tt-h' }, T.regalo),
     h('div', { class: 'tt-acc-regalo' },
-      h('button', { class: 'boton primario grande', type: 'button', onclick: () => abrirManual() }, T.abrir),
-      h('button', { class: 'boton', type: 'button', onclick: () => descargarManual() }, T.descargar)),
+      h('button', { class: 'boton primario grande', type: 'button', onclick: () => abrirManual() }, T.abrir)),
     h('p', { class: 'tt-tenue' }, T.manualPie)));
 }
 
@@ -419,36 +418,8 @@ function abrirManual() {
   };
   pintar();
   const cerrarB = h('button', { class: 'boton primario', type: 'button', onclick: () => m.close() }, T.cerrar);
-  const desc = h('button', { class: 'boton', type: 'button', onclick: () => descargarManual() }, T.descargar);
-  m.replaceChildren(h('h2', {}, T.regaloT), h('div', { class: 'tt-m-marco' }, h('nav', {}, h('p', { class: 'tt-tenue' }, T.indice), indice), cuerpo), h('div', { class: 'acciones' }, desc, cerrarB));
+  m.replaceChildren(h('h2', {}, T.regaloT), h('div', { class: 'tt-m-marco' }, h('nav', {}, h('p', { class: 'tt-tenue' }, T.indice), indice), cuerpo), h('div', { class: 'acciones' }, cerrarB));
   m.showModal();
-}
-
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-function manualHtml() {
-  const bloque = (b) => {
-    const [tipo, a, c] = b;
-    if (tipo === 'p') return `<p>${esc(L(a))}</p>`;
-    if (tipo === 'h') return `<h3>${esc(L(a))}</h3>`;
-    if (tipo === 'nota') return `<p class="n">${esc(L(a))}</p>`;
-    if (tipo === 'lista') return `<ul>${a.map((x) => `<li>${esc(L(x))}</li>`).join('')}</ul>`;
-    if (tipo === 'tabla') return `<table><thead><tr>${a.map((x) => `<th>${esc(L(x))}</th>`).join('')}</tr></thead><tbody>${c.map((f) => `<tr>${f.map((x) => `<td>${esc(L(x))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-    return '';
-  };
-  const es = idioma() === 'es';
-  return `<!doctype html><html lang="${idioma()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Project Orbit · ${es ? 'Manual de juego' : 'Game manual'}</title>
-<style>body{font:16px/1.55 system-ui,sans-serif;background:#10192a;color:#f1e6cf;margin:0;padding:24px}main{max-width:820px;margin:0 auto}h1{font:22px/1.3 monospace;letter-spacing:1px;color:#f0b53c}h2{margin-top:36px;color:#62c6ff;border-bottom:2px solid #2c3c58;padding-bottom:6px}h3{color:#f0b53c;margin-bottom:4px}table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #2c3c58;padding:8px;text-align:left;vertical-align:top}th{background:#1b2b44}.n{background:#1b2b44;border-left:4px solid #62c6ff;padding:10px 14px}nav li{margin:2px 0}a{color:#62c6ff}</style></head><body><main>
-<h1>PROJECT ORBIT · ${es ? 'MANUAL DE JUEGO' : 'GAME MANUAL'}</h1><p>${es ? 'Regalo del Jefe de Misión. Resumen de las reglas; el manual completo, con fórmulas, está en el portátil del juego.' : 'A gift from the Mission Chief. A summary of the rules; the full manual, with formulas, is on the in-game laptop.'}</p>
-<nav><ol>${MANUAL.map((c, i) => `<li><a href="#c${i}">${esc(L(c.t))}</a></li>`).join('')}</ol></nav>
-${MANUAL.map((c, i) => `<h2 id="c${i}">${esc(L(c.t))}</h2>${c.b.map(bloque).join('')}`).join('')}
-</main></body></html>`;
-}
-function descargarManual() {
-  efecto('confirmar');
-  const url = URL.createObjectURL(new Blob([manualHtml()], { type: 'text/html;charset=utf-8' }));
-  const a = h('a', { href: url, download: idioma() === 'es' ? 'manual-de-juego-project-orbit.html' : 'project-orbit-game-manual.html' });
-  document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 // ---------- Apertura y cierre ----------
