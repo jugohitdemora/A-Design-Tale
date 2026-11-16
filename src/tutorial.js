@@ -337,19 +337,21 @@ function escVuelo(el) {
   const lista = h('ol', { class: 'tt-fases' }, fases.map((f, i) => h('li', { class: S.fin || i < S.fase ? 'hecha' : i === S.fase ? 'ahora' : '' }, h('span', { class: 'tt-n' }, i + 1), h('span', {}, f))));
   const cuerpo = h('div', { class: 'tt-evento-zona' });
   const ev = S.evento;
+  const nuevo = S.nuevoEv ? ' nuevo' : '';
+  S.nuevoEv = false; // la animación de entrada solo corre al cambiar el evento, no en cada fase
   if (ev === 'pendiente') {
-    cuerpo.append(h('div', { class: 'tt-evento' },
+    cuerpo.append(h('div', { class: 'tt-evento' + nuevo },
       h('strong', {}, '⚠ ' + T.eventoTit), h('p', {}, T.tormenta),
       S.seguro
-        ? h('button', { class: 'boton primario', type: 'button', onclick: () => { S.evento = 'anulado'; efecto('contingencia'); pintarPaso({ decirTexto: false }); } }, T.activar)
-        : h('button', { class: 'boton peligro', type: 'button', onclick: () => { S.evento = 'dano'; efecto('aviso'); pintarPaso({ decirTexto: false }); } }, T.aceptar)));
-  } else if (ev === 'anulado') cuerpo.append(h('div', { class: 'tt-evento ok' }, h('strong', {}, '✔ ' + T.anulado)));
-  else if (ev === 'dano') cuerpo.append(h('div', { class: 'tt-evento mal' }, h('strong', {}, '✖ ' + T.dano)));
+        ? h('button', { class: 'boton primario', type: 'button', onclick: () => { S.evento = 'anulado'; S.nuevoEv = true; efecto('contingencia'); pintarPaso({ decirTexto: false }); } }, T.activar)
+        : h('button', { class: 'boton peligro', type: 'button', onclick: () => { S.evento = 'dano'; S.nuevoEv = true; efecto('aviso'); pintarPaso({ decirTexto: false }); } }, T.aceptar)));
+  } else if (ev === 'anulado') cuerpo.append(h('div', { class: 'tt-evento ok' + nuevo }, h('strong', {}, '✔ ' + T.anulado)));
+  else if (ev === 'dano') cuerpo.append(h('div', { class: 'tt-evento mal' + nuevo }, h('strong', {}, '✖ ' + T.dano)));
   const next = h('button', { class: 'boton primario', type: 'button', disabled: S.fin || ev === 'pendiente', onclick: () => {
     efecto('fase');
     if (S.fase < 3) {
       S.fase += 1;
-      if (S.fase === 1 && !S.evento) { S.evento = 'pendiente'; efecto('evento'); }
+      if (S.fase === 1 && !S.evento) { S.evento = 'pendiente'; S.nuevoEv = true; efecto('evento'); }
     } else {
       S.fin = true;
       S.resultado = { total: !!S.seguro, ciencia: 100 * (S.seguro ? 1 : 0.85) };

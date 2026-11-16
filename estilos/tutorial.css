@@ -104,7 +104,8 @@ dialog.tt::backdrop { background: rgba(4, 7, 12, 0.72); }
 .tt-fases li { display: flex; align-items: center; gap: 8px; padding: 12px; background: rgba(0,0,0,0.3); border: 2px solid #2c3c58; border-radius: 6px; opacity: 0.55; }
 .tt-fases li.hecha { opacity: 1; border-color: #3fa66b; } .tt-fases li.hecha .tt-n { background: #5fe08a; }
 .tt-fases li.ahora { opacity: 1; border-color: #f0b53c; background: rgba(240, 181, 60, 0.12); }
-.tt-evento { padding: 14px; background: rgba(224, 176, 64, 0.14); border: 3px solid #e0b040; border-radius: 6px; margin-bottom: 14px; animation: tt-entra 0.3s; }
+.tt-evento { padding: 14px; background: rgba(224, 176, 64, 0.14); border: 3px solid #e0b040; border-radius: 6px; margin-bottom: 14px; }
+.tt-evento.nuevo { animation: tt-entra 0.3s; }
 .tt-evento.ok { background: rgba(95, 224, 138, 0.14); border-color: #5fe08a; } .tt-evento.mal { background: rgba(239, 91, 74, 0.14); border-color: #ef5b4a; }
 .tt-evento p { margin: 6px 0 10px; }
 .tt-vuelo-acc { display: flex; justify-content: flex-end; }
