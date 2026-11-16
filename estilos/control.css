@@ -108,6 +108,11 @@
 .pl > .pl-centro-col { grid-area: mapa; min-height: 0; }
 .pl > .pl-der { grid-area: der; min-height: 0; }
 .pl-centro-col { overflow: hidden; }
+/* Mapa ampliado: ocupa todo el planificador; el resto de paneles se ocultan hasta reducirlo. */
+.pl.mapa-grande { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: 'mapa'; }
+.pl.mapa-grande > :not(.pl-centro-col) { display: none; }
+.pl-capas .pl-ampliar { order: 99; margin-left: auto; }
+.pl-sitios-grande .boton.elegido { border-color: var(--mc-verde); }
 .pl-izq, .pl-der { overflow: auto; display: flex; flex-direction: column; gap: var(--e-3); }
 .pl-sola { max-width: 600px; margin: 0 auto; }
 .pl-rutas { display: flex; flex-direction: column; gap: var(--e-2); }
@@ -120,7 +125,17 @@
 .pl-capas { display: flex; flex-wrap: wrap; gap: var(--e-2); align-items: center; margin-bottom: var(--e-2); }
 .pl-capas .boton { padding: 4px 12px; min-height: 32px; }
 /* La caja toma el alto libre de la columna; el mapa se dibuja con su proporción real (--ar) al mayor tamaño que quepa. */
-.pl-mapa-caja { flex: 1 1 0; min-height: 120px; container-type: size; display: flex; align-items: center; justify-content: center; }
+.pl-mapa-caja { position: relative; flex: 1 1 0; min-height: 120px; container-type: size; display: flex; align-items: center; justify-content: center; }
+/* Lectura bajo el ratón: flota arriba a la izquierda, encima del mapa, solo mientras hay texto. */
+.pl-lectura { position: absolute; left: 6px; top: 6px; z-index: 4; max-width: calc(100% - 12px); font: var(--t-meta) monospace; color: var(--mc-verde);
+  background: color-mix(in srgb, var(--mc-hundido) 88%, transparent); border: 1px solid var(--mc-borde); padding: var(--e-1) var(--e-2); pointer-events: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-lectura:empty { display: none; }
+/* Leyenda de la capa: en la fila de botones, a la derecha; la nota se corta y se lee entera al pasar el ratón. */
+.pl-leyenda { display: flex; gap: var(--e-2); align-items: center; flex: 1 1 220px; min-width: 0; margin-left: auto; font-size: var(--t-meta); color: var(--mc-tenue); }
+.pl-leyenda i { flex: none; width: 90px; height: 10px; border: 1px solid var(--mc-borde); }
+.pl-leyenda span { flex: none; }
+.pl-leyenda small { flex: 1 1 auto; min-width: 0; font-size: var(--t-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-mapa { position: relative; flex: none; box-sizing: border-box; aspect-ratio: var(--ar, 2 / 1); width: min(100cqw, 100cqh * (var(--ar, 2 / 1))); height: auto; background: var(--mc-hundido); border: 2px solid var(--mc-borde); overflow: hidden; cursor: crosshair; user-select: none; }
 .pl-credito { position: absolute; right: 4px; bottom: 4px; z-index: 3; max-width: 70%; padding: 2px 6px; font-size: var(--t-meta); color: #e8eefc; background: rgba(5,7,12,0.7); border-radius: 3px; pointer-events: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-mapa img, .pl-mapa canvas.pl-capa { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; image-rendering: auto; }
@@ -140,11 +155,6 @@
 .pl-etq.izq { transform: translate(calc(-100% - 14px), -50%); }
 .pl-etq.elegido { color: var(--mc-verde); }
 .mc-panel h3.pl-sep { margin-top: var(--e-5); }
-.pl-lectura { font: var(--t-meta) monospace; color: var(--mc-verde); background: var(--mc-hundido); border: 1px solid var(--mc-borde); padding: var(--e-1) var(--e-2); margin-top: var(--e-2); min-height: 28px; }
-.pl-lectura:empty { visibility: hidden; } /* solo aparece al pasar el ratón por el mapa */
-.pl-leyenda { display: flex; gap: var(--e-2); align-items: center; margin-top: var(--e-2); font-size: var(--t-meta); color: var(--mc-tenue); flex-wrap: wrap; }
-.pl-leyenda i { width: 140px; height: 10px; border: 1px solid var(--mc-borde); }
-.pl-leyenda small { flex-basis: 100%; font-size: var(--t-meta); }
 .pl-sitio-card { border: 2px solid var(--mc-borde); padding: var(--e-2) var(--e-3); border-radius: 3px; background: var(--mc-panel-2); }
 .pl-sitio-card.elegido { border-color: var(--mc-verde); }
 .pl-sitio-card b { display: block; font-size: var(--t-enfasis); }

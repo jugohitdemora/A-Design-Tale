@@ -25,7 +25,7 @@ const T = textos({
     fasesTit: 'Probabilidad por fase', ciencia: 'Cobertura de objetivos', masa: 'Masa', sombra: 'Horas de sombra por ciclo',
     sinRuta: 'Elige primero una ruta: la geometría del mes cambia el propelente.', propelente: 'Propelente', precio: 'Precio',
     efecto: 'Efecto', sinEfectos: 'Sin efectos especiales.', factor: (f) => `× ${f}`, fuente: 'Fuente',
-    noPlan: 'Esta misión no tiene planificación de ruta.', bajo: 'bajo', alto: 'alto', leyenda: 'Leyenda',
+    noPlan: 'Esta misión no tiene planificación de ruta.', bajo: 'bajo', alto: 'alto', leyenda: 'Leyenda', ampliar: '⛶ Ampliar mapa', reducir: '✕ Reducir mapa',
     inc: (i) => `inclinación ${i}°`, quien: 'Decide', ok: 'Listo para verificación', falta: 'Falta: mes y sitio', faltaMes: 'Falta: mes de lanzamiento', faltaSitio: 'Falta: sitio',
     // Selector de mes
     ahora: 'ahora', plazo: 'plazo', elegidoMes: 'elegido', hoy: 'Ahora', plazoComp: 'Plazo', sinPlazo: 'sin plazo',
@@ -70,7 +70,7 @@ const T = textos({
     fasesTit: 'Probability per phase', ciencia: 'Goal coverage', masa: 'Mass', sombra: 'Shadow hours per cycle',
     sinRuta: 'Choose a route first: the geometry of the month changes the propellant.', propelente: 'Propellant', precio: 'Price',
     efecto: 'Effect', sinEfectos: 'No special effects.', factor: (f) => `× ${f}`, fuente: 'Source',
-    noPlan: 'This mission has no route planning.', bajo: 'low', alto: 'high', leyenda: 'Legend',
+    noPlan: 'This mission has no route planning.', bajo: 'low', alto: 'high', leyenda: 'Legend', ampliar: '⛶ Enlarge map', reducir: '✕ Shrink map',
     inc: (i) => `inclination ${i}°`, quien: 'Decides', ok: 'Ready for verification', falta: 'Missing: month and site', faltaMes: 'Missing: launch month', faltaSitio: 'Missing: site',
     ahora: 'now', plazo: 'deadline', elegidoMes: 'chosen', hoy: 'Now', plazoComp: 'Deadline', sinPlazo: 'no deadline',
     perdida: (m, s) => `The set month (${m}) has already passed: the clock keeps running.${s ? ` Next good option: ${s}.` : ''} Choose a new month.`,
@@ -481,7 +481,10 @@ function mapa(c, P, u) {
   const svg = s('svg', { viewBox: '0 0 1000 1000', preserveAspectRatio: 'none', class: 'pl-svg' });
   if (!figura) for (let k = 1; k < 6; k++) { svg.append(s('line', { x1: 0, x2: 1000, y1: k * 1000 / 6, y2: k * 1000 / 6, class: 'pl-reticula' })); }
   if (!figura) for (let k = 1; k < 12; k++) { svg.append(s('line', { y1: 0, y2: 1000, x1: k * 1000 / 12, x2: k * 1000 / 12, class: 'pl-reticula' })); }
+  // Órbitas: solo se dibuja la que se está viendo (o la elegida); todas a la vez se tapan entre sí.
+  const orbitaActiva = u.verSitio ?? elegido;
   for (const sitio of lista(P.sitios)) {
+    if (sitio.inc != null && sitio.id !== orbitaActiva) continue;
     const sel = sitio.id === elegido, ver = sitio.id === u.verSitio;
     const g = s('g', { class: 'pl-sitio' + (sel ? ' elegido' : '') + (ver ? ' visto' : ''), 'data-id': sitio.id });
     if (sitio.inc != null) {
@@ -534,12 +537,20 @@ function mapa(c, P, u) {
       },
     }, tx(capa.nombre).replace(/\s*\(.*?\)/g, '').replace(/ (de la|en|of|in) .*$/, ''));
   }));
+  // Leyenda en la misma fila que los botones de capa (la nota completa al pasar el ratón) y lectura flotando sobre el mapa:
+  // así nada se apila debajo y el mapa usa todo el alto de la columna.
+  // Mapa ampliado: ocupa todo el planificador. Debajo de las capas van los sitios u órbitas para poder cambiar sin reducir.
+  botones.append(h('button', { class: 'boton texto pl-ampliar', type: 'button', onclick: () => { u.grande = !u.grande; c.repintar(); } }, u.grande ? T.reducir : T.ampliar));
+  const sitiosGrande = u.grande ? h('div', { class: 'pl-capas pl-sitios-grande' }, lista(P.sitios).map((x) => h('button', {
+    class: 'boton texto' + (x.id === (u.verSitio ?? elegido) ? ' on' : '') + (x.id === elegido ? ' elegido' : ''), type: 'button',
+    onclick: () => { u.verSitio = x.id; c.repintar(); },
+  }, (x.id === elegido ? '✓ ' : '') + tx(x.nombre)))) : null;
   const foco = lista(P.capas).find((x) => x.id === u.foco && x.calculo);
-  const leyenda = foco ? h('div', { class: 'pl-leyenda' }, h('span', {}, T.bajo),
+  if (foco) botones.append(h('div', { class: 'pl-leyenda', title: tx(foco.nota) || null }, h('span', {}, T.bajo),
     h('i', { style: `background:linear-gradient(90deg,${[0, 0.2, 0.4, 0.6, 0.8, 1].map((t) => `rgb(${color(t).join(',')})`).join(',')})` }),
-    h('span', {}, T.alto), h('small', {}, tx(foco.nota))) : null;
+    h('span', {}, T.alto), tx(foco.nota) ? h('small', {}, tx(foco.nota)) : null));
   return h('section', { class: 'mc-panel pl-centro-col' }, h('h3', {}, T.mapa),
-    botones, h('div', { class: 'pl-mapa-caja' }, escenario), ficha, leyenda, puedoSitio ? null : avisoBloqueo(T.soloSitio()));
+    botones, sitiosGrande, h('div', { class: 'pl-mapa-caja' }, escenario, ficha), puedoSitio ? null : avisoBloqueo(T.soloSitio()));
 }
 
 function fichaSitio(c, P, u, res) {
@@ -597,7 +608,7 @@ export function pantallaPlanificador(c) {
   const u = (c.ui.plan ??= { capas: ['color'], foco: null, verSitio: null, mesVer: null });
   const res = resumenSeguro(c);
   const { tiempo, cond } = panelMeses(c, u);
-  return h('div', { class: 'pl' },
+  return h('div', { class: 'pl' + (u.grande ? ' mapa-grande' : '') },
     tiempo,
     h('div', { class: 'pl-izq', 'data-scroll': 'pl-izq' }, panelRutas(c), panelEfectos(c, res)),
     mapa(c, P, u),
