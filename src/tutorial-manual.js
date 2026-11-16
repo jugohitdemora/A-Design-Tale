@@ -1,80 +1,85 @@
 // Contenido del Manual de juego que regala el Chief al terminar el tutorial (resumen del capítulo general del Manual del portátil,
 // src/laptop/manual.js). Bloques: ['p', txt] · ['h', txt] · ['nota', txt] · ['lista', [txt…]] · ['tabla', cabecera[], filas[][]]; txt = { es, en }.
+// Estilo: frases cortas, voz activa, un dato por frase, sin punto y coma, en español y en inglés.
 const t = (es, en) => ({ es, en });
 
 export const MANUAL = [
   { t: t('1. Objetivo del juego', '1. Goal of the game'), b: [
-    ['p', t('Hasta cuatro personas diseñan juntas una misión espacial real: una órbita, un aterrizaje o una exploración. La misión tiene presupuesto, cohete y plazo. Cada persona lleva un departamento. Ganan si la nave despega, llega y devuelve ciencia.', 'Up to four people design a real space mission together: an orbit, a landing or an exploration. The mission has a budget, a rocket and a deadline. Each person runs one department. You win if the spacecraft launches, arrives and returns science.')],
+    ['p', t('Hasta cuatro personas diseñan juntas una misión espacial real. Puede ser una órbita, un aterrizaje o una exploración. La misión tiene un presupuesto, un cohete y un plazo. Cada persona lleva un departamento. El equipo gana si la nave despega, llega y devuelve ciencia.', 'Up to four people design a real space mission together. It can be an orbit, a landing, or an exploration. The mission has a budget, a rocket, and a deadline. Each person runs one department. The team wins if the spacecraft launches, arrives, and returns science.')],
     ['lista', [
-      t('Diseñar: montar una nave que cabe en las seis barras (masa, volumen, potencia, batería, datos y presupuesto).', 'Design: build a spacecraft that fits in the six bars (mass, volume, power, battery, data and budget).'),
-      t('Decidir: objetivos de ciencia, cohete, ruta, mes de lanzamiento y contingencias (seguros).', 'Decide: science goals, rocket, route, launch month and contingencies (insurance).'),
-      t('Aprobar: pasar la revisión y conseguir el GO de los cuatro departamentos.', 'Approve: pass the review and get the GO of all four departments.'),
-      t('Volar: ver cada fase, activar contingencias a tiempo y leer el informe.', 'Fly: watch each phase, activate contingencies in time and read the report.'),
+      t('Diseñar: monta una nave que cabe en las seis barras (masa, volumen, potencia, batería, datos y presupuesto).', 'Design: build a spacecraft that fits in the six bars (mass, volume, power, battery, data, and budget).'),
+      t('Decidir: elige los objetivos de ciencia, el cohete, la ruta, el mes de lanzamiento y las contingencias (seguros).', 'Decide: choose the science goals, the rocket, the route, the launch month, and the contingencies (insurance).'),
+      t('Aprobar: pasa la revisión. Los cuatro departamentos deben dar su GO.', 'Approve: pass the review. All four departments must give their GO.'),
+      t('Volar: mira cada fase, activa las contingencias a tiempo y lee el informe.', 'Fly: watch each phase, activate the contingencies in time, and read the report.'),
     ]],
-    ['nota', t('Es cooperativo: todo el equipo gana o pierde junto. Las cifras marcadas con ≈ son valores de juego.', 'It is cooperative: the whole team wins or loses together. Figures marked ≈ are game values.')],
+    ['nota', t('El juego es cooperativo. Todo el equipo gana o pierde junto. El símbolo ≈ marca un valor de juego.', 'The game is cooperative. The whole team wins or loses together. The symbol ≈ marks a game value.')],
   ] },
   { t: t('2. Los cuatro departamentos', '2. The four departments'), b: [
     ['tabla', [t('Departamento', 'Department'), t('Responsable de', 'Responsible for')], [
-      [t('Vuelo y Mecánica', 'Flight & Mechanics'), t('Cuerpo de la nave, cohete, ruta, mes de lanzamiento y sitio u órbita.', 'Spacecraft body, rocket, route, launch month and site or orbit.')],
-      [t('Ciencia', 'Science'), t('Instrumentos, horas de uso y objetivos cubiertos.', 'Instruments, usage hours and goals covered.')],
-      [t('Energía', 'Power'), t('Paneles, baterías y control de temperatura.', 'Panels, batteries and thermal control.')],
-      [t('Comunicaciones y Operaciones', 'Communications & Operations'), t('Antenas, computador, navegación y segmento de tierra: que la ciencia llegue a casa.', 'Antennas, computer, navigation and ground segment: getting the science home.')],
+      [t('Vuelo y Mecánica', 'Flight & Mechanics'), t('El cuerpo de la nave, el cohete, la ruta, el mes de lanzamiento y el sitio o la órbita.', 'The spacecraft body, the rocket, the route, the launch month, and the site or orbit.')],
+      [t('Ciencia', 'Science'), t('Los instrumentos, sus horas de uso y los objetivos cubiertos.', 'The instruments, their usage hours, and the goals covered.')],
+      [t('Energía', 'Power'), t('Los paneles, las baterías y el control de temperatura.', 'The panels, the batteries, and the thermal control.')],
+      [t('Comunicaciones y Operaciones', 'Communications & Operations'), t('Las antenas, el computador, la navegación y el segmento de tierra. Su trabajo: que la ciencia llegue a casa.', 'The antennas, the computer, the navigation, and the ground segment. Their job: get the science home.')],
     ]],
-    ['nota', t('Si falta un jugador, su departamento queda vacante: cualquiera puede manejarlo y firmar por él. Habla con tu equipo antes de montar piezas. Cada puesto tiene su propio Manual SOP.', 'If a player is missing, the department stays vacant: anyone can run it and sign for it. Talk with your team before mounting parts. Each post has its own SOP manual.')],
+    ['nota', t('Si falta un jugador, su departamento queda vacante. Cualquiera puede manejarlo y firmar por él. Habla con tu equipo antes de montar piezas. Cada puesto tiene su propio Manual SOP.', 'If a player is absent, that department stays vacant. Anyone can run it and sign for it. Talk with your team before you mount parts. Each post has its own SOP manual.')],
   ] },
   { t: t('3. El recorrido, fase a fase', '3. The path, phase by phase'), b: [
     ['lista', [
-      t('Lobby: pon tu nick y el código de sala (hasta 4 jugadores) y elige un rol libre.', 'Lobby: enter your nick and the room code (up to 4 players) and pick a free role.'),
-      t('Briefing y expediente: elige escenario y misión; lee destino, presupuesto y plazo; marca los objetivos (el prioritario es obligatorio).', 'Briefing and dossier: pick scenario and mission; read destination, budget and deadline; mark the goals (the priority one is mandatory).'),
-      t('Diseño en el portátil: Constructor, selector de cohete, contingencias, estado y expediente.', 'Design on the laptop: Builder, rocket selector, contingencies, status and dossier.'),
-      t('Revisión y restricciones: si una barra se pasa, recorta piezas.', 'Review and constraints: if a bar is over, trim parts.'),
+      t('Lobby: escribe tu nick y el código de sala (hasta 4 jugadores). Elige un rol libre.', 'Lobby: enter your nick and the room code (up to 4 players). Pick a free role.'),
+      t('Briefing y expediente: elige un escenario y una misión. Lee el destino, el presupuesto y el plazo. Marca los objetivos. El objetivo prioritario es obligatorio.', 'Briefing and dossier: pick a scenario and a mission. Read the destination, the budget, and the deadline. Mark the goals. The priority goal is mandatory.'),
+      t('Diseño en el portátil: usa el Constructor, el selector de cohete, las contingencias, el estado y el expediente.', 'Design on the laptop: use the Builder, the rocket selector, the contingencies, the status, and the dossier.'),
+      t('Revisión y restricciones: si una barra pasa el límite, recorta piezas.', 'Review and constraints: if a bar goes over the limit, trim parts.'),
       t('Verificación y GO / NO-GO: cada departamento firma en la sala de control.', 'Verification and GO / NO-GO: each department signs in the control room.'),
-      t('Lanzamiento, vuelo en la sala de control e informe de vuelo.', 'Launch, flight in the control room and flight report.'),
-      t('Rediseño: «Volver a volar» o «Nueva misión».', 'Redesign: "Fly again" or "New mission".'),
+      t('Lanzamiento, vuelo en la sala de control e informe de vuelo.', 'Launch, flight in the control room, and flight report.'),
+      t('Rediseño: elige «Volver a volar» o «Nueva misión».', 'Redesign: choose "Fly again" or "New mission".'),
     ]],
-    ['nota', t('El diseño no va en línea recta: si una revisión falla o un cambio borra las firmas, vuelves a diseñar.', 'Design is not a straight line: if a review fails or a change clears the signatures, you go back to design.')],
+    ['nota', t('El diseño no va en línea recta. Si una revisión falla, vuelves a diseñar. Si un cambio borra las firmas, también.', 'Design is not a straight line. If a review fails, you design again. If a change clears the signatures, you do the same.')],
   ] },
   { t: t('4. Reloj de misión y plazo', '4. Mission clock and deadline'), b: [
-    ['p', t('La misión tiene un reloj en meses que corre en tiempo real mientras diseñas, recortas y verificas.', 'The mission has a clock in months that runs in real time while you design, trim and verify.')],
+    ['p', t('El reloj de misión cuenta meses. Corre en tiempo real mientras diseñas, recortas y verificas.', 'The mission clock counts months. It runs in real time while you design, trim, and verify.')],
     ['tabla', [t('Jugadores', 'Players'), t('Duración de 1 mes de misión', 'Length of 1 mission month')], [
       [t('4', '4'), t('60 s', '60 s')], [t('3', '3'), t('75 s', '75 s')], [t('2', '2'), t('90 s', '90 s')], [t('1', '1'), t('105 s', '105 s')],
     ]],
-    ['p', t('Cada misión tiene un plazo con los inversores. Hay un mes de gracia; después el presupuesto baja 4 % por cada mes de retraso. Si el retraso pasa de 12 meses, los inversores se retiran.', 'Each mission has an investor deadline. There is one month of grace; after that the budget drops 4 % for each month of delay. If the delay exceeds 12 months, the investors pull out.')],
+    ['p', t('Cada misión tiene un plazo con los inversores. Hay un mes de gracia. Después, el presupuesto baja un 4 % por cada mes de retraso. Si el retraso pasa de 12 meses, los inversores se retiran.', 'Each mission has a deadline with the investors. You have one month of grace. After that, the budget drops 4 % for each month of delay. If the delay is more than 12 months, the investors pull out.')],
   ] },
-  { t: t('5. Barras, razón y tolerancia', '5. Bars, ratio and tolerance'), b: [
-    ['p', t('Seis barras comparan lo que usa el diseño con un límite: masa, volumen, potencia, batería, enlace de datos y presupuesto.', 'Six bars compare what the design uses with a limit: mass, volume, power, battery, data link and budget.')],
-    ['p', t('Razón = usado ÷ límite. Hasta 1,00 estás dentro. Entre 1,00 y 1,20 estás en tolerancia: la revisión pasa. Por encima de 1,20 la revisión falla.', 'Ratio = used ÷ limit. Up to 1.00 you are within the limit. Between 1.00 and 1.20 you are in tolerance: the review passes. Above 1.20 the review fails.')],
-    ['p', t('Pasarte del límite tiene un costo en el vuelo: la probabilidad de fallo de una etapa relacionada sube unos 0,5 puntos porcentuales por cada 1 % de exceso, hasta +10 puntos con 120 %.', 'Going over the limit has a cost in flight: the failure probability of a related stage rises about 0.5 percentage points per 1 % of excess, up to +10 points at 120 %.')],
-    ['nota', t('Deja margen: un evento puede cambiar un límite cuando estás justo en 100 %.', 'Keep margin: an event can change a limit when you are exactly at 100 %.')],
+  { t: t('5. Barras, razón y tolerancia', '5. Bars, ratio, and tolerance'), b: [
+    ['p', t('Seis barras comparan lo que usa el diseño con un límite. Son la masa, el volumen, la potencia, la batería, el enlace de datos y el presupuesto.', 'Six bars compare what the design uses with a limit. They are mass, volume, power, battery, data link, and budget.')],
+    ['p', t('Razón = usado ÷ límite. Con 1,00 o menos, estás dentro del límite. De 1,00 a 1,20, estás en tolerancia y la revisión pasa. Por encima de 1,20, la revisión falla.', 'Ratio = used ÷ limit. At 1.00 or less, you are within the limit. From 1.00 to 1.20, you are in tolerance and the review passes. Above 1.20, the review fails.')],
+    ['p', t('Pasar el límite tiene un costo en el vuelo. La probabilidad de fallo de una etapa relacionada sube unos 0,5 puntos porcentuales por cada 1 % de exceso. El máximo es +10 puntos con un 120 %.', 'Going over the limit has a cost in flight. The failure probability of a related stage rises about 0.5 percentage points for each 1 % of excess. The maximum is +10 points at 120 %.')],
+    ['nota', t('Deja margen. Un evento puede cambiar un límite cuando estás justo en el 100 %.', 'Keep some margin. An event can change a limit when you are exactly at 100 %.')],
   ] },
   { t: t('6. Revisiones y GO / NO-GO', '6. Reviews and GO / NO-GO'), b: [
-    ['p', t('La revisión del diseño compara cada barra con su límite y no cuesta meses (el reloj sigue corriendo mientras rediseñas). En modo Restricciones usas el mismo taller, pero solo puedes quitar piezas o bajar horas de uso.', 'The design review compares each bar with its limit and costs no months (the clock keeps running while you redesign). In Constraints mode you use the same workshop, but you can only remove parts or lower usage hours.')],
-    ['p', t('La votación GO / NO-GO está en la sala de control: hacen falta las cuatro firmas para lanzar. Si cambias el diseño, el mes o el sitio, las firmas se borran. Si el lanzamiento falla, la misión termina.', 'The GO / NO-GO poll is in the control room: all four signatures are needed to launch. If you change the design, the month or the site, the signatures are cleared. If the launch fails, the mission ends.')],
+    ['p', t('La revisión del diseño compara cada barra con su límite. No cuesta meses, pero el reloj sigue corriendo mientras rediseñas.', 'The design review compares each bar with its limit. It costs no months, but the clock keeps running while you redesign.')],
+    ['p', t('En el modo Restricciones usas el mismo taller. Solo puedes quitar piezas o bajar las horas de uso.', 'In Constraints mode, you use the same workshop. You can only remove parts or lower the usage hours.')],
+    ['p', t('La votación GO / NO-GO ocurre en la sala de control. Para lanzar, hacen falta las cuatro firmas. Si cambias el diseño, el mes o el sitio, las firmas se borran. Si el lanzamiento falla, la misión termina.', 'The GO / NO-GO poll happens in the control room. To launch, you need all four signatures. If you change the design, the month, or the site, the signatures clear. If the launch fails, the mission ends.')],
   ] },
   { t: t('7. Eventos', '7. Events'), b: [
-    ['p', t('Mientras corre el reloj saltan eventos de diseño al azar: aparecen en una tarjeta y afectan a todo el equipo. En el vuelo, cada fase puede traer un evento del mazo de la misión.', 'While the clock runs, random design events appear on a card and affect the whole team. In flight, each phase can bring an event from the mission deck.')],
-    ['nota', t('Una contingencia comprada anula los eventos negativos. Los eventos buenos son suerte y ninguna contingencia los anula.', 'A bought contingency cancels negative events. Good events are luck and no contingency cancels them.')],
+    ['p', t('Mientras corre el reloj, saltan eventos de diseño al azar. Cada evento aparece en una tarjeta y afecta a todo el equipo. En el vuelo, cada fase puede traer un evento del mazo de la misión.', 'While the clock runs, random design events appear. Each event shows on a card and affects the whole team. In flight, each phase can bring an event from the mission deck.')],
+    ['nota', t('Una contingencia comprada anula los eventos negativos. Los eventos buenos son suerte. Ninguna contingencia los anula.', 'A bought contingency cancels the negative events. Good events are luck. No contingency cancels them.')],
   ] },
   { t: t('8. Ventana de lanzamiento y propelente', '8. Launch window and propellant'), b: [
-    ['p', t('El mes de lanzamiento se elige en la sala de control; Vuelo y Mecánica lidera la decisión. Cada mes tiene sus condiciones con datos de la NASA: clima del sitio, clima espacial, posición del destino y ΔV (cuánto debe cambiar la velocidad de la nave).', 'The launch month is chosen in the control room; Flight & Mechanics leads the decision. Each month has its own conditions from NASA data: site weather, space weather, target position and ΔV (how much the spacecraft must change its velocity).')],
-    ['nota', t('Fuera del mes óptimo hace falta más propelente, y eso pesa en la barra de masa. Lanzar tarde también puede llevarte más allá del plazo.', 'Outside the best month you need more propellant, and it weighs on the mass bar. Launching late can also take you past the deadline.')],
+    ['p', t('El equipo elige el mes de lanzamiento en la sala de control. Vuelo y Mecánica lidera la decisión. Cada mes tiene sus condiciones, con datos de la NASA: el clima del sitio, el clima espacial, la posición del destino y el ΔV. El ΔV es cuánto debe cambiar la velocidad de la nave.', 'The team chooses the launch month in the control room. Flight & Mechanics leads the decision. Each month has its own conditions, with NASA data: the site weather, the space weather, the target position, and the ΔV. The ΔV is how much the spacecraft must change its velocity.')],
+    ['nota', t('Fuera del mes óptimo, la nave necesita más propelente. Ese propelente pesa en la barra de masa. Un lanzamiento tardío también puede pasar el plazo.', 'Outside the best month, the spacecraft needs more propellant. That propellant weighs on the mass bar. A late launch can also pass the deadline.')],
   ] },
   { t: t('9. Contingencias', '9. Contingencies'), b: [
-    ['p', t('Son seguros que se compran en la fase de Diseño y cuestan masa y presupuesto. Se activan en la fase de Misión, en la sala de control, por el departamento dueño. Si hay un evento con contingencia pendiente, no puedes avanzar hasta activarla.', 'They are insurance bought in the Design phase and cost mass and budget. They are activated in the Mission phase, in the control room, by the owning department. If an event has a pending contingency, you cannot advance until it is activated.')],
-    ['nota', t('Asegura primero los fallos críticos en fases críticas: valen mucho más que los que solo quitan un 15 % de ciencia.', 'Insure critical failures in critical phases first: they are worth far more than ones that only remove 15 % of the science.')],
+    ['p', t('Una contingencia es un seguro. Se compra en la fase de Diseño y cuesta masa y presupuesto. En la fase de Misión, el departamento dueño la activa en la sala de control.', 'A contingency is insurance. You buy it in the Design phase, and it costs mass and budget. In the Mission phase, the owning department activates it in the control room.')],
+    ['p', t('Si un evento tiene una contingencia pendiente, no puedes avanzar. Antes, actívala.', 'If an event has a pending contingency, you cannot advance. Activate it first.')],
+    ['nota', t('Asegura primero los fallos críticos en las fases críticas. Valen mucho más que un evento que solo quita un 15 % de ciencia.', 'Insure the critical failures in the critical phases first. They are worth much more than an event that only removes 15 % of the science.')],
   ] },
   { t: t('10. El vuelo y la sala de control', '10. The flight and the control room'), b: [
-    ['p', t('Tras el GO y el lanzamiento, el vuelo se juega en la sala de control. Las fases se muestran una a una y todos ven lo mismo. Pulsa «Next» para avanzar. El semáforo de cada fase muestra su probabilidad actual. Las fases críticas son las que pueden terminar la misión.', 'After GO and launch, you play the flight in the control room. Phases are shown one by one and everyone sees the same. Press "Next" to advance. The light of each phase shows its current probability. Critical phases are the ones that can end the mission.')],
+    ['p', t('Después del GO y del lanzamiento, el vuelo ocurre en la sala de control. La pantalla muestra una fase cada vez. Todos ven lo mismo. Pulsa «Next» para avanzar.', 'After GO and launch, the flight happens in the control room. The screen shows one phase at a time. Everyone sees the same. Press "Next" to advance.')],
+    ['p', t('El semáforo de cada fase muestra su probabilidad actual. Las fases críticas pueden terminar la misión.', 'The light of each phase shows its current probability. Critical phases can end the mission.')],
   ] },
   { t: t('11. Puntuación e informe', '11. Scoring and report'), b: [
-    ['p', t('El informe da el veredicto (total, parcial o fallida) y una puntuación según la regla de la misión. Explica las causas, los hallazgos y los datos perdidos, y compara tu misión con la misión real. Después, «Volver a volar» te deja rediseñar con lo aprendido.', 'The report gives the verdict (full, partial or failed) and a score under the mission rule. It explains the causes, findings and lost data, and compares your mission with the real one. Then "Fly again" lets you redesign with what you learned.')],
+    ['p', t('El informe da un veredicto: total, parcial o fallida. También da una puntuación, según la regla de la misión.', 'The report gives a verdict: full, partial, or failed. It also gives a score, under the mission rule.')],
+    ['p', t('El informe explica las causas, los hallazgos y los datos perdidos. También compara tu misión con la misión real. Después, «Volver a volar» te deja rediseñar con lo que aprendiste.', 'The report explains the causes, the findings, and the lost data. It also compares your mission with the real mission. Then "Fly again" lets you redesign with what you learned.')],
   ] },
   { t: t('12. Controles y navegación 3D', '12. Controls and 3D navigation'), b: [
     ['lista', [
-      t('Arrastra con el ratón (o el dedo) para mirar alrededor. Sensibilidad, calidad y animación del fondo se cambian en Ajustes.', 'Drag with the mouse (or your finger) to look around. Sensitivity, quality and background animation are changed in Settings.'),
-      t('Clic en un objeto para usarlo: holograma del proyector, carpeta de misión, tu portátil, carpeta de anillas (SOP), pantalla central, tu consola (tu GO) y la puerta.', 'Click an object to use it: projector hologram, mission folder, your laptop, ring binder (SOP), central screen, your console (your GO) and the door.'),
-      t('Esc te levanta del portátil o te saca de la pantalla ampliada.', 'Esc stands you up from the laptop or takes you out of the zoomed screen.'),
-      t('Multijugador: abre la misma URL en cada dispositivo; el código de sala va después de #.', 'Multiplayer: open the same URL on each device; the room code goes after #.'),
+      t('Arrastra con el ratón (o con el dedo) para mirar alrededor. Cambia la sensibilidad, la calidad y la animación del fondo en Ajustes.', 'Drag with the mouse (or your finger) to look around. Change the sensitivity, the quality, and the background animation in Settings.'),
+      t('Haz clic en un objeto para usarlo. Puedes usar el holograma del proyector, la carpeta de misión, tu portátil, la carpeta de anillas (SOP), la pantalla central, tu consola (tu GO) y la puerta.', 'Click an object to use it. You can use the projector hologram, the mission folder, your laptop, the ring binder (SOP), the central screen, your console (your GO), and the door.'),
+      t('Pulsa Esc para levantarte del portátil o salir de la pantalla ampliada.', 'Press Esc to stand up from the laptop or leave the zoomed screen.'),
+      t('Multijugador: abre la misma URL en cada dispositivo. El código de sala va después de #.', 'Multiplayer: open the same URL on each device. The room code goes after #.'),
     ]],
   ] },
 ];

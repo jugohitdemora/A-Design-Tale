@@ -12,43 +12,43 @@ const T = textos({
     boton: 'TUTORIAL', titulo: 'Tutorial · Simulacro', jefe: 'JEFE DE MISIÓN', saltar: 'Saltar', siguiente: 'Siguiente', atras: 'Atrás',
     paso: (a, b) => `Paso ${a} de ${b}`, cerrar: 'Cerrar', terminar: 'Terminar y a la misión',
     barras: 'Barras de recursos', masa: 'Masa', potencia: 'Potencia', presupuesto: 'Presupuesto', ratio: 'razón',
-    dentro: 'Dentro del límite', tolerancia: 'En tolerancia: pasa, pero con más riesgo', fuera: 'Fuera: la revisión falla',
+    dentro: 'Dentro del límite', tolerancia: 'En tolerancia. La revisión pasa, pero el riesgo es mayor.', fuera: 'Fuera del límite. La revisión falla.',
     piezas: 'Piezas', objetivos: 'Objetivos de la misión', prioritario: 'PRIORITARIO', opcional: 'OPCIONAL', marcado: 'Marcado', marcar: 'Marcar',
-    seguro: 'Contingencia', seguroDesc: 'Seguro «Modo seguro»: anula una tormenta solar en el vuelo.',
+    seguro: 'Contingencia', seguroDesc: 'Seguro «Modo seguro». Anula una tormenta solar en el vuelo.',
     riesgoLanz: 'Riesgo de fallo en el lanzamiento',
-    faltan: 'Faltan piezas obligatorias', listoDiseno: 'Diseño completo: puedes pedir la revisión',
+    faltan: 'Faltan piezas obligatorias', listoDiseno: 'Diseño completo. Puedes pedir la revisión.',
     firmar: 'Firmar GO', firmado: 'GO', pendiente: 'Pendiente',
     lanzar: 'LANZAR', cuenta: 'Cuenta atrás', despegue: '¡Despegue!',
     fases: ['Lanzamiento', 'Crucero', 'Órbita lunar', 'Operaciones'], faseTit: 'Fases del vuelo', next: 'NEXT',
-    eventoTit: 'EVENTO', tormenta: 'Tormenta solar: las partículas dañan la electrónica.',
+    eventoTit: 'EVENTO', tormenta: 'Tormenta solar. Las partículas dañan la electrónica.',
     activar: 'Activar contingencia', aceptar: 'Aceptar el daño', anulado: 'Anulada por tu contingencia',
     dano: 'Daño: −15 % de ciencia',
     informe: 'Informe de vuelo', veredicto: 'Veredicto', total: 'MISIÓN TOTAL', parcial: 'MISIÓN PARCIAL',
     ciencia: 'Ciencia lograda', gastado: 'Presupuesto gastado', puntos: 'Puntuación',
     regalo: '¡Un regalo!', regaloT: 'Manual de juego', abrir: 'Abrir el manual', leer: 'Leer',
     indice: 'Capítulos', manualHecho: 'Manual guardado', ya: 'Ya tienes el manual', otraVez: 'Repetir tutorial',
-    manualPie: 'La versión completa, con fórmulas y datos de tu misión, está en la app «Manual de juego» del portátil.',
+    manualPie: 'Encuentra la versión completa, con fórmulas y datos de tu misión, en la app «Manual de juego» del portátil.',
   },
   en: {
     boton: 'TUTORIAL', titulo: 'Tutorial · Drill', jefe: 'MISSION CHIEF', saltar: 'Skip', siguiente: 'Next', atras: 'Back',
     paso: (a, b) => `Step ${a} of ${b}`, cerrar: 'Close', terminar: 'Finish and go to the mission',
     barras: 'Resource bars', masa: 'Mass', potencia: 'Power', presupuesto: 'Budget', ratio: 'ratio',
-    dentro: 'Within the limit', tolerancia: 'In tolerance: it passes, with more risk', fuera: 'Over: the review fails',
+    dentro: 'Within the limit', tolerancia: 'In tolerance. The review passes, but the risk is higher.', fuera: 'Over the limit. The review fails.',
     piezas: 'Parts', objetivos: 'Mission goals', prioritario: 'PRIORITY', opcional: 'OPTIONAL', marcado: 'Marked', marcar: 'Mark',
-    seguro: 'Contingency', seguroDesc: '"Safe mode" insurance: cancels a solar storm in flight.',
+    seguro: 'Contingency', seguroDesc: 'Insurance "Safe mode". It cancels a solar storm in flight.',
     riesgoLanz: 'Launch failure risk',
-    faltan: 'Required parts are missing', listoDiseno: 'Design complete: you can request the review',
+    faltan: 'Required parts are missing', listoDiseno: 'Design complete. You can request the review.',
     firmar: 'Sign GO', firmado: 'GO', pendiente: 'Pending',
     lanzar: 'LAUNCH', cuenta: 'Countdown', despegue: 'Liftoff!',
     fases: ['Launch', 'Cruise', 'Lunar orbit', 'Operations'], faseTit: 'Flight phases', next: 'NEXT',
-    eventoTit: 'EVENT', tormenta: 'Solar storm: particles damage the electronics.',
+    eventoTit: 'EVENT', tormenta: 'Solar storm. Particles damage the electronics.',
     activar: 'Activate contingency', aceptar: 'Accept the damage', anulado: 'Cancelled by your contingency',
     dano: 'Damage: −15 % science',
     informe: 'Flight report', veredicto: 'Verdict', total: 'FULL MISSION', parcial: 'PARTIAL MISSION',
     ciencia: 'Science achieved', gastado: 'Budget spent', puntos: 'Score',
     regalo: 'A gift!', regaloT: 'Game manual', abrir: 'Open the manual', leer: 'Read',
     indice: 'Chapters', manualHecho: 'Manual saved', ya: 'You already have the manual', otraVez: 'Repeat tutorial',
-    manualPie: 'The full version, with formulas and your mission data, is in the "Game manual" app on the laptop.',
+    manualPie: 'Find the full version, with formulas and your mission data, in the "Game manual" app on the laptop.',
   },
 });
 
@@ -162,18 +162,18 @@ function decir(texto) {
 
 // Cada paso: { id, chief: {es,en} (o función → texto), escena(ctx) pinta el escenario, gate: true si hay que hacer algo antes de seguir }.
 const PASOS = [
-  { id: 'hola', chief: { es: '¡Bienvenido a bordo! Soy el Jefe de Misión. En unos minutos aprenderás a jugar haciendo una misión de práctica. Nadie se juega nada: es un simulacro.', en: 'Welcome aboard! I am the Mission Chief. In a few minutes you will learn to play by running a practice mission. Nothing is at stake: it is a drill.' }, escena: escHola },
-  { id: 'juego', chief: { es: 'Project Orbit es cooperativo. Hasta cuatro personas diseñan una misión espacial real, cada una en un departamento. Todos ganan o pierden juntos. Si faltan jugadores, su departamento queda vacante y cualquiera lo maneja.', en: 'Project Orbit is cooperative. Up to four people design a real space mission, each in one department. Everyone wins or loses together. If players are missing, their department stays vacant and anyone can run it.' }, escena: escDeptos },
-  { id: 'fases', chief: { es: 'Este es el camino de cada partida. Primero el briefing, después el diseño, la revisión, la votación GO / NO-GO, el lanzamiento, el vuelo y el informe. Hoy haremos todo el recorrido en pequeño.', en: 'This is the path of every game: briefing, design, review, the GO / NO-GO vote, launch, flight and report. Today we will do the whole path in miniature.' }, escena: escFases },
-  { id: 'briefing', chief: { es: 'Briefing. Abre tu expediente: destino, presupuesto y objetivos de ciencia. El objetivo PRIORITARIO es obligatorio; los opcionales dan más ciencia, pero piden más instrumentos. Márcalos con un clic.', en: 'Briefing. Open your dossier: destination, budget and science goals. The PRIORITY goal is mandatory; optional ones give more science but need more instruments. Mark them with a click.' }, escena: escBriefing, gate: () => S.obj },
-  { id: 'diseno', chief: { es: 'Diseño. Monta chasis, cámara, antena y un panel solar (●). Las barras miden razón = usado ÷ límite: hasta 1,00 bien; hasta 1,20 tolerancia, con más riesgo; más de 1,20 la revisión falla. Compra también el seguro: lo verás útil en el vuelo.', en: 'Design. Mount the frame, camera, antenna and a solar panel (●). Bars show ratio = used ÷ limit: up to 1.00 fine; up to 1.20 tolerance, with more risk; above 1.20 the review fails. Also buy the insurance: it will pay off in flight.' }, escena: escDiseno, gate: () => disenoValido().ok },
-  { id: 'go', chief: { es: 'Revisión y GO / NO-GO. Cada departamento revisa su parte y firma GO en su consola. Hacen falta las cuatro firmas. Si cambias el diseño después, las firmas se borran y hay que firmar otra vez. Pulsa cada lámpara.', en: 'Review and GO / NO-GO. Each department checks its part and signs GO at its console. All four signatures are needed. If you change the design afterwards, the signatures are cleared and you sign again. Press each lamp.' }, escena: escGo, gate: () => S.firmas.size === 4 },
-  { id: 'lanzar', chief: { es: 'Lanzamiento. En el juego real eliges el mes de la ventana: fuera del mes óptimo gastas más propelente. Mira el riesgo de fallo: se suma cuando te pasas de masa. Si el lanzamiento falla, la misión termina. ¡Cuenta atrás!', en: 'Launch. In the real game you pick the month of the window: outside the best month you burn more propellant. Look at the failure risk: it grows when you exceed the mass limit. If the launch fails, the mission ends. Countdown!' }, escena: escLanzar, gate: () => S.lanzado },
-  { id: 'vuelo', chief: { es: 'Vuelo. Las fases se muestran una a una y todos ven lo mismo. Pulsa NEXT para avanzar. Cuando salga un evento malo, el departamento dueño de la contingencia puede activarla; sin avanzar no sigues.', en: 'Flight. Phases are shown one by one and everyone sees the same. Press NEXT to advance. When a bad event appears, the department that owns the contingency can activate it; you cannot advance until it is resolved.' }, escena: escVuelo, gate: () => S.fin },
+  { id: 'hola', chief: { es: '¡Bienvenido a bordo! Soy el Jefe de Misión. Aprenderás a jugar con una misión de práctica. Es un simulacro. No arriesgas nada.', en: 'Welcome aboard! I am the Mission Chief. You will learn to play with a practice mission. It is a drill. Nothing is at risk.' }, escena: escHola },
+  { id: 'juego', chief: { es: 'Project Orbit es un juego en equipo. Hasta cuatro personas diseñan una misión espacial real. Cada persona lleva un departamento. Todo el equipo gana o pierde junto. Si falta un jugador, su departamento queda vacante. Cualquiera puede manejarlo.', en: 'Project Orbit is a team game. Up to four people design a real space mission. Each person runs one department. The whole team wins or loses together. If a player is absent, that department stays vacant. Anyone can run it.' }, escena: escDeptos },
+  { id: 'fases', chief: { es: 'Este es el camino de cada partida. Primero viene el briefing. Después diseñas, revisas, votas GO o NO-GO, lanzas, vuelas y lees el informe. Hoy lo haremos todo en un simulacro corto.', en: 'This is the path of each game. First comes the briefing. Then you design, review, vote GO or NO-GO, launch, fly, and read the report. Today you will play all of it in a short drill.' }, escena: escFases },
+  { id: 'briefing', chief: { es: 'Briefing. Lee tu expediente. Indica el destino, el presupuesto y los objetivos de ciencia. El objetivo PRIORITARIO es obligatorio. Un objetivo opcional da más ciencia, pero pide más instrumentos. Haz clic en un objetivo para marcarlo.', en: 'Briefing. Read your dossier. It gives the destination, the budget, and the science goals. The PRIORITY goal is mandatory. An optional goal gives more science, but it needs more instruments. Click a goal to mark it.' }, escena: escBriefing, gate: () => S.obj },
+  { id: 'diseno', chief: { es: 'Diseño. Monta un chasis, una cámara, una antena y un panel solar (●). Cada barra muestra una razón: lo usado dividido por el límite. Con 1,00 o menos, estás dentro del límite. De 1,00 a 1,20, estás en tolerancia. La revisión pasa, pero sube el riesgo. Por encima de 1,20, la revisión falla. Compra también el seguro. Lo necesitarás en el vuelo.', en: 'Design. Mount a frame, a camera, an antenna, and a solar panel (●). Each bar shows a ratio: used divided by limit. At 1.00 or less, you are within the limit. From 1.00 to 1.20, you are in tolerance. The review passes, but the risk grows. Above 1.20, the review fails. Buy the insurance too. You will need it in flight.' }, escena: escDiseno, gate: () => disenoValido().ok },
+  { id: 'go', chief: { es: 'Revisión y GO / NO-GO. Cada departamento revisa su parte. Después firma GO en su consola. Hacen falta las cuatro firmas. Si cambias el diseño más tarde, las firmas se borran. Entonces firmas otra vez. Pulsa cada lámpara.', en: 'Review and GO / NO-GO. Each department checks its part. Then it signs GO at its console. You need all four signatures. If you change the design later, the signatures clear. Then you sign again. Press each lamp.' }, escena: escGo, gate: () => S.firmas.size === 4 },
+  { id: 'lanzar', chief: { es: 'Lanzamiento. En el juego real, eliges el mes de lanzamiento. Fuera del mejor mes, el cohete necesita más propelente. Mira el riesgo de fallo. Sube cuando la masa pasa el límite. Si el lanzamiento falla, la misión termina. ¡Inicia la cuenta atrás!', en: 'Launch. In the real game, you choose the launch month. Outside the best month, the rocket needs more propellant. Look at the failure risk. It grows when the mass is over the limit. If the launch fails, the mission ends. Start the countdown!' }, escena: escLanzar, gate: () => S.lanzado },
+  { id: 'vuelo', chief: { es: 'Vuelo. La pantalla muestra una fase cada vez. Todos ven la misma fase. Pulsa NEXT para avanzar. Puede aparecer un evento malo. Entonces el departamento dueño de la contingencia debe activarla. Antes de eso, no puedes avanzar.', en: 'Flight. The screen shows one phase at a time. Everyone sees the same phase. Press NEXT to advance. A bad event can appear. Then the department that owns the contingency must activate it. You cannot advance before that.' }, escena: escVuelo, gate: () => S.fin },
   { id: 'informe', chief: () => (S.resultado?.total
-    ? { es: 'Misión total. Tu seguro anuló la tormenta y toda la ciencia llegó a casa. Así se juega: diseñar con margen, asegurar lo que puede fallar y firmar entre todos. Vuelve a volar para mejorar la puntuación.', en: 'Full mission. Your insurance cancelled the storm and all the science came home. That is the game: design with margin, insure what can fail and sign together. Fly again to improve the score.' }
-    : { es: 'Misión parcial. Sin el seguro, la tormenta te quitó el 15 % de la ciencia. En el juego real el informe explica cada causa y, con «Volver a volar», rediseñas con lo aprendido. Prueba otra vez comprando el seguro.', en: 'Partial mission. Without the insurance, the storm cost you 15 % of the science. In the real game the report explains every cause and, with "Fly again", you redesign with what you learned. Try again with the insurance.' }), escena: escInforme },
-  { id: 'regalo', chief: { es: 'Has terminado el entrenamiento. Toma: el Manual de juego. Tiene las reglas, los números y los controles en capítulos. Léelo aquí; el manual completo, con fórmulas, también está en el portátil de tu asiento. ¡Buena misión, astronauta!', en: 'Training complete. Here, take the Game manual. It has the rules, numbers and controls in chapters. Read it here; the full manual, with formulas, is also on your seat laptop. Good luck out there, astronaut!' }, escena: escRegalo },
+    ? { es: '¡Misión total! Tu seguro anuló la tormenta. Toda la ciencia llegó a casa. Así se juega: diseña con margen, asegura lo que puede fallar y firma con tu equipo. Vuela otra vez para mejorar la puntuación.', en: 'Full mission! Your insurance cancelled the storm. All the science came home. This is the game: design with margin, insure what can fail, and sign together. Fly again to get a better score.' }
+    : { es: 'Misión parcial. No tenías seguro, así que la tormenta quitó el 15 % de la ciencia. En el juego real, el informe explica cada causa. Después pulsas «Volver a volar» y rediseñas. Inténtalo otra vez y compra el seguro.', en: 'Partial mission. You had no insurance, so the storm removed 15 % of the science. In the real game, the report explains each cause. Then you press "Fly again" and redesign. Try again and buy the insurance.' }), escena: escInforme },
+  { id: 'regalo', chief: { es: '¡Entrenamiento completo! Toma este Manual de juego. Reúne las reglas, los números y los controles en capítulos. Léelo aquí. El manual completo, con fórmulas, está en el portátil de tu asiento. ¡Buena suerte, astronauta!', en: 'Training complete! Take this Game manual. It lists the rules, the numbers, and the controls in chapters. Read it here. The full manual, with formulas, is on the laptop at your seat. Good luck, astronaut!' }, escena: escRegalo },
 ];
 
 function ctxPaso() { return PASOS[S.paso]; }
@@ -234,7 +234,7 @@ function escFases(el) {
   ];
   const lista = h('ol', { class: 'tt-camino' }, fs.map((f, i) => h('li', { style: `--i:${i}` }, h('span', { class: 'tt-n' }, i + 1), h('span', {}, idioma() === 'es' ? f[1] : f[2]))));
   el.append(h('h3', { class: 'tt-h' }, idioma() === 'es' ? 'El camino de una partida' : 'The path of a game'), lista,
-    h('p', { class: 'tt-tenue' }, idioma() === 'es' ? 'El reloj de misión corre en tiempo real mientras diseñas: cada mes dura 1 minuto con 4 jugadores (más con menos jugadores).' : 'The mission clock runs in real time while you design: a month lasts 1 minute with 4 players (longer with fewer players).'));
+    h('p', { class: 'tt-tenue' }, idioma() === 'es' ? 'El reloj de misión corre en tiempo real mientras diseñas. Un mes dura 1 minuto con 4 jugadores. Dura más con menos jugadores.' : 'The mission clock runs in real time while you design. One month lasts 1 minute with 4 players. It lasts longer with fewer players.'));
 }
 
 function escBriefing(el) {
@@ -253,7 +253,7 @@ function escBriefing(el) {
     h('h3', { class: 'tt-h' }, T.objetivos),
     h('div', { class: 'tt-objs' },
       marca('obj', idioma() === 'es' ? 'Fotografiar un cráter' : 'Photograph a crater', idioma() === 'es' ? 'Pide: cámara a bordo.' : 'Needs: a camera on board.', T.prioritario, true),
-      marca('extra', idioma() === 'es' ? 'Analizar el suelo' : 'Analyse the soil', idioma() === 'es' ? 'Pide: espectrómetro. Más ciencia, más masa y vatios.' : 'Needs: spectrometer. More science, more mass and watts.', T.opcional, false)));
+      marca('extra', idioma() === 'es' ? 'Analizar el suelo' : 'Analyse the soil', idioma() === 'es' ? 'Pide: espectrómetro. Da más ciencia. Suma masa y consumo.' : 'Needs: a spectrometer. It gives more science. It adds mass and power use.', T.opcional, false)));
   if (!S.obj) el.append(h('p', { class: 'tt-tenue' }, idioma() === 'es' ? 'Marca el objetivo prioritario para continuar.' : 'Mark the priority goal to continue.'));
 }
 
@@ -287,7 +287,7 @@ function escDiseno(el) {
     onclick: () => { s.seguro = !s.seguro; s.firmas.clear(); efecto(s.seguro ? 'contingencia' : 'quitar'); pintarPaso({ decirTexto: false }); } },
     h('span', { class: 'tt-lampara' }), h('strong', {}, T.seguro), h('span', { class: 'tt-dep' }, T.seguroDesc), h('span', { class: 'tt-num' }, `0 kg · 0 W · ${SEGURO.c} M`));
   let msg, cls = 'tt-ayuda';
-  if (!v.req) { msg = s.extra && !s.piezas.has('espectro') ? (idioma() === 'es' ? 'Marcaste «Analizar el suelo»: necesitas el espectrómetro.' : 'You marked "Analyse the soil": you need the spectrometer.') : T.faltan + ' (●)'; cls += ' aviso'; }
+  if (!v.req) { msg = s.extra && !s.piezas.has('espectro') ? (idioma() === 'es' ? 'Marcaste «Analizar el suelo». Necesitas el espectrómetro.' : 'You marked "Analyse the soil". You need the spectrometer.') : T.faltan + ' (●)'; cls += ' aviso'; }
   else if (!v.ok) { msg = T.fuera; cls += ' mal'; }
   else if (Math.max(m.rm, m.rp, m.rc) > 1) { msg = T.tolerancia; cls += ' aviso'; }
   else msg = T.listoDiseno;
@@ -328,7 +328,7 @@ function escLanzar(el) {
   } }, T.lanzar);
   el.append(h('div', { class: 'tt-pad' }, cohete, h('div', { class: 'tt-pad-info' },
     h('p', { class: 'tt-riesgo' }, `${T.riesgoLanz}: ${riesgoLanz().toString().replace('.', idioma() === 'es' ? ',' : '.')} %`),
-    h('p', { class: 'tt-tenue' }, idioma() === 'es' ? 'Simulacro: los dados son amistosos y el lanzamiento saldrá bien.' : 'Drill: the dice are friendly and the launch will succeed.'),
+    h('p', { class: 'tt-tenue' }, idioma() === 'es' ? 'Es un simulacro. Los dados son amistosos. El lanzamiento saldrá bien.' : 'This is a drill. The dice are friendly. The launch will succeed.'),
     cuenta, btn)));
 }
 
@@ -372,9 +372,9 @@ function escInforme(el) {
       h('div', {}, h('span', {}, T.gastado), h('strong', {}, `${m.c} / ${LIM.presupuesto} M`)),
       h('div', {}, h('span', {}, T.puntos), h('strong', {}, puntos))),
     h('ul', { class: 'tt-causas' },
-      h('li', {}, idioma() === 'es' ? (S.seguro ? 'La contingencia «Modo seguro» anuló la tormenta solar.' : 'No compraste contingencia: la tormenta solar quitó el 15 % de la ciencia.') : (S.seguro ? 'The "Safe mode" contingency cancelled the solar storm.' : 'You bought no contingency: the solar storm removed 15 % of the science.')),
-      h('li', {}, idioma() === 'es' ? (S.extra ? 'Cubriste el objetivo opcional: más ciencia.' : 'Solo el objetivo prioritario: menos riesgo, menos ciencia.') : (S.extra ? 'You covered the optional goal: more science.' : 'Priority goal only: less risk, less science.')),
-      h('li', {}, idioma() === 'es' ? 'El informe real también cuenta datos perdidos y compara con la misión de verdad.' : 'The real report also counts lost data and compares with the real mission.'))));
+      h('li', {}, idioma() === 'es' ? (S.seguro ? 'La contingencia «Modo seguro» anuló la tormenta solar.' : 'No compraste contingencia. La tormenta solar quitó el 15 % de la ciencia.') : (S.seguro ? 'The "Safe mode" contingency cancelled the solar storm.' : 'You bought no contingency. The solar storm removed 15 % of the science.')),
+      h('li', {}, idioma() === 'es' ? (S.extra ? 'Cubriste el objetivo opcional. Conseguiste más ciencia.' : 'Elegiste solo el objetivo prioritario. El riesgo es menor y la ciencia también.') : (S.extra ? 'You covered the optional goal. You got more science.' : 'You chose the priority goal only. The risk is lower, and the science is lower.')),
+      h('li', {}, idioma() === 'es' ? 'El informe real también cuenta los datos perdidos y compara tu misión con la misión real.' : 'The real report also counts the lost data and compares your mission with the real mission.'))));
 }
 
 // ---------- Manual de regalo ----------
