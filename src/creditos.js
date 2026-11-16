@@ -16,7 +16,7 @@ const T = textos({
     omni: 'NASA OMNI2: probabilidad mensual de tormentas geomagnéticas y de protones solares.',
     nssdc: 'NASA NSSDC: hojas de datos de planetas, naves e instrumentos.',
     equipo: 'Hecho para el NASA Space Apps Challenge 2026.',
-    inversores: 'Nuestros inversores', inversor: 'Inversor',
+    teamTit: 'TEAM FRITANDO TAJADAS EN MARTE', teamTxt: 'Somos el equipo que hizo el juego… y también sus inversores.',
   },
   en: {
     titulo: 'Credits and sources', boton: 'CREDITS', cerrar: 'Close',
@@ -29,9 +29,15 @@ const T = textos({
     omni: 'NASA OMNI2: monthly odds of geomagnetic storms and solar proton events.',
     nssdc: 'NASA NSSDC: fact sheets for planets, spacecraft and instruments.',
     equipo: 'Made for the NASA Space Apps Challenge 2026.',
-    inversores: 'Our investors', inversor: 'Investor',
+    teamTit: 'TEAM FRITANDO TAJADAS EN MARTE', teamTxt: 'We are the team that made the game… and also its investors.',
   },
 });
+
+// Nombre real de cada miembro del equipo, por id de inversor (src/inversores.js).
+const EQUIPO = {
+  valentina: 'Valentina Yepes', 'juan-pablo': 'Juan Pablo Villamil', emanuel: 'Emanuel Llanos',
+  laura: 'Laura Tabares', mateo: 'Mateo Quiceno', marzuq: 'Marzuq Gallego',
+};
 
 const h = (tag, attrs = {}, ...hijos) => {
   const el = document.createElement(tag);
@@ -68,11 +74,12 @@ function contenido() {
       h('li', {}, T.omni, ' ', enlace('https://spdf.gsfc.nasa.gov/pub/data/omni/low_res_omni/', '↗')),
       h('li', {}, T.nssdc, ' ', enlace('https://nssdc.gsfc.nasa.gov/planetary/factsheet/', '↗'))),
     h('p', { class: 'tenue' }, T.equipo),
-    // Easter egg, lo último de los créditos: los inversores del juego (fotos generadas con IA del equipo).
-    h('h3', {}, T.inversores),
+    // Easter egg, lo último de los créditos: el equipo, que son los inversores del juego (fotos low poly generadas con IA).
+    h('h3', {}, T.teamTit),
+    h('p', { class: 'tenue' }, T.teamTxt),
     h('div', { class: 'cred-rejilla cred-inversores' }, INVERSORES.map((inv) => h('figure', { class: 'cred-ficha' },
-      h('img', { src: inv.foto, alt: `${inv.nombre} (${TI.ia})`, loading: 'lazy' }),
-      h('figcaption', {}, h('strong', {}, `${T.inversor} ${inv.nombre}`), h('span', {}, TI.ia))))),
+      h('img', { src: inv.foto, alt: `${EQUIPO[inv.id] ?? inv.nombre} (${TI.ia})`, loading: 'lazy' }),
+      h('figcaption', {}, h('strong', {}, EQUIPO[inv.id] ?? inv.nombre), h('span', {}, TI.ia))))),
   ];
 }
 
