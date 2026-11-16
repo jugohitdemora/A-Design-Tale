@@ -507,7 +507,8 @@ setInterval(() => {
   enLineaAntes = ok;
   vestirCarpetas(); // los datos de misión pueden llegar después del reparto
 }, 2000);
-window.__depurar = { sesion: () => sesion, transporte: () => transporte, mirada, poses, control, camara: camaraSala, clicables: sala.clicables, THREE, irA: (v) => irA(v), estadoVista: () => ({ lugar, vista, pantallaLista }) };
+// Solo para pruebas en ?local=1 (pruebas/ir-a-mision.js); la versión publicada no lo expone.
+if (params.get('local') === '1') window.__depurar = { sesion: () => sesion, transporte: () => transporte, mirada, poses, control, camara: camaraSala, clicables: sala.clicables, THREE, irA: (v) => irA(v), estadoVista: () => ({ lugar, vista, pantallaLista }) };
 
 let moduloLocal = null;
 if (SIMULADO) {

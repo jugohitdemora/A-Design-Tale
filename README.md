@@ -87,4 +87,4 @@ The screens are projected onto 3D objects: the laptop measures 1024 × 640 logic
 - The topics are public: anyone who knows the room code can read and write in it. EMQX drops messages above ~10 per second (presence is limited because of that) and the order between brokers is not guaranteed.
 - Guaranteed reliability would need a relay of our own on port 443 (Cloudflare Workers with Durable Objects, Firebase or Supabase; they require an account). It would be enough to write another transport with the same interface. More in [PROTOCOLO.md](PROTOCOLO.md#11-known-limits).
 - The whole state is replicated to everyone: each role's "private" information is only hidden in the interface.
-- `window.__depurar` exposes the session for testing; remove it before submission.
+- `window.__depurar` (test hook for `pruebas/ir-a-mision.js`) only exists in `?local=1` mode.
