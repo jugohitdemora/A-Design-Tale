@@ -132,3 +132,9 @@ body.en-proyector .f-hud .g-linea { display: none; } /* la barra del proyector y
 .mc-cab .mc-logo { display: none; }                 /* el modo (PLANIFICACIÓN…) ya nombra la sala */
 .mc-cab .rm-vel { display: none; }                  /* ritmo del reloj: dato de consulta */
 .mc.fase-diseno .mc-cab .rm-lanz, .mc.fase-restricciones .mc-cab .rm-lanz { display: none; } /* la línea de tiempo ya dice si hay mes */
+/* Iconos pixel art del dock y del título de ventana */
+.lp-icono-dib { display: flex; height: 32px; align-items: center; }
+.lp-icono-dib svg { display: block; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(29, 42, 58, 0.25)); }
+.lp-icono:disabled .lp-icono-dib svg { filter: grayscale(1); }
+.lp-ventana-nombre { display: inline-flex; align-items: center; gap: 6px; }
+.lp-ventana-nombre svg { display: block; }

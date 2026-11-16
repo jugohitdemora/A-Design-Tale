@@ -14,7 +14,7 @@ import { pasosFase, lineaGuia } from './index.js';
 
 const T = textos({
   es: {
-    so: 'AGENCIA·OS', apps: { constructor: 'Constructor', cohete: 'Cámara de lanzamiento', contingencias: 'Contingencias', ruta: 'Sala de control',
+    so: 'AGENCIA·OS', apps: { constructor: 'Constructor', cohete: 'Selector de cohete', contingencias: 'Contingencias', ruta: 'Sala de control',
       expediente: 'Expediente', manual: 'Manual SOP', juego: 'Manual de juego', estado: 'Estado', revision: 'Revisión', verificacion: 'Verificación', informe: 'Informe' },
     planRuta: 'Planificar ruta', pasoN: (n) => `Paso ${n}`,
     levantarse: 'Sala (Esc)',
@@ -24,7 +24,7 @@ const T = textos({
     cargando: 'Cargando…', enControl: 'La misión se sigue desde la sala de control.',
   },
   en: {
-    so: 'AGENCY·OS', apps: { constructor: 'Builder', cohete: 'Launch camera', contingencias: 'Contingencies', ruta: 'Control room',
+    so: 'AGENCY·OS', apps: { constructor: 'Builder', cohete: 'Rocket selector', contingencias: 'Contingencies', ruta: 'Control room',
       expediente: 'Dossier', manual: 'SOP manual', juego: 'Game manual', estado: 'Status', revision: 'Review', verificacion: 'Verification', informe: 'Report' },
     planRuta: 'Plan route', pasoN: (n) => `Step ${n}`,
     levantarse: 'Room (Esc)',
@@ -35,7 +35,38 @@ const T = textos({
   },
 });
 
-const ICONOS = { constructor: '🛰', cohete: '📹', contingencias: '⚠', ruta: '🗺', revision: '✅', expediente: '📁', manual: '📘', juego: '📖', estado: '📊', verificacion: '✔', informe: '📄' };
+// Iconos del dock en pixel art 16×16, mismo estilo y paleta que los iconos de piezas del Constructor.
+// [x, y, ancho, alto, tono]; tonos de la paleta --lp-* del portátil.
+const TONO = { k: 'var(--lp-tinta)', l: 'var(--lp-panel)', f: 'var(--lp-panel-2)', p: 'var(--lp-plano)', s: 'var(--lp-acento)',
+  a: 'var(--lp-aviso)', o: 'var(--lp-ok)', m: 'var(--lp-mal)', w: '#ffffff' };
+const PIXELES = {
+  cohete: [[7, 0, 2, 1, 'k'], [6, 1, 4, 2, 'k'], [7, 1, 2, 2, 'm'], [5, 3, 6, 9, 'k'], [6, 3, 4, 8, 'l'], [6, 3, 1, 8, 'w'], [7, 5, 2, 2, 'p'],
+    [6, 9, 4, 1, 'm'], [3, 8, 2, 4, 'k'], [4, 9, 1, 2, 'm'], [11, 8, 2, 4, 'k'], [11, 9, 1, 2, 'm'], [6, 12, 4, 1, 'k'],
+    [6, 13, 4, 1, 'a'], [7, 13, 2, 1, 'm'], [7, 14, 2, 2, 'a']],
+  constructor: [[0, 5, 5, 6, 'k'], [1, 6, 3, 4, 'p'], [2, 6, 1, 4, 'k'], [11, 5, 5, 6, 'k'], [12, 6, 3, 4, 'p'], [13, 6, 1, 4, 'k'],
+    [5, 7, 1, 2, 'k'], [10, 7, 1, 2, 'k'], [6, 5, 4, 6, 'k'], [7, 6, 2, 4, 's'], [7, 6, 1, 1, 'l'], [7, 2, 2, 3, 'k'], [6, 1, 4, 1, 'k'],
+    [7, 0, 2, 1, 'a'], [7, 11, 2, 2, 'k'], [6, 13, 4, 1, 'k']],
+  ruta: [[1, 2, 14, 12, 'k'], [2, 3, 12, 10, 'l'], [6, 3, 1, 10, 'f'], [10, 3, 1, 10, 'f'], [3, 10, 2, 2, 'o'],
+    [5, 9, 1, 1, 'a'], [6, 8, 1, 1, 'a'], [8, 8, 1, 1, 'a'], [9, 7, 1, 1, 'a'],
+    [11, 4, 1, 1, 'm'], [13, 4, 1, 1, 'm'], [12, 5, 1, 1, 'm'], [11, 6, 1, 1, 'm'], [13, 6, 1, 1, 'm']],
+  contingencias: [[7, 1, 2, 1, 'k'], [6, 2, 4, 2, 'k'], [5, 4, 6, 2, 'k'], [4, 6, 8, 2, 'k'], [3, 8, 10, 2, 'k'], [2, 10, 12, 2, 'k'], [1, 12, 14, 2, 'k'],
+    [7, 3, 2, 1, 'a'], [6, 4, 4, 2, 'a'], [5, 6, 6, 2, 'a'], [4, 8, 8, 2, 'a'], [3, 10, 10, 2, 'a'], [2, 12, 12, 1, 'a'],
+    [7, 5, 2, 4, 'k'], [7, 10, 2, 2, 'k']],
+  revision: [[2, 2, 12, 14, 'k'], [3, 3, 10, 12, 'l'], [5, 1, 6, 3, 'k'], [6, 2, 4, 1, 'f'], [4, 5, 5, 1, 'f'],
+    [4, 9, 1, 2, 'o'], [5, 10, 1, 2, 'o'], [6, 11, 2, 2, 'o'], [8, 10, 1, 2, 'o'], [9, 9, 1, 2, 'o'], [10, 8, 1, 2, 'o'], [11, 7, 1, 2, 'o']],
+  expediente: [[1, 2, 6, 2, 'k'], [2, 3, 4, 1, 'a'], [1, 4, 14, 11, 'k'], [2, 5, 12, 3, 'a'], [3, 3, 10, 5, 'k'], [4, 4, 8, 4, 'l'], [5, 5, 5, 1, 'f'],
+    [1, 8, 14, 7, 'k'], [2, 9, 12, 5, 'a'], [2, 9, 12, 1, 'l'], [6, 11, 4, 1, 'k']],
+  manual: [[3, 1, 11, 14, 'k'], [4, 2, 8, 12, 'p'], [12, 2, 1, 12, 'l'], [5, 2, 1, 12, 'k'], [7, 4, 4, 3, 'l'], [8, 5, 2, 1, 'k'], [4, 14, 9, 1, 'l']],
+  juego: [[1, 4, 7, 9, 'k'], [2, 5, 5, 7, 'l'], [8, 4, 7, 9, 'k'], [9, 5, 5, 7, 'l'], [7, 4, 2, 9, 'k'],
+    [3, 6, 3, 1, 'f'], [3, 8, 3, 1, 'f'], [3, 10, 2, 1, 'f'], [10, 6, 3, 1, 'f'], [10, 8, 3, 1, 'f'], [10, 10, 2, 1, 'f'], [0, 12, 16, 2, 'k'], [1, 12, 14, 1, 's']],
+  estado: [[1, 1, 14, 14, 'k'], [2, 2, 12, 12, 'l'], [3, 9, 2, 4, 'o'], [6, 6, 2, 7, 'a'], [9, 4, 2, 9, 'p'], [12, 8, 1, 5, 'm'], [2, 13, 12, 1, 'k']],
+};
+function iconoDock(app, tamano = 32) {
+  const rects = (PIXELES[app] ?? []).map(([x, y, w, hh, k]) => `<rect x="${x}" y="${y}" width="${w}" height="${hh}" fill="${TONO[k]}"/>`).join('');
+  const t = document.createElement('template');
+  t.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="${tamano}" height="${tamano}" shape-rendering="crispEdges" aria-hidden="true" focusable="false">${rects}</svg>`;
+  return t.content.firstChild;
+}
 
 // Apps externas (las escriben otros módulos). Se rellenan al cargar.
 const externas = {};
@@ -151,7 +182,7 @@ export function pantallaLaptop(c, fase, { irA }) {
       onclick: esRuta ? () => irA('control') : () => { c.ui.app = a; if (a === 'manual') c.ui.manualRol = c.rol; c.repintar(); },
     },
     k != null ? h('span', { class: 'lp-icono-paso', 'aria-label': T.pasoN(k) }, String(k)) : null,
-    h('span', { class: 'lp-icono-dib', 'aria-hidden': 'true' }, ICONOS[a]), h('span', { class: 'lp-icono-txt' }, nombre));
+    h('span', { class: 'lp-icono-dib', 'aria-hidden': 'true' }, iconoDock(a)), h('span', { class: 'lp-icono-txt' }, nombre));
   };
   const dock = h('nav', { class: 'lp-dock', role: 'tablist' },
     d.bloqueadas.map((a) => icono(a, null, true)),
@@ -159,7 +190,7 @@ export function pantallaLaptop(c, fase, { irA }) {
     h('hr', { class: 'lp-dock-sep', 'aria-hidden': 'true' }),
     d.consulta.map((a) => icono(a, null, false)));
   const ventana = h('section', { class: 'lp-ventana', 'data-app': app },
-    h('div', { class: 'lp-ventana-titulo' }, h('span', {}, `${ICONOS[app]} ${T.apps[app]}`), h('span', { class: 'lp-ventana-botones', 'aria-hidden': 'true' }, '▁ ▢ ✕')),
+    h('div', { class: 'lp-ventana-titulo' }, h('span', { class: 'lp-ventana-nombre' }, iconoDock(app, 16), ' ', T.apps[app]), h('span', { class: 'lp-ventana-botones', 'aria-hidden': 'true' }, '▁ ▢ ✕')),
     h('div', { class: 'lp-ventana-cuerpo', 'data-scroll': 'app-' + app }, contenidoApp(c, app, fase, irA)));
   return h('div', { class: 'laptop-so' }, barra, h('div', { class: 'lp-cuerpo' }, dock, ventana));
 }
